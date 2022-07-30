@@ -293,12 +293,12 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 	auto result_data = FlatVector::GetData<uint64_t>(result);
 	auto &validity = FlatVector::Validity(result);
 
-	ofstream log_file;
-	Profiler<system_clock> phase_profiler, outer_profiler, init_profiler;
-	log_file.open(info.file_name, std::ios_base::app);
-	log_file << "Thread id: " << std::this_thread::get_id() << endl;
-	log_file << "Args size: " << std::to_string(args.size()) << endl;
-	outer_profiler.Start();
+//	ofstream log_file;
+//	Profiler<system_clock> phase_profiler, outer_profiler, init_profiler;
+//	log_file.open(info.file_name, std::ios_base::app);
+//	log_file << "Thread id: " << std::this_thread::get_id() << endl;
+//	log_file << "Args size: " << std::to_string(args.size()) << endl;
+//	outer_profiler.Start();
 
 	//	info.context.init_m = true;
 
@@ -306,7 +306,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 		vector<std::bitset<LANE_LIMIT>> seen(input_size);
 		vector<std::bitset<LANE_LIMIT>> visit(input_size);
 		vector<std::bitset<LANE_LIMIT>> visit_next(input_size);
-		init_profiler.Start();
+//		init_profiler.Start();
 		//! mapping of src_value ->  (bfs_num/lane, vector of indices in src_data)
 
 		unordered_map<int64_t, pair<int16_t, vector<int64_t>>> lane_map;
@@ -317,8 +317,8 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 		uint64_t bfs_depth = 0;
 		auto curr_batch_size = InitialiseBfs(result_size, args.size(), src_data, vdata_src.sel, vdata_src.validity,
 		                                     seen, visit, visit_next, lane_map, bfs_depth, depth_map_uint8, input_size);
-		init_profiler.End();
-		log_file << "Init time: " << std::to_string(init_profiler.Elapsed()) << endl;
+//		init_profiler.End();
+//		log_file << "Init time: " << std::to_string(init_profiler.Elapsed()) << endl;
 		bool exit_early = false;
 		while (!exit_early) {
 			if (bfs_depth == UINT8_MAX) {
@@ -330,8 +330,8 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			}
 			bfs_depth++;
 			exit_early = true;
-			log_file << "BFS depth: " << std::to_string(bfs_depth) << endl;
-			phase_profiler.Start();
+//			log_file << "BFS depth: " << std::to_string(bfs_depth) << endl;
+//			phase_profiler.Start();
 
 			if (bfs_depth < UINT8_MAX) {
 				exit_early = BfsWithoutArray<uint8_t>(exit_early, id, input_size, info, seen, visit, visit_next,
@@ -346,8 +346,8 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 				exit_early = BfsWithoutArray<uint64_t>(exit_early, id, input_size, info, seen, visit, visit_next,
 				                                       bfs_depth, depth_map_uint64);
 			}
-			phase_profiler.End();
-			log_file << "BFS time: " << std::to_string(phase_profiler.Elapsed()) << endl;
+//			phase_profiler.End();
+//			log_file << "BFS time: " << std::to_string(phase_profiler.Elapsed()) << endl;
 
 			visit = visit_next;
 			for (auto i = 0; i < input_size; i++) {
@@ -369,13 +369,13 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 		}
 
 		result_size = result_size + curr_batch_size;
-		log_file << "Batch size: " << std::to_string(curr_batch_size) << endl;
-		log_file << "Result size: " << std::to_string(result_size) << endl;
+//		log_file << "Batch size: " << std::to_string(curr_batch_size) << endl;
+//		log_file << "Result size: " << std::to_string(result_size) << endl;
 	}
 	//	auto end = std::chrono::high_resolution_clock::now();
-	outer_profiler.End();
-	log_file << "Entire program time: " << std::to_string(outer_profiler.Elapsed()) << endl;
-	log_file << "-" << endl;
+//	outer_profiler.End();
+//	log_file << "Entire program time: " << std::to_string(outer_profiler.Elapsed()) << endl;
+//	log_file << "-" << endl;
 	//	auto int_s = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
 }
