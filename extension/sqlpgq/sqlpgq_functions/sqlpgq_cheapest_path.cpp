@@ -28,7 +28,6 @@ static int16_t InitialiseBellmanFord(ClientContext &context, const DataChunk &ar
                                      const VectorData &vdata_src, const int64_t *src_data, idx_t result_size,
                                      unordered_map<int64_t, std::vector<bool>> &modified,
                                      unordered_map<int64_t, vector<T>> &dists) {
-//	auto start = high_resolution_clock::now();
 	for (int64_t i = 0; i < input_size; i++) {
 		modified[i] = std::vector<bool>(args.size(), false);
 		dists[i] = std::vector<T>(args.size(), std::numeric_limits<T>::max());
@@ -44,21 +43,14 @@ static int16_t InitialiseBellmanFord(ClientContext &context, const DataChunk &ar
 			dists[src_entry][lanes] = 0;
 			curr_batch_size++;
 			lanes++;
-//			std::cout << "Number of lanes: " << lanes << std::endl;
 		}
 	}
-//	auto stop = high_resolution_clock::now();
-//	auto duration = duration_cast<microseconds>(stop - start);
-//
-//	std::cout << "Initialization time: " <<  duration.count() << std::endl;
 	return curr_batch_size;
 }
 
 template <typename T>
 void CheckUpdateDistance(int64_t v, int64_t n, T weight, unordered_map<int64_t, std::vector<bool>> &modified,
                          unordered_map<int64_t, vector<T>> &dists, bool &changed) {
-//	auto start = high_resolution_clock::now();
-
 	for (uint64_t i = 0; i < modified[v].size(); i++) {
 		if (modified[v][i]) {
 			auto new_dist = std::min(dists[n][i], dists[v][i] + weight);
@@ -71,10 +63,6 @@ void CheckUpdateDistance(int64_t v, int64_t n, T weight, unordered_map<int64_t, 
 			}
 		}
 	}
-//	auto stop = high_resolution_clock::now();
-//	auto duration = duration_cast<microseconds>(stop - start);
-//
-//	std::cout << "Update checking time: " <<  duration.count() << std::endl;
 }
 template <typename T>
 void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t input_size, Vector &result,
@@ -86,7 +74,6 @@ void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t i
 	auto &result_validity = FlatVector::Validity(result);
 	unordered_map<int64_t, std::vector<bool>> modified;
 	unordered_map<int64_t, vector<T>> dists;
-//	std::cout << info.context.lane_limit << std::endl;
 	while (result_size < args.size()) {
 		int16_t curr_batch_size = 0;
 		curr_batch_size =
@@ -100,8 +87,6 @@ void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t i
 				if (!std::all_of(modified[v].begin(), modified[v].end(), [](bool v) { return !v; })) {
 					//! Loop through all the n neighbours of v
 					if (is_double) {
-//						auto start = high_resolution_clock::now();
-
 						for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v];
 						     index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
 							//! Get weight of (v,n)
@@ -109,24 +94,13 @@ void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t i
 							CheckUpdateDistance<T>(v, n, info.context.csr_list[id]->w_double[index], modified, dists,
 							                       changed);
 						}
-//						auto stop = high_resolution_clock::now();
-//						auto duration = duration_cast<microseconds>(stop - start);
-//
-//						std::cout << "Edge updating time: " <<  duration.count() << std::endl;
-
 					} else {
-//						auto start = high_resolution_clock::now();
-
 						for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v];
 							 index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
 							//! Get weight of (v,n)
 							int64_t n = info.context.csr_list[id]->e[index];
 							CheckUpdateDistance<T>(v, n, info.context.csr_list[id]->w[index], modified, dists, changed);
 						}
-//						auto stop = high_resolution_clock::now();
-//						auto duration = duration_cast<microseconds>(stop - start);
-//
-//						std::cout << "Edge updating time: " <<  duration.count() << std::endl;
 					}
 				}
 			}
