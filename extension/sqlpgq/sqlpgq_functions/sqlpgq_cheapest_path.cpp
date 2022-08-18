@@ -30,7 +30,7 @@ static int16_t InitialiseBellmanFord(ClientContext &context, const DataChunk &ar
                                      unordered_map<int64_t, vector<T>> &dists) {
 	for (int64_t i = 0; i < input_size; i++) {
 		modified[i] = std::vector<bool>(args.size(), false);
-		dists[i] = std::vector<T>(args.size(), std::numeric_limits<T>::max());
+		dists[i] = std::vector<T>(args.size(), INT32_MAX);
 	}
 
 	int16_t lanes = 0;
@@ -64,6 +64,32 @@ void CheckUpdateDistance(int64_t v, int64_t n, T weight, unordered_map<int64_t, 
 		}
 	}
 }
+
+template <typename T>
+int64_t UpdateOneLane(T &n_dist, T v_dist, T weight) {
+	T new_dist = v_dist + weight;
+	bool better = new_dist < n_dist;
+	T min = better ? new_dist : n_dist;
+	T diff = n_dist ^ min;
+	n_dist = min;
+	return diff;
+}
+
+template <typename T>
+bool UpdateLanes(std::unordered_map<int64_t, vector<T>> &dists, size_t v, T n, T weight) {
+	std::vector<T> &v_dists = dists[v];
+	std::vector<T> &n_dists = dists[n];
+	size_t num_lanes = dists[v].size();
+	size_t lane_idx = 0;
+	int64_t xor_diff = 0;
+	while (lane_idx < num_lanes) {
+		xor_diff |= UpdateOneLane<T>(n_dists[lane_idx], v_dists[lane_idx], weight);
+		++lane_idx;
+	}
+	return xor_diff != 0;
+}
+
+
 template <typename T>
 void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t input_size, Vector &result,
                           VectorData vdata_src, int64_t *src_data, const VectorData &vdata_target, int64_t *target_data,
@@ -83,26 +109,30 @@ void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t i
 			changed = false;
 			//! For every v in the input
 			for (int64_t v = 0; v < input_size; v++) {
-				//! not modified[v].empty()
-				if (!std::all_of(modified[v].begin(), modified[v].end(), [](bool v) { return !v; })) {
-					//! Loop through all the n neighbours of v
-					if (is_double) {
-						for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v];
-						     index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
-							//! Get weight of (v,n)
-							int64_t n = info.context.csr_list[id]->e[index];
-							CheckUpdateDistance<T>(v, n, info.context.csr_list[id]->w_double[index], modified, dists,
-							                       changed);
-						}
-					} else {
-						for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v];
-							 index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
-							//! Get weight of (v,n)
-							int64_t n = info.context.csr_list[id]->e[index];
-							CheckUpdateDistance<T>(v, n, info.context.csr_list[id]->w[index], modified, dists, changed);
-						}
-					}
+				for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v]; index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
+					changed = UpdateLanes<T>(dists, v, info.context.csr_list[id]->e[index], info.context.csr_list[id]->w_bigint[index]) | changed;
 				}
+				//							//! Get weight of (v,n)
+
+//				if (!std::all_of(modified[v].begin(), modified[v].end(), [](bool v) { return !v; })) {
+//					//! Loop through all the n neighbours of v
+//					if (is_double) {
+//						for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v];
+//						     index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
+//							//! Get weight of (v,n)
+//							int64_t n = info.context.csr_list[id]->e[index];
+//							CheckUpdateDistance<T>(v, n, info.context.csr_list[id]->w_double[index], modified, dists,
+//							                       changed);
+//						}
+//					} else {
+//						for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v];
+//							 index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
+//							//! Get weight of (v,n)
+//							int64_t n = info.context.csr_list[id]->e[index];
+//							CheckUpdateDistance<T>(v, n, info.context.csr_list[id]->w[index], modified, dists, changed);
+//						}
+//					}
+//				}
 			}
 		}
 		for (idx_t i = 0; i < args.size(); i++) {
@@ -120,7 +150,7 @@ void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t i
 					result_data[i] = resulting_distance;
 				}
 			} else {
-				if (resulting_distance == INT64_MAX) {
+				if (resulting_distance == INT32_MAX) {
 					result_validity.SetInvalid(i);
 				} else {
 					result_data[i] = resulting_distance;
@@ -153,13 +183,13 @@ static void CheapestPathFunction(DataChunk &args, ExpressionState &state, Vector
 //	std::cout << "LANES: " << info.context.lane_limit << std::endl;
 
 //	auto start = high_resolution_clock::now();
-	if (info.context.csr_list[id]->w.empty()) {
-		TemplatedBellmanFord<double_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                               id, true);
-	} else {
-		TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                              id, false);
-	}
+//	if (info.context.csr_list[id]->w.empty()) {
+//		TemplatedBellmanFord<double_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
+//		                               id, true);
+//	} else {
+	TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
+								  id, false);
+//	}
 //	auto stop = high_resolution_clock::now();
 
 //	auto duration = duration_cast<microseconds>(stop - start);
@@ -190,7 +220,7 @@ static unique_ptr<FunctionData> CheapestPathBind(ClientContext &context, ScalarF
 	}
 	string file_name;
 
-	if (context.csr_list[id]->w.empty()) {
+	if (context.csr_list[id]->w.empty()) { // TODO add to this
 		bound_function.return_type = LogicalType::DOUBLE;
 	} else {
 		bound_function.return_type = LogicalType::BIGINT;

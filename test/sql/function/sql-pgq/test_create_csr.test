@@ -1,8 +1,6 @@
 # name: test/sql/function/sql-pgq/test_create_csr.test
 # description: Test create csr function
 # group: [sql-pgq]
-
-
 require sqlpgq
 
 
@@ -10,7 +8,7 @@ statement ok
 CREATE TABLE Customer(cid bigint not null, name string);
 
 statement ok
-CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount bigint);
+CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount decimal(10,0));
 
 statement ok
 INSERT INTO Customer VALUES (197, 'A'), (201, 'B'), (343, 'C'), (406, 'D'), (101, 'E'), (807, 'F'), (404, 'G');
@@ -74,13 +72,16 @@ CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 statement ok
 INSERT INTO src_dest VALUES(0, 7, 0, 3), (0, 7, 1, 2), (0, 7, 1, 0), (0, 7, 0, 2);
 
+statement ok
+PRAGMA enable_profiling;
+
 query T
 SELECT cheapest_path(0, v_size, src, dst) FROM src_dest;
 ----
-1
-1
-0
-1
+160
+50
+NULL
+150
 
 
 
