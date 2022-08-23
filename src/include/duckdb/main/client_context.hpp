@@ -52,14 +52,12 @@ public:
 	}
 
 	std::atomic<int64_t> *v;
-
 	std::atomic<int64_t> *v_weight;
 
-	bool v_index_modified = false; //! Check if this is required
 	vector<int64_t> e;
 
-	vector<int64_t> w;
 	vector<double_t> w_double;
+	vector<int64_t> w_bigint;
 
 	bool initialized_v = false;
 	bool initialized_e = false;

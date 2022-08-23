@@ -1,29 +1,16 @@
 require sqlpgq
 
 statement ok
-CREATE SCHEMA information_schema;
+CREATE TABLE person(id BIGINT PRIMARY KEY);
 
 statement ok
-CREATE SCHEMA pg_catalog;
+CREATE TABLE person_knows_person(source BIGINT NOT NULL, target BIGINT NOT NULL, weight decimal(17,0));
 
 statement ok
-CREATE TABLE person(creationdate TIMESTAMP NOT NULL, id BIGINT PRIMARY KEY, firstname VARCHAR NOT NULL, lastname VARCHAR NOT NULL, gender VARCHAR NOT NULL, birthday DATE NOT NULL, locationip VARCHAR NOT NULL, browserused VARCHAR NOT NULL, locationcityid BIGINT NOT NULL, speaks VARCHAR NOT NULL, email VARCHAR NOT NULL);
+COPY person_knows_person FROM 'data/sqlpgq-testing/sf1/person_knows_person.csv' (FORMAT 'csv', DELIMITER ',');
 
 statement ok
-CREATE TABLE person_knows_person(creationdate TIMESTAMP NOT NULL, source BIGINT NOT NULL, target BIGINT NOT NULL);
-
-statement ok
-COPY person_knows_person FROM 'data/sqlpgq-testing/Person_knows_Person/part-00000-97235d24-1e63-44da-a16e-fbec913d8097-c000.csv' (FORMAT 'csv', DELIMITER '|', HEADER);
-
-statement ok
-COPY person_knows_person FROM 'data/sqlpgq-testing/Person_knows_Person/part-00001-97235d24-1e63-44da-a16e-fbec913d8097-c000.csv' (FORMAT 'csv', DELIMITER '|', HEADER);
-
-statement ok
-COPY person FROM 'data/sqlpgq-testing/Person/part-00000-354b330a-be7e-4581-99ab-dfe73df59470-c000.csv' (FORMAT 'csv', DELIMITER '|', HEADER);
-
-statement ok
-copy person from 'data/sqlpgq-testing/Person/part-00001-354b330a-be7e-4581-99ab-dfe73df59470-c000.csv' (FORMAT 'csv', DELIMITER '|', HEADER);
-
+COPY person FROM 'data/sqlpgq-testing/sf1/person.csv' (FORMAT 'csv', DELIMITER ',');
 
 statement ok
 create table parameters (person1Id bigint, person2Id bigint);
@@ -55,17 +42,22 @@ FROM (
     LEFT JOIN  person_knows_person k ON k.source = p.id
     GROUP BY p.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, 1))
+src.rowid, dst.rowid, k.weight))
 FROM
   person_knows_person k
   JOIN person src ON k.source = src.id
   JOIN person dst ON k.target = dst.id;
 
 statement ok
-create table parameters_rowid as select p.rowid as src_rowid, p2.rowid as dst_rowid from parameters h JOIN person p on p.id = h.person1id JOIN person p2 on p2.id = h.person2id;
+create table parameters_rowid as select p.rowid as src_rowid, p2.rowid as dst_rowid
+FROM parameters h
+JOIN person p on p.id = h.person1id
+JOIN person p2 on p2.id = h.person2id;
 
-statement ok
+query I
 SELECT p.id, p2.id, cheapest_path(0, (select count(*) from person), s.src_rowid, s.dst_rowid) FROM parameters_rowid s
 LEFT JOIN person p ON s.src_rowid = p.rowid
 LEFT JOIN person p2 ON s.dst_rowid = p2.rowid
 order by p.id, p2.id;
+----
+495	3791	12

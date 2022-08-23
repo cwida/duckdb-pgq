@@ -224,7 +224,10 @@ static void PragmaDisableOptimizer(ClientContext &context, const FunctionParamet
 static void PragmaDeleteCSR(ClientContext &context, const FunctionParameters &parameters) {
 	auto id = parameters.values[0].GetValue<int32_t>();
 	auto csr_entry = context.csr_list.find(id);
-	D_ASSERT(csr_entry != context.csr_list.end());
+
+	if (csr_entry == context.csr_list.end()) {
+		throw ParserException("Unknown CSR ID");
+	}
 	csr_entry->second.reset();
 	context.csr_list.erase(id);
 }

@@ -3,11 +3,8 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "sqlpgq_functions.hpp"
-
+#include <algorithm>
 #include <chrono>
-#include <float.h>
-#include <iostream>
-using namespace std::chrono;
 
 namespace duckdb {
 
@@ -30,7 +27,7 @@ static int16_t InitialiseBellmanFord(ClientContext &context, const DataChunk &ar
                                      unordered_map<int64_t, vector<T>> &dists) {
 	for (int64_t i = 0; i < input_size; i++) {
 		modified[i] = std::vector<bool>(args.size(), false);
-		dists[i] = std::vector<T>(args.size(), INT32_MAX);
+		dists[i] = std::vector<T>(args.size(), std::numeric_limits<T>::max()/2);
 	}
 
 	int16_t lanes = 0;
@@ -46,23 +43,6 @@ static int16_t InitialiseBellmanFord(ClientContext &context, const DataChunk &ar
 		}
 	}
 	return curr_batch_size;
-}
-
-template <typename T>
-void CheckUpdateDistance(int64_t v, int64_t n, T weight, unordered_map<int64_t, std::vector<bool>> &modified,
-                         unordered_map<int64_t, vector<T>> &dists, bool &changed) {
-	for (uint64_t i = 0; i < modified[v].size(); i++) {
-		if (modified[v][i]) {
-			auto new_dist = std::min(dists[n][i], dists[v][i] + weight);
-			//! If the new weight is shorter than existing
-			if (new_dist != dists[n][i]) {
-				//! Update the distance
-				dists[n][i] = new_dist;
-				modified[n][i] = true;
-				changed = true;
-			}
-		}
-	}
 }
 
 template <typename T>
@@ -93,7 +73,7 @@ bool UpdateLanes(std::unordered_map<int64_t, vector<T>> &dists, size_t v, T n, T
 template <typename T>
 void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t input_size, Vector &result,
                           VectorData vdata_src, int64_t *src_data, const VectorData &vdata_target, int64_t *target_data,
-                          int32_t id, bool is_double) {
+                          int32_t id, std::vector<T> weight_array) {
 	idx_t result_size = 0;
 	result.SetVectorType(VectorType::FLAT_VECTOR);
 	auto result_data = FlatVector::GetData<T>(result);
@@ -110,29 +90,8 @@ void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t i
 			//! For every v in the input
 			for (int64_t v = 0; v < input_size; v++) {
 				for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v]; index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
-					changed = UpdateLanes<T>(dists, v, info.context.csr_list[id]->e[index], info.context.csr_list[id]->w_bigint[index]) | changed;
+				changed = UpdateLanes<T>(dists, v, info.context.csr_list[id]->e[index], weight_array[index]) | changed;
 				}
-				//							//! Get weight of (v,n)
-
-//				if (!std::all_of(modified[v].begin(), modified[v].end(), [](bool v) { return !v; })) {
-//					//! Loop through all the n neighbours of v
-//					if (is_double) {
-//						for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v];
-//						     index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
-//							//! Get weight of (v,n)
-//							int64_t n = info.context.csr_list[id]->e[index];
-//							CheckUpdateDistance<T>(v, n, info.context.csr_list[id]->w_double[index], modified, dists,
-//							                       changed);
-//						}
-//					} else {
-//						for (auto index = (int64_t)info.context.csr_list[id]->v_weight[v];
-//							 index < (int64_t)info.context.csr_list[id]->v_weight[v + 1]; index++) {
-//							//! Get weight of (v,n)
-//							int64_t n = info.context.csr_list[id]->e[index];
-//							CheckUpdateDistance<T>(v, n, info.context.csr_list[id]->w[index], modified, dists, changed);
-//						}
-//					}
-//				}
 			}
 		}
 		for (idx_t i = 0; i < args.size(); i++) {
@@ -143,20 +102,12 @@ void TemplatedBellmanFord(CheapestPathBindData &info, DataChunk &args, int64_t i
 			}
 			const auto &target_entry = target_data[target_index];
 			auto resulting_distance = dists[target_entry][i];
-			if (is_double) {
-				if (resulting_distance == DBL_MAX) {
-					result_validity.SetInvalid(i);
-				} else {
-					result_data[i] = resulting_distance;
-				}
-			} else {
-				if (resulting_distance == INT32_MAX) {
-					result_validity.SetInvalid(i);
-				} else {
-					result_data[i] = resulting_distance;
-				}
-			}
 
+			if (resulting_distance == std::numeric_limits<T>::max()/2) {
+				result_validity.SetInvalid(i);
+			} else {
+				result_data[i] = resulting_distance;
+			}
 		}
 		result_size += curr_batch_size;
 	}
@@ -180,23 +131,15 @@ static void CheapestPathFunction(DataChunk &args, ExpressionState &state, Vector
 	auto &target = args.data[3];
 	target.Orrify(args.size(), vdata_target);
 	auto target_data = (int64_t *)vdata_target.data;
-//	std::cout << "LANES: " << info.context.lane_limit << std::endl;
 
-//	auto start = high_resolution_clock::now();
-//	if (info.context.csr_list[id]->w.empty()) {
+	if (!info.context.csr_list[id]->w_bigint.empty()) {
+		TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
+		                              id, info.context.csr_list[id]->w_bigint);
+	} else if (!info.context.csr_list[id]->w_double.empty()) {
+		throw NotImplementedException("Cheapest path using doubles has not been implemented yet.");
 //		TemplatedBellmanFord<double_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-//		                               id, true);
-//	} else {
-	TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-								  id, false);
-//	}
-//	auto stop = high_resolution_clock::now();
-
-//	auto duration = duration_cast<microseconds>(stop - start);
-
-// 	std::cout << "Total time: " <<  duration.count() << std::endl;
-
-
+//		                              id, info.context.csr_list[id]->w_double);
+	}
 }
 
 static unique_ptr<FunctionData> CheapestPathBind(ClientContext &context, ScalarFunction &bound_function,
@@ -220,10 +163,10 @@ static unique_ptr<FunctionData> CheapestPathBind(ClientContext &context, ScalarF
 	}
 	string file_name;
 
-	if (context.csr_list[id]->w.empty()) { // TODO add to this
-		bound_function.return_type = LogicalType::DOUBLE;
-	} else {
+	if (!context.csr_list[id]->w_bigint.empty()) {
 		bound_function.return_type = LogicalType::BIGINT;
+	} else if (!context.csr_list[id]->w_double.empty()) {
+		bound_function.return_type = LogicalType::DOUBLE;
 	}
 
 	return make_unique<CheapestPathBindData>(context, file_name);
@@ -231,7 +174,6 @@ static unique_ptr<FunctionData> CheapestPathBind(ClientContext &context, ScalarF
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetCheapestPathFunction() {
 	ScalarFunctionSet set("cheapest_path");
-
 
 	set.AddFunction(ScalarFunction(
 	    {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},

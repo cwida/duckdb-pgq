@@ -8,7 +8,7 @@ statement ok
 CREATE TABLE Customer(cid bigint not null, name string);
 
 statement ok
-CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount decimal(10,0));
+CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount bigint);
 
 statement ok
 INSERT INTO Customer VALUES (197, 'A'), (201, 'B'), (343, 'C'), (406, 'D'), (101, 'E'), (807, 'F'), (404, 'G');
@@ -65,15 +65,11 @@ FROM
   JOIN Customer src ON t.from_id = src.cid
   JOIN Customer dst ON t.to_id = dst.cid
 
-
 statement ok
 CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 
 statement ok
 INSERT INTO src_dest VALUES(0, 7, 0, 3), (0, 7, 1, 2), (0, 7, 1, 0), (0, 7, 0, 2);
-
-statement ok
-PRAGMA enable_profiling;
 
 query T
 SELECT cheapest_path(0, v_size, src, dst) FROM src_dest;
@@ -83,336 +79,94 @@ SELECT cheapest_path(0, v_size, src, dst) FROM src_dest;
 NULL
 150
 
+statement ok
+pragma delete_csr=0
+
+statement error
+pragma delete_csr=0
+
+statement ok
+SELECT CREATE_CSR_VERTEX(
+0,
+v.vcount,
+sub.dense_id,
+sub.cnt
+) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub, (SELECT count(c.cid) as vcount FROM Customer c) v
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id , sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid))
+FROM
+  Transfers t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
 
 
+statement ok
+pragma delete_csr=0
 
-#query I
-#SELECT DISTINCT CREATE_CSR(
-#0,
-#v.vcount,
-#e.ecount,
-#sub.dense_id,
-#sub.cnt,
-#r.src,
-#r.dst
-#) AS numEdges
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub, (SELECT count(c.cid) as vcount FROM Customer c) v, (select count(w.from_id) as ecount FROM Transfers w) e,
-#        (SELECT src.rowid as src, dst.rowid as dst, t.amount as weight
-#            FROM Transfers t
-#            JOIN Customer src ON t.from_id = src.cid
-#            JOIN Customer dst ON t.to_id = dst.cid) r
-#    WHERE r.src = sub.dense_id;
-#----
-#{'id': 0, 'vertices': 7, 'edges': 10, 'weight': none}
+statement ok
+CREATE TABLE Transfers_f(tid bigint, from_id bigint, to_id bigint, amount double);
 
-#
-#statement ok
-#CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
-#
-#statement ok
-#INSERT INTO src_dest VALUES(0, 6, 0, 5), (0, 6, 0, 4), (0, 6, 5, 3), (0, 6, 0, 2), (0, 6, 2, 3), (0, 6, 1, 5), (0, 6, 3, 2), (0, 6, 0, 1) ;
+statement ok
+INSERT INTO Transfers_f VALUES
+  (955, 197, 201, 100.0),
+  (323, 197, 343, 300.1),
+  (124, 197, 807, 200.2),
+  (203, 201, 343, 50.3),
+  (123, 343, 406, 10.4),
+  (122, 343, 807, 50.5),
+  (321, 406, 343, 200.7),
+  (125, 406, 807, 20.6),
+  (127, 101, 406, 150.8),
+  (126, 807, 101, 100.9);
 
-#csr will be deleted after calling cheapest_path.
-#query T
-#SELECT cheapest_path(id, v_size, src, dst) FROM src_dest;
-#----
-#180
-#280
-#250
-#150
-#10
-#80
-#200
-#100
-#
-#statement ok
-#CREATE TABLE Transfers_float(tid bigint, from_id bigint, to_id bigint, amount double);
-#
-#
-#statement ok
-#INSERT INTO Transfers_float VALUES
-#  (955, 197, 201, 100.1),
-#  (323, 197, 343, 300.5),
-#  (124, 197, 807, 200.2),
-#  (203, 201, 343, 50.3),
-#  (123, 343, 406, 10.7),
-#  (122, 343, 807, 50.2),
-#  (321, 406, 343, 200.3),
-#  (125, 406, 807, 20.1),
-#  (127, 101, 406, 150.3),
-#  (126, 807, 101, 100.5);
-#
-#query I
-#SELECT DISTINCT CREATE_CSR(
-#0,
-#v.vcount,
-#sub.dense_id,
-#sub.cnt,
-#r.src,
-#r.dst,
-#r.weight
-#) AS numEdges
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers_float t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub,
-#    (SELECT count(c.cid) as vcount FROM Customer c) v,
-#    (SELECT src.rowid as src, dst.rowid as dst, t.amount as weight
-#        FROM Transfers_float t
-#        JOIN Customer src ON t.from_id = src.cid
-#        JOIN Customer dst ON t.to_id = dst.cid) r
-#    WHERE r.src = sub.dense_id;
-#----
-#{'id': 0, 'vertices': 7, 'edges': 10, 'weight': double}
-#
-#query I
-#SELECT DISTINCT CREATE_CSR(
-#1,
-#v.vcount,
-#sub.dense_id,
-#sub.cnt,
-#r.src,
-#r.dst,
-#r.weight
-#) AS numEdges
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers_float t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub,
-#    (SELECT count(c.cid) as vcount FROM Customer c) v,
-#    (SELECT src.rowid as src, dst.rowid as dst, t.amount as weight
-#        FROM Transfers_float t
-#        JOIN Customer src ON t.from_id = src.cid
-#        JOIN Customer dst ON t.to_id = dst.cid) r
-#    WHERE r.src = sub.dense_id;
-#----
-#{'id': 1, 'vertices': 7, 'edges': 10}
+statement ok
+SELECT CREATE_CSR_VERTEX(
+0,
+v.vcount,
+sub.dense_id,
+sub.cnt
+) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers_f t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub, (SELECT count(c.cid) as vcount FROM Customer c) v
 
-#SELECT
-#0 as id,
-#v.vcount,
-#sub.dense_id,
-#sub.cnt,
-#r.src,
-#r.dst,
-#r.weight
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub, (SELECT count(c.cid) as vcount FROM Customer c) v, (SELECT src.rowid as src, dst.rowid as dst, t.amount as weight
-#                                                            FROM Transfers t
-#                                                            JOIN Customer src ON t.from_id = src.cid
-#                                                            JOIN Customer dst ON t.to_id = dst.cid) r
-#                                                            WHERE r.src = sub.dense_id;
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id , sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers_f t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid, t.amount))
+FROM
+  Transfers_f t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
 
+statement error
+SELECT cheapest_path(0, v_size, src, dst) FROM src_dest;
 
-
-
-# statement ok
-# CREATE TABLE regex(s STRING, p STRING)
-
-# statement ok
-# INSERT INTO regex VALUES ('asdf', 'sd'), ('asdf', '^sd'), (NULL, '^sd'), ('asdf', NULL)
-
-# statement ok
-# CREATE SEQUENCE seq;
-
-# query R
-# SELECT AVG(nextval('seq'))
-# ----
-# 1
-
-
-# query T
-# SELECT regexp_matches(s, '.*') FROM regex
-# ----
-# 1
-# 1
-# NULL
-# 1
-
-# query T
-# SELECT regexp_matches(s, p) FROM regex
-# ----
-# 1
-# 0
-# NULL
-# NULL
-
-#statement ok
-#SELECT test_age(LIST_VALUE(25, 10)) t
-# statement ok
-# CREATE TABLE csr(a INTEGER, b INTEGER, c INTEGER)
-
-# statement ok
-# INSERT INTO csr VALUES (1,10, 0), (1,10, 2), (1,10, 3)
-#
-#statement ok
-#CREATE TABLE Customer(cid bigint not null, name string);
-#
-#statement ok
-#CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount bigint);
-#
-#statement ok
-#INSERT INTO Customer VALUES (173, 'A'), (478, 'B'), (297, 'C'), (869, 'D');
-#
-#statement ok
-#INSERT INTO Transfers VALUES
-#  (955, 173, 478, 150),
-#  (769, 173, 297, 50),
-#  (607, 478, 297, 250),
-#  (184, 297, 869, 350);
-#
-#statement ok
-#CREATE TABLE TestSerial(tid int)
-#
-#statement ok
-#INSERT INTO TestSerial VALUES(0), (1), (2)
-
-# query T
-# SELECT sum(CREATE_CSR_VERTEX(0, 3, tid)) 
-# FROM 
-# (SELECT tid from TestSerial) ts
-# ----
-# 3
-
-
-#query T
-#SELECT v.vcount FROM (SELECT count(c.cid) as vcount FROM Customer c) v
-#----
-#4
-
-
-# query T
-# SELECT sum(CREATE_CSR_VERTEX(0, 4, 
-# CAST (sub.dense_id AS INT) , CAST (sub.cnt AS INT))) AS numEdges
-# FROM (
-#     SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#     FROM Customer c  
-#     LEFT JOIN  Transfers t ON t.from_id = c.cid
-#     GROUP BY c.rowid
-# ) sub
-# ----
-# 4
-
-#query T
-#SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
-#sub.dense_id , sub.cnt)) AS numEdges
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub
-#----
-#4
-
-
-# (SELECT count(c.cid) as vcount FROM Customer c)
-
-
-#statement ok
-#SELECT CREATE_CSR_VERTEX(
-#0,
-#v.vcount,
-#sub.dense_id,
-#sub.cnt
-#) AS numEdges
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub,  (SELECT count(c.cid) as vcount FROM Customer c) v
-
-# SELECT sin((SELECT count(cid) as vcount FROM Customer c)), 
-# CAST(sub.dense_id AS INT), CAST(sub.cnt AS INT)
-# FROM (
-#     SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#     FROM Customer c  
-#     LEFT JOIN  Transfers t ON t.from_id = c.cid
-#     GROUP BY c.rowid
-# ) sub
-
-# SELECT CAST(v.vcount AS INT), 
-# CAST(sub.dense_id AS INT), CAST(sub.cnt AS INT)
-# FROM (
-#     SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#     FROM Customer c  
-#     LEFT JOIN  Transfers t ON t.from_id = c.cid
-#     GROUP BY c.rowid
-# ) sub, 
-# (SELECT count(c.cid) as vcount FROM Customer c) v
-
-# UNION SELECT v.vcount FROM (SELECT count(c.cid) as vcount FROM Customer c) v
-
-#statement ok
-#SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
-#CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
-#sub.dense_id , sub.cnt )) AS numEdges
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub) AS BIGINT),
-#src.rowid, dst.rowid ))
-#FROM
-#  Transfers t
-#  JOIN Customer src ON t.from_id = src.cid
-#  JOIN Customer dst ON t.to_id = dst.cid
-
-#statement ok
-#CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
-#
-#statement ok
-#INSERT INTO src_dest VALUES(0, 4, 0, 3), (0, 4, 1, 2), (0, 4, 1, 0), (0, 4, 0, 2);
-#
-##csr will be deleted after calling reachability.
-#query T
-#SELECT reachability(id, false, v_size, src, dst) FROM src_dest;
-#----
-#1
-#1
-#0
-#1
-
-# ----
-# 1
-
-# SELECT sum(CREATE_CSR_VERTEX(0, 5, CAST(sub.dense_id AS INT), CAST(sub.cnt AS INT))) AS numEdges
-# FROM (
-#     SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#     FROM Customer c  
-#     LEFT JOIN  Transfers t ON t.from_id = c.cid
-#     GROUP BY c.rowid
-# ) sub
-# (SELECT count(c.cid) FROM Customer c) AS INT)
-# (SELECT count(c.cid) FROM Customer c)
-
-# statement ok
-# SELECT CREATE_CSR_VERTEX(1, 10, 0 ,1 , 3)
-
-#statement ok
-#SELECT CREATE_CSR_VERTEX_TEST(10)
-
-#statement error
-#SELECT CREATE_CSR_VERTEX()
-
-
-#, LIST_VALUE(0, 1, 3))
-#SELECT LIST_VALUE(1,2,3)
-#
-
-# SELECT c.rowid as dense_id, count(t.from_id) as cnt FROM Customer c  LEFT JOIN  Transfers t ON t.from_id = c.cid GROUP BY c.rowid
+statement ok
+pragma delete_csr=0
