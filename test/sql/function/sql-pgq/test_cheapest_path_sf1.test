@@ -4,10 +4,13 @@ statement ok
 CREATE TABLE person(id BIGINT PRIMARY KEY);
 
 statement ok
-CREATE TABLE person_knows_person(source BIGINT NOT NULL, target BIGINT NOT NULL, weight decimal(17,0));
+CREATE TABLE person_knows_person(source BIGINT NOT NULL, target BIGINT NOT NULL, weight bigint);
 
 statement ok
 COPY person_knows_person FROM 'data/sqlpgq-testing/sf1/person_knows_person.csv' (FORMAT 'csv', DELIMITER ',');
+
+statement ok
+insert into person_knows_person select target, source, weight from person_knows_person
 
 statement ok
 COPY person FROM 'data/sqlpgq-testing/sf1/person.csv' (FORMAT 'csv', DELIMITER ',');
@@ -16,7 +19,7 @@ statement ok
 create table parameters (person1Id bigint, person2Id bigint);
 
 statement ok
-copy parameters from 'data/sqlpgq-testing/parameters/interactive-13.csv' (DELIMITER '|', HEADER);
+copy parameters from 'data/sqlpgq-testing/parameters/q13.csv' (DELIMITER '|', HEADER);
 
 statement ok
 SELECT CREATE_CSR_VERTEX(
