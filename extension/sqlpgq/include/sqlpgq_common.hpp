@@ -19,10 +19,11 @@ public:
 	CSRFunctionData(ClientContext &context, int32_t id, LogicalType weight_type);
 	unique_ptr<FunctionData> Copy() const override;
 	bool Equals(const FunctionData &other_p) const override;
-	static unique_ptr<FunctionData> VertexBind(ClientContext &context, ScalarFunction &bound_function,
+	static unique_ptr<FunctionData> CSRVertexBind(ClientContext &context, ScalarFunction &bound_function,
 	                                     vector<unique_ptr<Expression>> &arguments);
-
-public:
+	static unique_ptr<FunctionData> CSREdgeBind(ClientContext &context, ScalarFunction &bound_function,
+	                                                  vector<unique_ptr<Expression>> &arguments);
+	public:
 	ClientContext &context;
 	const int32_t id;
 	const LogicalType weight_type; // TODO Make sure type is LogicalType::SQLNULL when no type is provided
