@@ -24,6 +24,8 @@ class PreparedStatementData;
 class SchemaCatalogEntry;
 struct RandomEngine;
 
+
+
 struct ClientData {
 	ClientData(ClientContext &context);
 	~ClientData();
@@ -51,6 +53,11 @@ struct ClientData {
 
 	//! The file search path
 	string file_search_path;
+
+
+	//! Used to build the CSR data structures required for path-finding queries
+	std::unordered_map<int32_t, unique_ptr<Csr>> csr_list;
+	std::mutex csr_lock;
 
 public:
 	DUCKDB_API static ClientData &Get(ClientContext &context);
