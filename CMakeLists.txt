@@ -274,6 +274,7 @@ option(DISABLE_BUILTIN_EXTENSIONS "Disable linking extensions." FALSE)
 option(JDBC_DRIVER "Build the DuckDB JDBC driver" FALSE)
 option(BUILD_ODBC_DRIVER "Build the DuckDB ODBC driver" FALSE)
 option(BUILD_PYTHON "Build the DuckDB Python extension" FALSE)
+option(BUILD_SQLPGQ_EXTENSION "Build the SQL/PGQ DuckDB extension." FALSE)
 option(USER_SPACE "Build the DuckDB Python in the user space" FALSE)
 option(FORCE_QUERY_LOG "If enabled, all queries will be logged to the specified path" OFF)
 option(BUILD_SHELL "Build the DuckDB Shell and SQLite API Wrappers" TRUE)
@@ -310,6 +311,7 @@ if(BUILD_PYTHON
   set(BUILD_ICU_EXTENSION TRUE)
   set(BUILD_VISUALIZER_EXTENSION TRUE)
   set(BUILD_PARQUET_EXTENSION TRUE)
+  set(BUILD_SQLPGQ_EXTENSION TRUE)
 endif()
 
 if(BUILD_PYTHON)
@@ -317,6 +319,7 @@ if(BUILD_PYTHON)
   set(BUILD_TPCDS_EXTENSION TRUE)
   set(BUILD_FTS_EXTENSION TRUE)
   set(BUILD_EXCEL_EXTENSION TRUE)
+  set(BUILD_SQLPGQ_EXTENSION TRUE)
 endif()
 
 if (BUILD_BENCHMARKS)
@@ -574,6 +577,11 @@ function(add_extension_definitions)
     add_definitions(-DBUILD_JSON_EXTENSION=${BUILD_JSON_EXTENSION})
   endif()
 
+  if(${BUILD_SQLPGQ_EXTENSION})
+    include_directories(${PROJECT_SOURCE_DIR}/extension/sqlpgq/include)
+    add_definitions(-DBUILD_SQLPGQ_EXTENSION=${BUILD_SQLPGQ_EXTENSION})
+  endif()
+
   if(${BUILD_JEMALLOC_EXTENSION})
     include_directories(${PROJECT_SOURCE_DIR}/extension/jemalloc/include)
     add_definitions(-DBUILD_JEMALLOC_EXTENSION=${BUILD_JEMALLOC_EXTENSION})
@@ -626,6 +634,10 @@ function(add_extension_dependencies LIBRARY)
 
   if(${BUILD_JSON_EXTENSION})
     add_dependencies(${LIBRARY} json_extension)
+  endif()
+
+  if(${BUILD_SQLPGQ_EXTENSION})
+    add_dependencies(${LIBRARY} sqlpgq_extension)
   endif()
 
   if(${BUILD_JEMALLOC_EXTENSION})
@@ -687,6 +699,10 @@ function(link_extension_libraries LIBRARY)
 
   if(${BUILD_JSON_EXTENSION})
     target_link_libraries(${LIBRARY} json_extension)
+  endif()
+
+  if (${BUILD_SQLPGQ_EXTENSION})
+    target_link_libraries(${LIBRARY} sqlpgq_extension)
   endif()
 
   if(${BUILD_EXCEL_EXTENSION})
