@@ -12,6 +12,7 @@
 #include "duckdb/common/enums/output_type.hpp"
 #include "duckdb/common/types/value.hpp"
 #include "duckdb/common/unordered_map.hpp"
+#include "duckdb/common/compressed_sparse_row.h"
 
 namespace duckdb {
 class BufferedFileWriter;
@@ -22,6 +23,7 @@ class QueryProfiler;
 class QueryProfilerHistory;
 class PreparedStatementData;
 class SchemaCatalogEntry;
+class CSR;
 struct RandomEngine;
 
 
@@ -56,7 +58,7 @@ struct ClientData {
 
 
 	//! Used to build the CSR data structures required for path-finding queries
-	std::unordered_map<int32_t, unique_ptr<Csr>> csr_list;
+	std::unordered_map<int32_t, unique_ptr<CSR>> csr_list;
 	std::mutex csr_lock;
 
 public:
