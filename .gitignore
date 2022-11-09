@@ -296,6 +296,7 @@ docs
 # tests
 test/test.sql
 duckdb_benchmark_data/
+data/sqlpgq-testing/graphalytics
 
 # SQLite logic tests
 test/evidence/
@@ -342,3 +343,4 @@ zig-cache/*
 
 # .db files
 *.db
+/data/sqlpgq-testing/graphalytics/
