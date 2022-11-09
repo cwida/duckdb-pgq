@@ -24,6 +24,7 @@
 #include "duckdb/main/client_config.hpp"
 #include "duckdb/main/external_dependencies.hpp"
 #include "duckdb/common/preserved_error.hpp"
+#include "duckdb/common/compressed_sparse_row.h"
 
 namespace duckdb {
 class Appender;
@@ -185,6 +186,8 @@ public:
 	DUCKDB_API unordered_set<string> GetTableNames(const string &query);
 
 	DUCKDB_API ClientProperties GetClientProperties() const;
+
+
 
 private:
 	//! Parse statements and resolve pragmas from a query
