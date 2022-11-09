@@ -17,7 +17,8 @@ bool CSRFunctionData::Equals(const FunctionData &other_p) const {
 	auto &other = (const CSRFunctionData &)other_p;
 	return id == other.id && weight_type == other.weight_type;
 }
-unique_ptr<FunctionData> CSRFunctionData::VertexBind(ClientContext &context, ScalarFunction &bound_function,
+
+unique_ptr<FunctionData> CSRFunctionData::CSRVertexBind(ClientContext &context, ScalarFunction &bound_function,
                                                      vector<unique_ptr<Expression>> &arguments) {
 	if (!arguments[0]->IsFoldable()) {
 		throw InvalidInputException("Id must be constant.");
@@ -32,9 +33,18 @@ unique_ptr<FunctionData> CSRFunctionData::VertexBind(ClientContext &context, Sca
 	}
 }
 
-static unique_ptr<FunctionData> CreateCsrVertexBind(ClientContext &context, ScalarFunction &bound_function,
-                                                    vector<unique_ptr<Expression>> &arguments) {
-
+unique_ptr<FunctionData> CSRFunctionData::CSREdgeBind(ClientContext &context, ScalarFunction &bound_function,
+                                                  vector<unique_ptr<Expression>> &arguments) {
+	if (!arguments[0]->IsFoldable()) {
+		throw InvalidInputException("Id must be constant.");
+	}
+	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
+	if (arguments.size() == 6) {
+		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[5]->return_type);
+	} else {
+		auto logical_type = LogicalType::SQLNULL;
+		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
+	}
 }
 
 } // namespace duckdb

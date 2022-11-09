@@ -167,19 +167,19 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 	return;
 }
 
-static unique_ptr<FunctionData> CreateCsrEdgeBind(ClientContext &context, ScalarFunction &bound_function,
-                                                  vector<unique_ptr<Expression>> &arguments) {
-	if (!arguments[0]->IsFoldable()) {
-		throw InvalidInputException("Id must be constant.");
-	}
-	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
-	if (arguments.size() == 6) {
-		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[5]->return_type);
-	} else {
-		auto logical_type = LogicalType::SQLNULL;
-		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
-	}
-}
+//static unique_ptr<FunctionData> CreateCsrEdgeBind(ClientContext &context, ScalarFunction &bound_function,
+//                                                  vector<unique_ptr<Expression>> &arguments) {
+//	if (!arguments[0]->IsFoldable()) {
+//		throw InvalidInputException("Id must be constant.");
+//	}
+//	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
+//	if (arguments.size() == 6) {
+//		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[5]->return_type);
+//	} else {
+//		auto logical_type = LogicalType::SQLNULL;
+//		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
+//	}
+//}
 
 // static unique_ptr<FunctionData> CreateCsrWeightBind(ClientContext &context, ScalarFunction &bound_function,
 //                                                     vector<unique_ptr<Expression>> &arguments) {
@@ -190,20 +190,20 @@ static unique_ptr<FunctionData> CreateCsrEdgeBind(ClientContext &context, Scalar
 //	return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), true);
 // }
 
-static unique_ptr<FunctionData> CreateCsrVertexBind(ClientContext &context, ScalarFunction &bound_function,
-                                                    vector<unique_ptr<Expression>> &arguments) {
-	if (!arguments[0]->IsFoldable()) {
-		throw InvalidInputException("Id must be constant.");
-	}
-
-	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
-	if (arguments.size() == 4) {
-		auto logical_type = LogicalType::SQLNULL;
-		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
-	} else {
-		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[3]->return_type);
-	}
-}
+//static unique_ptr<FunctionData> CreateCsrVertexBind(ClientContext &context, ScalarFunction &bound_function,
+//                                                    vector<unique_ptr<Expression>> &arguments) {
+//	if (!arguments[0]->IsFoldable()) {
+//		throw InvalidInputException("Id must be constant.");
+//	}
+//
+//	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
+//	if (arguments.size() == 4) {
+//		auto logical_type = LogicalType::SQLNULL;
+//		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
+//	} else {
+//		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[3]->return_type);
+//	}
+//}
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetCsrVertexFunction() {
 	ScalarFunctionSet set("create_csr_vertex");
