@@ -30,6 +30,10 @@ if(${BUILD_JSON_EXTENSION})
   add_subdirectory(json)
 endif()
 
+if(${BUILD_SQLPGQ_EXTENSION})
+  add_subdirectory(sqlpgq)
+endif()
+
 if(${BUILD_JEMALLOC_EXTENSION})
   add_subdirectory(jemalloc)
 endif()

@@ -1,0 +1,158 @@
+#include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
+#include "duckdb/main/client_context.hpp"
+#include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/planner/expression/bound_function_expression.hpp"
+#include "sqlpgq_functions.hpp"
+
+namespace duckdb {
+
+struct IterativeLengthBindData : public FunctionData {
+	ClientContext &context;
+	string file_name;
+
+	IterativeLengthBindData(ClientContext &context, string &file_name) : context(context), file_name(file_name) {
+	}
+
+	unique_ptr<FunctionData> Copy() override {
+		return make_unique<IterativeLengthBindData>(context, file_name);
+	}
+};
+
+static bool IterativeLength(int64_t v_size, int64_t *v, vector<int64_t> &e, vector<std::bitset<LANE_LIMIT>> &seen,
+                            vector<std::bitset<LANE_LIMIT>> &visit, vector<std::bitset<LANE_LIMIT>> &next) {
+	bool change = false;
+	for (auto i = 0; i < v_size; i++) {
+		next[i] = 0;
+	}
+	for (auto i = 0; i < v_size; i++) {
+		if (visit[i].any()) {
+			for (auto offset = v[i]; offset < v[i + 1]; offset++) {
+				auto n = e[offset];
+				next[n] = next[n] | visit[i];
+			}
+		}
+	}
+	for (auto i = 0; i < v_size; i++) {
+		next[i] = next[i] & ~seen[i];
+		seen[i] = seen[i] | next[i];
+		change |= next[i].any();
+	}
+	return change;
+}
+
+static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &func_expr = (BoundFunctionExpression &)state.expr;
+	auto &info = (IterativeLengthBindData &)*func_expr.bind_info;
+
+	// get csr info (TODO: do not store in context -- make global map in module that is indexed by id+&context)
+	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
+	D_ASSERT(info.context.csr_list[id]);
+	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
+	int64_t *v = (int64_t *)info.context.csr_list[id]->v;
+	vector<int64_t> &e = info.context.csr_list[id]->e;
+
+	// get src and dst vectors for searches
+	auto &src = args.data[2];
+	auto &dst = args.data[3];
+	VectorData vdata_src;
+	VectorData vdata_dst;
+	src.Orrify(args.size(), vdata_src);
+	dst.Orrify(args.size(), vdata_dst);
+	auto src_data = (int64_t *)vdata_src.data;
+	auto dst_data = (int64_t *)vdata_dst.data;
+
+	// create result vector
+	result.SetVectorType(VectorType::FLAT_VECTOR);
+	auto result_data = FlatVector::GetData<int64_t>(result);
+
+	// create temp SIMD arrays
+	vector<std::bitset<LANE_LIMIT>> seen(v_size);
+	vector<std::bitset<LANE_LIMIT>> visit1(v_size);
+	vector<std::bitset<LANE_LIMIT>> visit2(v_size);
+
+	// maps lane to search number
+	short lane_to_num[LANE_LIMIT];
+	for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+		lane_to_num[lane] = -1; // inactive
+	}
+
+	idx_t started_searches = 0;
+	while (started_searches < args.size()) {
+
+		// empty visit vectors
+		for (auto i = 0; i < v_size; i++) {
+			seen[i] = 0;
+			visit1[i] = 0;
+		}
+
+		// add search jobs to free lanes
+		uint64_t active = 0;
+		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+			lane_to_num[lane] = -1;
+			while (started_searches < args.size()) {
+				int64_t search_num = started_searches++;
+				int64_t src_pos = vdata_src.sel->get_index(search_num);
+                int64_t dst_pos = vdata_dst.sel->get_index(search_num);
+                if (!vdata_src.validity.RowIsValid(src_pos)) {
+					result_data[search_num] = (uint64_t)-1; /* no path */
+				} else if (src_data[src_pos] == dst_data[dst_pos]) {
+                    result_data[search_num] = (uint64_t) 0;// path of length 0 does not require a search
+                } else {
+					visit1[src_data[src_pos]][lane] = 1;
+					lane_to_num[lane] = search_num; // active lane
+					active++;
+					break;
+				}
+			}
+		}
+
+		// make passes while a lane is still active
+		for (int64_t iter = 1; active; iter++) {
+//            std::cout << "Single direction iteration: " << iter << std::endl;
+
+            if (!IterativeLength(v_size, v, e, seen, (iter&1)?visit1:visit2, (iter&1)?visit2:visit1)) {
+				break;
+			}
+			// detect lanes that finished
+			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+				int64_t search_num = lane_to_num[lane];
+				if (search_num >= 0) { // active lane
+					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
+					if (seen[dst_data[dst_pos]][lane]) {
+						result_data[search_num] = iter; /* found at iter => iter = path length */
+						lane_to_num[lane] = -1;         // mark inactive
+						active--;
+					}
+				}
+			}
+		}
+		// no changes anymore: any still active searches have no path
+		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+			int64_t search_num = lane_to_num[lane];
+			if (search_num >= 0) {                     // active lane
+				result_data[search_num] = (int64_t)-1; /* no path */
+				lane_to_num[lane] = -1;                // mark inactive
+			}
+		}
+	}
+}
+
+static unique_ptr<FunctionData> IterativeLengthBind(ClientContext &context, ScalarFunction &bound_function,
+                                                    vector<unique_ptr<Expression>> &arguments) {
+	string file_name;
+	if (arguments.size() == 5) {
+		file_name = ExpressionExecutor::EvaluateScalar(*arguments[4]).GetValue<string>();
+	} else {
+		file_name = "timings-test.txt";
+	}
+	return make_unique<IterativeLengthBindData>(context, file_name);
+}
+
+CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLengthFunction() {
+	auto fun = ScalarFunction("iterativelength",
+	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
+	                          LogicalType::BIGINT, IterativeLengthFunction, false, IterativeLengthBind);
+	return CreateScalarFunctionInfo(fun);
+}
+
+} // namespace duckdb
