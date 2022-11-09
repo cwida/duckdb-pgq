@@ -6,6 +6,7 @@
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "sqlpgq_functions.hpp"
+#include "sqlpgq_common.hpp"
 
 #include <chrono>
 #include <mutex>
@@ -13,19 +14,7 @@
 
 namespace duckdb {
 
-struct CsrBindData : public FunctionData {
-	ClientContext &context;
-	int32_t id;
-	LogicalType weight_type = LogicalType::SQLNULL;
 
-	CsrBindData(ClientContext &context, int32_t id, LogicalType &weight_type)
-	    : context(context), id(id), weight_type(weight_type) {
-	}
-
-	unique_ptr<FunctionData> Copy() override {
-		return make_unique<CsrBindData>(context, id, weight_type);
-	}
-};
 
 static void CsrInitializeVertex(ClientContext &context, int32_t id, int64_t v_size) {
 	lock_guard<mutex> csr_init_lock(context.csr_lock);
@@ -106,7 +95,7 @@ static void CsrInitializeWeight(ClientContext &context, int32_t id, int64_t v_si
 
 static void CreateCsrVertexFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	auto &info = (CsrBindData &)*func_expr.bind_info;
+	auto &info = (CSRFunctionData &)*func_expr.bind_info;
 
 	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
 	auto csr_entry = info.context.csr_list.find(info.id);
@@ -133,7 +122,7 @@ static void CreateCsrVertexFunction(DataChunk &args, ExpressionState &state, Vec
 
 static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	auto &info = (CsrBindData &)*func_expr.bind_info;
+	auto &info = (CSRFunctionData &)*func_expr.bind_info;
 
 	int64_t vertex_size = args.data[1].GetValue(0).GetValue<int64_t>();
 	int64_t edge_size = args.data[2].GetValue(0).GetValue<int64_t>();
@@ -185,10 +174,10 @@ static unique_ptr<FunctionData> CreateCsrEdgeBind(ClientContext &context, Scalar
 	}
 	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
 	if (arguments.size() == 6) {
-		return make_unique<CsrBindData>(context, id.GetValue<int32_t>(), arguments[5]->return_type);
+		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[5]->return_type);
 	} else {
 		auto logical_type = LogicalType::SQLNULL;
-		return make_unique<CsrBindData>(context, id.GetValue<int32_t>(), logical_type);
+		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
 	}
 }
 
@@ -198,7 +187,7 @@ static unique_ptr<FunctionData> CreateCsrEdgeBind(ClientContext &context, Scalar
 //		throw InvalidInputException("Id must be constant.");
 //	}
 //	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
-//	return make_unique<CsrBindData>(context, id.GetValue<int32_t>(), true);
+//	return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), true);
 // }
 
 static unique_ptr<FunctionData> CreateCsrVertexBind(ClientContext &context, ScalarFunction &bound_function,
@@ -210,9 +199,9 @@ static unique_ptr<FunctionData> CreateCsrVertexBind(ClientContext &context, Scal
 	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
 	if (arguments.size() == 4) {
 		auto logical_type = LogicalType::SQLNULL;
-		return make_unique<CsrBindData>(context, id.GetValue<int32_t>(), logical_type);
+		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
 	} else {
-		return make_unique<CsrBindData>(context, id.GetValue<int32_t>(), arguments[3]->return_type);
+		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[3]->return_type);
 	}
 }
 
@@ -222,17 +211,7 @@ CreateScalarFunctionInfo SQLPGQFunctions::GetCsrVertexFunction() {
 	set.AddFunction(ScalarFunction(
 	    "create_csr_vertex", {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
 	    LogicalType::BIGINT, CreateCsrVertexFunction, false, CreateCsrVertexBind));
-	//	set.AddFunction(ScalarFunction(
-	//	    "create_csr_vertex",
-	//	    {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	//	    LogicalType::BIGINT, CreateCsrVertexFunction, false, CreateCsrVertexBind));
-	//	set.AddFunction(ScalarFunction(
-	//	    "create_csr_vertex",
-	//	    {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::DOUBLE},
-	//	    LogicalType::BIGINT, CreateCsrVertexFunction, false, CreateCsrVertexBind));
-	//	//	auto fun = ScalarFunction("create_csr_vertex",
-	//	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	//	                          LogicalType::BIGINT, CreateCsrVertexFunction, false, CreateCsrVertexBind);
+
 	return CreateScalarFunctionInfo(set);
 }
 
@@ -250,23 +229,5 @@ CreateScalarFunctionInfo SQLPGQFunctions::GetCsrEdgeFunction() {
 
 	return CreateScalarFunctionInfo(set);
 }
-
-// CreateScalarFunctionInfo SQLPGQFunctions::GetCsrFunction() {
-//	ScalarFunctionSet set("create_csr");
-//
-//	set.AddFunction(ScalarFunction( //! Simplified unweighted
-//	    {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-//	    LogicalTypeId::BIGINT, CreateCsrFunction, false, CreateCsrBind
-//	    ));
-//	set.AddFunction(ScalarFunction( //! Simplified weighted integers
-//	    {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT,
-// LogicalType::BIGINT}, 	    LogicalTypeId::BIGINT, CreateCsrFunction, false, CreateCsrBind
-//	    ));
-//	set.AddFunction(ScalarFunction( //! Simplified weighted doubles
-//	    {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT,
-// LogicalType::DOUBLE}, 	    LogicalTypeId::BIGINT, CreateCsrFunction, false, CreateCsrBind
-//	    ));
-//	return CreateScalarFunctionInfo(set);
-// }
 
 } // namespace duckdb
