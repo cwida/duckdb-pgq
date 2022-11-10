@@ -1,7 +1,3 @@
-//
-// Created by daniel on 19-4-22.
-//
-
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "sqlpgq_functions.hpp"
 #include "sqlpgq_common.hpp"
