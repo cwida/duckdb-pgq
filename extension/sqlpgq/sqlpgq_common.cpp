@@ -57,7 +57,7 @@ bool IterativeLengthFunctionData::Equals(const FunctionData &other_p) const {
 	return file_name == other.file_name;
 }
 
-static unique_ptr<FunctionData> IterativeLengthFunctionData::IterativeLengthBind(ClientContext &context, ScalarFunction &bound_function,
+unique_ptr<FunctionData> IterativeLengthFunctionData::IterativeLengthBind(ClientContext &context, ScalarFunction &bound_function,
                                                     vector<unique_ptr<Expression>> &arguments) {
 	string file_name;
 	if (arguments.size() == 5) {

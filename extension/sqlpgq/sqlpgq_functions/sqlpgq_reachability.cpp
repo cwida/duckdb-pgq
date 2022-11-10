@@ -1,23 +1,12 @@
-#include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/main/client_context.hpp"
-#include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/main/client_data.hpp"
+#include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
+#include "sqlpgq_common.hpp"
 #include "sqlpgq_functions.hpp"
 
 namespace duckdb {
 typedef enum { NO_ARRAY, ARRAY, INTERMEDIATE } msbfs_modes_t;
-
-struct ReachabilityBindData : public FunctionData {
-	ClientContext &context;
-	string file_name;
-
-	ReachabilityBindData(ClientContext &context, string &file_name) : context(context), file_name(file_name) {
-	}
-
-	unique_ptr<FunctionData> Copy() override {
-		return make_unique<ReachabilityBindData>(context, file_name);
-	}
-};
 
 static int16_t InitialiseBfs(idx_t curr_batch, idx_t size, int64_t *src_data, const SelectionVector *src_sel,
                              const ValidityMask &src_validity, vector<std::bitset<LANE_LIMIT>> &seen,
@@ -45,7 +34,7 @@ static int16_t InitialiseBfs(idx_t curr_batch, idx_t size, int64_t *src_data, co
 	return curr_batch_size;
 }
 
-static bool BfsWithoutArrayVariant(bool exit_early, int32_t id, int64_t input_size, ReachabilityBindData &info,
+static bool BfsWithoutArrayVariant(bool exit_early, int32_t id, int64_t input_size, IterativeLengthFunctionData &info,
                                    vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                                    vector<std::bitset<LANE_LIMIT>> &visit_next, vector<int64_t> &visit_list) {
 	for (int64_t i = 0; i < input_size; i++) {
@@ -53,10 +42,10 @@ static bool BfsWithoutArrayVariant(bool exit_early, int32_t id, int64_t input_si
 			continue;
 		}
 
-		D_ASSERT(info.context.csr_list[id]);
-		for (auto index = (int64_t)info.context.csr_list[id]->v[i]; index < info.context.csr_list[id]->v[i + 1];
+		D_ASSERT(info.context.client_data->csr_list[id]);
+		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i]; index < info.context.client_data->csr_list[id]->v[i + 1];
 		     index++) {
-			auto n = info.context.csr_list[id]->e[index];
+			auto n = info.context.client_data->csr_list[id]->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
 	}
@@ -85,10 +74,10 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Cli
 			continue;
 		}
 
-		D_ASSERT(context.csr_list[id]);
-		for (auto index = (int64_t)context.csr_list[id]->v[i]; index < (int64_t)context.csr_list[id]->v[i + 1];
+		D_ASSERT(context.client_data->csr_list[id]);
+		for (auto index = (int64_t)context.client_data->csr_list[id]->v[i]; index < (int64_t)context.client_data->csr_list[id]->v[i + 1];
 		     index++) {
-			auto n = context.csr_list[id]->e[index];
+			auto n = context.client_data->csr_list[id]->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
 	}
@@ -107,7 +96,7 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Cli
 }
 
 static pair<bool, size_t> BfsTempStateVariant(bool exit_early, int32_t id, int64_t input_size,
-                                              ReachabilityBindData &info, vector<std::bitset<LANE_LIMIT>> &seen,
+                                              IterativeLengthFunctionData &info, vector<std::bitset<LANE_LIMIT>> &seen,
                                               vector<std::bitset<LANE_LIMIT>> &visit,
                                               vector<std::bitset<LANE_LIMIT>> &visit_next) {
 	size_t num_nodes_to_visit = 0;
@@ -116,10 +105,10 @@ static pair<bool, size_t> BfsTempStateVariant(bool exit_early, int32_t id, int64
 			continue;
 		}
 
-		D_ASSERT(info.context.csr_list[id]);
-		for (auto index = (int64_t)info.context.csr_list[id]->v[i];
-		     index < (int64_t)info.context.csr_list[id]->v[i + 1]; index++) {
-			auto n = info.context.csr_list[id]->e[index];
+		D_ASSERT(info.context.client_data->csr_list[id]);
+		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i];
+		     index < (int64_t)info.context.client_data->csr_list[id]->v[i + 1]; index++) {
+			auto n = info.context.client_data->csr_list[id]->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
 	}
@@ -140,15 +129,15 @@ static pair<bool, size_t> BfsTempStateVariant(bool exit_early, int32_t id, int64
 	return pair<bool, size_t>(exit_early, num_nodes_to_visit);
 }
 
-static bool BfsWithArrayVariant(bool exit_early, int32_t id, ReachabilityBindData &info,
+static bool BfsWithArrayVariant(bool exit_early, int32_t id, IterativeLengthFunctionData &info,
                                 vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                                 vector<std::bitset<LANE_LIMIT>> &visit_next, vector<int64_t> &visit_list) {
 	unordered_set<int64_t> neighbours_set;
 	for (int64_t i : visit_list) {
-		D_ASSERT(info.context.csr_list[id]);
-		for (auto index = (int64_t)info.context.csr_list[id]->v[i];
-		     index < (int64_t)info.context.csr_list[id]->v[i + 1]; index++) {
-			auto n = info.context.csr_list[id]->e[index];
+		D_ASSERT(info.context.client_data->csr_list[id]);
+		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i];
+		     index < (int64_t)info.context.client_data->csr_list[id]->v[i + 1]; index++) {
+			auto n = info.context.client_data->csr_list[id]->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 			neighbours_set.insert(n);
 		}
@@ -182,7 +171,7 @@ static int FindMode(int mode, size_t visit_list_len, size_t visit_limit, size_t 
 
 static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	auto &info = (ReachabilityBindData &)*func_expr.bind_info;
+	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
 	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
 	bool is_variant = args.data[1].GetValue(0).GetValue<bool>();
@@ -190,13 +179,13 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 
 	auto &src = args.data[3];
 
-	VectorData vdata_src, vdata_target;
-	src.Orrify(args.size(), vdata_src);
+	UnifiedVectorFormat vdata_src, vdata_target;
+	src.ToUnifiedFormat(args.size(), vdata_src);
 
 	auto src_data = (int64_t *)vdata_src.data;
 
 	auto &target = args.data[4];
-	target.Orrify(args.size(), vdata_target);
+	target.ToUnifiedFormat(args.size(), vdata_target);
 	auto target_data = (int64_t *)vdata_target.data;
 
 	idx_t result_size = 0;
@@ -266,25 +255,12 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 	}
 }
 
-static unique_ptr<FunctionData> ReachabilityBind(ClientContext &context, ScalarFunction &bound_function,
-                                                 vector<unique_ptr<Expression>> &arguments) {
-	string file_name;
-	if (arguments.size() == 6) {
-		// if(args.data[5].){
-		file_name = ExpressionExecutor::EvaluateScalar(*arguments[5]).GetValue<string>();
-		// file_name = arguments[5].GetValue(0).GetValue<string>()
-
-	} else {
-		file_name = "timings-test.txt";
-	}
-	return make_unique<ReachabilityBindData>(context, file_name);
-}
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetReachabilityFunction() {
 	auto fun = ScalarFunction(
 	    "reachability",
 	    {LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	    LogicalType::BOOLEAN, ReachabilityFunction, false, ReachabilityBind);
+	    LogicalType::BOOLEAN, ReachabilityFunction, IterativeLengthFunctionData::IterativeLengthBind);
 	return CreateScalarFunctionInfo(fun);
 }
 
