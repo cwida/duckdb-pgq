@@ -1,0 +1,17 @@
+require sqlpgq
+
+statement ok
+CREATE TABLE v (id INTEGER)
+
+statement ok
+CREATE TABLE e (source INTEGER, target INTEGER)
+
+statement ok
+COPY v FROM '/home/daniel/git/duckdb/data/graphalytics/v.parquet' (FORMAT 'parquet');
+
+statement ok
+COPY e FROM '/home/daniel/git/duckdb/data/graphalytics/e.parquet' (FORMAT 'parquet');
+
+
+
+
