@@ -59,6 +59,13 @@
 #define JSON_STATICALLY_LOADED false
 #endif
 
+#if defined(BUILD_SQLPGQ_EXTENSION) && !defined(DISABLE_BUILTIN_EXTENSIONS)
+#define SQLPGQ_STATICALLY_LOADED true
+#include "sqlpgq-extension.hpp"
+#else
+#define SQLPGQ_STATICALLY_LOADED false
+#endif
+
 #if defined(BUILD_JEMALLOC_EXTENSION) && !defined(DISABLE_BUILTIN_EXTENSIONS)
 #define JEMALLOC_STATICALLY_LOADED true
 #include "jemalloc-extension.hpp"
@@ -91,6 +98,7 @@ static DefaultExtension internal_extensions[] = {
     {"fts", "Adds support for Full-Text Search Indexes", FTS_STATICALLY_LOADED},
     {"httpfs", "Adds support for reading and writing files over a HTTP(S) connection", HTTPFS_STATICALLY_LOADED},
     {"json", "Adds support for JSON operations", JSON_STATICALLY_LOADED},
+    {"sqlpgq", "Adds support for SQL/PGQ", SQLPGQ_STATICALLY_LOADED},
     {"jemalloc", "Overwrites system allocator with JEMalloc", JEMALLOC_STATICALLY_LOADED},
     {"sqlite_scanner", "Adds support for reading SQLite database files", false},
     {"postgres_scanner", "Adds support for reading from a Postgres database", false},
@@ -114,7 +122,7 @@ DefaultExtension ExtensionHelper::GetDefaultExtension(idx_t index) {
 //===--------------------------------------------------------------------===//
 void ExtensionHelper::LoadAllExtensions(DuckDB &db) {
 	unordered_set<string> extensions {"parquet",    "icu",  "tpch",  "tpcds",    "fts",  "httpfs",
-	                                  "visualizer", "json", "excel", "sqlsmith", "inet", "jemalloc"};
+	                                  "visualizer", "json", "excel", "sqlsmith", "inet", "jemalloc", "sqlpgq"};
 	for (auto &ext : extensions) {
 		LoadExtensionInternal(db, ext, true);
 	}
@@ -216,6 +224,13 @@ ExtensionLoadResult ExtensionHelper::LoadExtensionInternal(DuckDB &db, const std
 		db.LoadExtension<JEMallocExtension>();
 #else
 		// jemalloc extension required but not build: skip this test
+		return ExtensionLoadResult::NOT_LOADED;
+#endif
+	} else if (extension == "sqlpgq") {
+#if defined(BUILD_SQLPGQ_EXTENSION) && !defined(DISABLE_BUILTIN_EXTENSIONS)
+		db.LoadExtension<SQLPGQExtension>();
+#else
+		// SQL/PGQ extension required but not build: skip this test
 		return ExtensionLoadResult::NOT_LOADED;
 #endif
 	} else if (extension == "inet") {

@@ -1,0 +1,82 @@
+require sqlpgq
+
+require parquet
+
+statement ok
+CREATE TABLE v AS SELECT * FROM read_parquet('data/sqlpgq-testing/graphalytics/v.parquet');
+
+statement ok
+CREATE TABLE e AS SELECT * FROM read_parquet('data/sqlpgq-testing/graphalytics/e.parquet');
+
+statement ok
+CREATE TEMP TABLE PersonKnows AS (SELECT DISTINCT r.Person1id as id
+                                    FROM ((SELECT source as Person1id
+                                            FROM e)
+                                          UNION ALL
+                                          (SELECT target AS Person1id
+                                           FROM e)) r
+                                    ORDER BY id);
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM PersonKnows c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.id) as vcount FROM PersonKnows c),
+sub.dense_id, sub.cnt)) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.source) as cnt
+    FROM PersonKnows c
+    LEFT JOIN e t ON t.source = c.id
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid))
+FROM
+  e t
+  JOIN PersonKnows src ON t.source = src.id
+  JOIN PersonKnows dst ON t.target = dst.id;
+
+statement ok
+create temp table results
+(
+    Person1id bigint,
+    Person2id bigint,
+    weight bigint
+);
+
+statement ok
+create temp table all_options
+(
+    Person1id bigint,
+    Person1rowid bigint,
+    Person2id bigint,
+    Person2rowid bigint
+);
+
+statement ok
+CREATE TABLE src_dst_pairs (src bigint NOT NULL, dst bigint NOT NULL);
+
+statement ok
+INSERT INTO src_dst_pairs (select (select * from v limit 1), * from v limit 10)
+
+statement ok
+INSERT INTO all_options(
+      SELECT
+        s1.id AS person1id, s1.rowid as person1rowid,
+        s2.id AS person2id, s2.rowid as person2rowid
+      FROM src_dst_pairs
+      JOIN personknows s1 ON s1.id = src_dst_pairs.src
+      JOIN personknows s2 ON s2.id = src_dst_pairs.dst
+);
+
+statement ok
+SELECT min(weight) FROM (
+    SELECT  p.person1id, p.person2id,
+            iterativelength(0, (SELECT count(*) FROM personKnows),
+                p.person1rowid, p.person2rowid) AS weight
+    FROM
+      (SELECT *
+       FROM all_options ao
+       WHERE (ao.rowid / 512) % 240 = 0
+      ) p
+);
+
+
+

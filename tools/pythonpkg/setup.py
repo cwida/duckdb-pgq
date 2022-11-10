@@ -57,7 +57,7 @@ class build_ext(CompilerLauncherMixin, _build_ext):
 
 lib_name = 'duckdb'
 
-extensions = ['parquet', 'icu', 'fts', 'tpch', 'tpcds', 'visualizer', 'json', 'excel']
+extensions = ['parquet', 'icu', 'fts', 'tpch', 'tpcds', 'visualizer', 'json', 'excel', 'sqlpgq']
 
 if platform.system() == 'Windows':
     extensions = ['parquet', 'icu', 'fts', 'tpch', 'json', 'excel']
@@ -143,6 +143,8 @@ if 'BUILD_HTTPFS' in os.environ:
 
 for ext in extensions:
     toolchain_args.extend(['-DBUILD_{}_EXTENSION'.format(ext.upper())])
+
+toolchain_args.extend(['-DEXTENSION_STATIC_BUILD'])
 
 class get_pybind_include(object):
     def __init__(self, user=False):
