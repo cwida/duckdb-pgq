@@ -1,0 +1,66 @@
+# name: test/sql/function/sql-pgq/test_weight_csr.test
+# group: [sql-pgq]
+statement ok
+CREATE TABLE Customer(cid bigint not null, name string);
+
+statement ok
+CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount bigint);
+
+statement ok
+INSERT INTO Customer VALUES (173, 'A'), (478, 'B'), (297, 'C'), (869, 'D');
+
+statement ok
+INSERT INTO Transfers VALUES
+  (955, 173, 478, 150),
+  (769, 173, 297, 50),
+  (607, 478, 297, 250),
+  (184, 297, 869, 350);
+
+statement ok
+SELECT CREATE_CSR_VERTEX(
+0,
+v.vcount,
+sub.dense_id,
+sub.cnt
+) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub,  (SELECT count(c.cid) as vcount FROM Customer c) v
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id , sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid ))
+FROM
+  Transfers t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
+
+statement ok
+SELECT min(CREATE_CSR_WEIGHT(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id, sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid, t.amount ))
+FROM
+  Transfers t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
+
+#
+#

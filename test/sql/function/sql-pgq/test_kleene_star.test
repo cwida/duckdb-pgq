@@ -1,0 +1,60 @@
+# name: test/sql/function/sql-pgq/test_kleene_star.test
+# group: [sql-pgq]
+# # name: test/sql/function/sql-pgq/test_kleene_star.test
+# # description: Test match query with star
+# # group: [sql-pgq]
+
+# statement ok
+# CREATE TABLE Customer(cid bigint not null, name string);
+
+# statement ok
+# CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount bigint);
+
+# statement ok
+# INSERT INTO Customer VALUES (173, 'A'), (478, 'B'), (297, 'C'), (869, 'D');
+
+# statement ok
+# INSERT INTO Transfers VALUES
+#   (955, 173, 478, 150),
+#   (769, 173, 297, 50),
+#   (607, 478, 297, 250),
+#   (184, 297, 869, 350);
+
+# statement ok
+# CREATE PROPERTY GRAPH aml 
+# VERTEX TABLES ( customer KEY ( CID ) LABEL customer )
+# EDGE TABLES ( transfers KEY ( from_id ) SOURCE KEY ( from_id ) REFERENCES customer DESTINATION KEY ( to_id ) REFERENCES customer LABEL transfers )
+
+
+# # statement ok
+# # SELECT CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c), 
+# # sub.dense_id , sub.cnt ) 
+# # FROM (
+# #     SELECT c.rowid as dense_id, count(t.from_id) as cnt
+# #     FROM Customer c  
+# #     LEFT JOIN  Transfers t ON t.from_id = c.cid
+# #     GROUP BY c.rowid
+# # ) sub
+
+# statement ok
+# select c1id, c2id 
+# from GRAPH_TABLE (aml, MATCH (c1 IS CUSTOMER)-[t1 IS TRANSFERS]->(c2 IS CUSTOMER) COLUMNS (c1.cid AS c1id, c2.cid AS c2id)) gt
+
+# query II rowsort
+# select gt.c1id, gt.c2id
+# from GRAPH_TABLE (aml, MATCH (c1 IS CUSTOMER)-[t1 IS TRANSFERS*]-(c2 IS CUSTOMER) COLUMNS (c1.cid AS c1id, c2.cid AS c2id)) gt
+# ----
+# 173	173			
+# 173	297
+# 173	478
+# 173	869
+# 297	297
+# 297	869
+# 478	297
+# 478	478
+# 478	869
+# 869	869
+# # 173	478
+# # 173	297
+# # 478	297
+# # 297	869

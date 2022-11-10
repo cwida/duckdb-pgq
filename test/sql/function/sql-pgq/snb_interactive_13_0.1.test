@@ -1,0 +1,72 @@
+# name: test/sql/function/sql-pgq/snb_interactive_13_0.1.test
+# group: [sql-pgq]
+require sqlpgq
+
+statement ok
+create table person as (select * from '/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf0.1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person/part-00000-d1080d9d-1782-43d9-9819-774e8996b943-c000.csv');
+
+statement ok
+create table person_knows_person as select * from read_csv_auto('/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf0.1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person_knows_Person/part-00000-ec450818-55f1-47df-90a7-b73b5c67649c-c000.csv') ;
+
+statement ok
+insert into person_knows_person (select creationdate, Person2id, Person1id from person_knows_person);
+
+query IIII
+select pk.person1id, p.rowid, pk.person2id, p2.rowid from person_knows_person pk join person p on p.id = pk.person1id join person p2 on p2.id = pk.person2id where p.rowid = 0 order by p.rowid, p2.rowid;
+----
+14	0	910	47
+14	0	8796093023077	437
+14	0	10995116278132	502
+14	0	10995116279024	554
+14	0	17592186044566	780
+14	0	21990232556617	1009
+14	0	26388279067210	1172
+14	0	28587302322542	1256
+14	0	35184372089798	1562
+
+statement ok
+CREATE TEMP TABLE PersonKnows AS (SELECT DISTINCT r.Person1id as id
+                                    FROM ((SELECT Person1id
+                                           FROM person_knows_person)
+                                          UNION ALL
+                                          (SELECT Person2id AS Person1id
+                                           FROM person_knows_person)) r
+                                    ORDER BY id);
+
+statement ok
+SELECT CREATE_CSR_VERTEX(
+0,
+v.vcount,
+sub.dense_id,
+sub.cnt
+) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.person1id) as cnt
+    FROM PersonKnows c
+    LEFT JOIN  Person_knows_Person t ON t.person1id = c.id
+    GROUP BY c.rowid
+) sub, (SELECT count(c.id) as vcount FROM PersonKnows c) v;
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM PersonKnows c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.id) as vcount FROM PersonKnows c),
+sub.dense_id, sub.cnt)) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.person1id) as cnt
+    FROM PersonKnows c
+    LEFT JOIN  Person_knows_Person t ON t.person1id = c.id
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid))
+FROM
+  Person_knows_Person t
+  JOIN PersonKnows src ON t.person1id = src.id
+  JOIN PersonKnows dst ON t.person2id = dst.id;
+
+
+query III
+SELECT s.id AS person1id, s2.id AS person2id, any_shortest_path(0, false, (SELECT count(*) FROM PersonKnows), s.rowid, s2.rowid) AS weight FROM
+(SELECT p.id, p.rowid FROM PersonKnows p WHERE p.id = 15393162790310) s,
+(SELECT p.id, p.rowid FROM PersonKnows p WHERE p.id = 2199023255851) s2
+----
+15393162790310	2199023255851	1
