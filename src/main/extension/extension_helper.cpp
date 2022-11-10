@@ -98,6 +98,7 @@ static DefaultExtension internal_extensions[] = {
     {"fts", "Adds support for Full-Text Search Indexes", FTS_STATICALLY_LOADED},
     {"httpfs", "Adds support for reading and writing files over a HTTP(S) connection", HTTPFS_STATICALLY_LOADED},
     {"json", "Adds support for JSON operations", JSON_STATICALLY_LOADED},
+    {"sqlpgq", "Adds support for SQL/PGQ", SQLPGQ_STATICALLY_LOADED},
     {"jemalloc", "Overwrites system allocator with JEMalloc", JEMALLOC_STATICALLY_LOADED},
     {"sqlite_scanner", "Adds support for reading SQLite database files", false},
     {"postgres_scanner", "Adds support for reading from a Postgres database", false},
@@ -121,7 +122,7 @@ DefaultExtension ExtensionHelper::GetDefaultExtension(idx_t index) {
 //===--------------------------------------------------------------------===//
 void ExtensionHelper::LoadAllExtensions(DuckDB &db) {
 	unordered_set<string> extensions {"parquet",    "icu",  "tpch",  "tpcds",    "fts",  "httpfs",
-	                                  "visualizer", "json", "excel", "sqlsmith", "inet", "jemalloc"};
+	                                  "visualizer", "json", "excel", "sqlsmith", "inet", "jemalloc", "sqlpgq"};
 	for (auto &ext : extensions) {
 		LoadExtensionInternal(db, ext, true);
 	}

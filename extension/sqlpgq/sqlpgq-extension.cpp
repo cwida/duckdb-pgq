@@ -2,10 +2,8 @@
 #include "sqlpgq-extension.hpp"
 
 #include "duckdb/catalog/catalog_entry/macro_catalog_entry.hpp"
-#include "duckdb/catalog/default/default_functions.hpp"
 #include "sqlpgq_functions.hpp"
 #include "duckdb.hpp"
-#include <iostream>
 
 namespace duckdb {
 
