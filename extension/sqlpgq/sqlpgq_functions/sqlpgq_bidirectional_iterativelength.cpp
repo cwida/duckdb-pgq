@@ -1,22 +1,12 @@
-#include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
-#include "duckdb/main/client_context.hpp"
 #include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/main/client_context.hpp"
+#include "duckdb/main/client_data.hpp"
+#include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
+#include "sqlpgq_common.hpp"
 #include "sqlpgq_functions.hpp"
 
 namespace duckdb {
-
-struct BidirectionalIterativeLengthBindData : public FunctionData {
-	ClientContext &context;
-	string file_name;
-
-    BidirectionalIterativeLengthBindData(ClientContext &context, string &file_name) : context(context), file_name(file_name) {
-	}
-
-	unique_ptr<FunctionData> Copy() override {
-		return make_unique<BidirectionalIterativeLengthBindData>(context, file_name);
-	}
-};
 
 static bool BidirectionalIterativeLength(int64_t v_size, int64_t *v, vector<int64_t> &e, vector<std::bitset<LANE_LIMIT>> &seen,
                             vector<std::bitset<LANE_LIMIT>> &visit, vector<std::bitset<LANE_LIMIT>> &next) {
@@ -43,22 +33,22 @@ static bool BidirectionalIterativeLength(int64_t v_size, int64_t *v, vector<int6
 
 static void BidirectionalIterativeLengthFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	auto &info = (BidirectionalIterativeLengthBindData &)*func_expr.bind_info;
+	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
 	// get csr info (TODO: do not store in context -- make global map in module that is indexed by id+&context)
 	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
-	D_ASSERT(info.context.csr_list[id]);
+	D_ASSERT(info.context.client_data->csr_list[id]);
 	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
-	int64_t *v = (int64_t *)info.context.csr_list[id]->v;
-	vector<int64_t> &e = info.context.csr_list[id]->e;
+	int64_t *v = (int64_t *)info.context.client_data->csr_list[id]->v;
+	vector<int64_t> &e = info.context.client_data->csr_list[id]->e;
 
 	// get src and dst vectors for searches
 	auto &src = args.data[2];
 	auto &dst = args.data[3];
-	VectorData vdata_src;
-	VectorData vdata_dst;
-	src.Orrify(args.size(), vdata_src);
-	dst.Orrify(args.size(), vdata_dst);
+	UnifiedVectorFormat vdata_src;
+	UnifiedVectorFormat vdata_dst;
+	src.ToUnifiedFormat(args.size(), vdata_src);
+	dst.ToUnifiedFormat(args.size(), vdata_dst);
 	auto src_data = (int64_t *)vdata_src.data;
 	auto dst_data = (int64_t *)vdata_dst.data;
 
@@ -130,7 +120,6 @@ static void BidirectionalIterativeLengthFunction(DataChunk &args, ExpressionStat
 
 		// make passes while a lane is still active
 		for (int64_t iter = 1; active; iter++) {
-//            std::cout << "Bidirectional iteration: " << iter << std::endl;
 			if (!BidirectionalIterativeLength(v_size, v, e, seen, (iter&1)?visit1:visit2, (iter&1)?visit2:visit1)) {
 				break;
 			}
@@ -169,45 +158,6 @@ static void BidirectionalIterativeLengthFunction(DataChunk &args, ExpressionStat
                     }
                 }
             }
-
-
-//            for (int64_t lane = 0; lane < LANE_LIMIT; lane+=2) {
-//                int64_t src_lane = lane_to_num[lane];
-//                int64_t dst_lane = lane_to_num[lane+1];
-//                int16_t row_idx = lane_to_idx[lane];
-//                if ((src_lane < 0) & (dst_lane < 0)) {
-//                    // CHECK
-//                    continue;
-//                }
-//                bool found = false;
-//                for(int64_t v_idx = 0; v_idx < v_size; v_idx++) {
-//                    if (visit1[v_idx][src_lane] && visit2[v_idx][dst_lane]) {
-//                        result_data[row_idx] = iter * 2 - 1; /* found at iter => iter = path length */
-//                        lane_to_num[lane] = -1;         // mark inactive
-//                        lane_to_num[lane + 1] = -1;         // mark inactive
-//                        active--;
-//                        found = true;
-//                        break;
-//                    }
-//                }
-//                if (!found) {
-//                    for(int64_t v_idx = 0; v_idx < v_size; v_idx++) {
-//                        if (visit1[v_idx][src_lane] && visit1[v_idx][dst_lane]) {
-//                            result_data[row_idx] = iter * 2; /* found at iter => iter = path length */
-//                            lane_to_num[lane] = -1;         // mark inactive
-//                            lane_to_num[lane + 1] = -1;         // mark inactive
-//                            active--;
-//                            break;
-//                        } else if (visit2[v_idx][src_lane] && visit2[v_idx][dst_lane]) {
-//                            result_data[row_idx] = iter * 2; /* found at iter => iter = path length */
-//                            lane_to_num[lane] = -1;         // mark inactive
-//                            lane_to_num[lane + 1] = -1;         // mark inactive
-//                            active--;
-//                            break;
-//                        }
-//                    }
-//                }
-//            }
         }
         for (int64_t lane = 0; lane < LANE_LIMIT; lane+=2) {
             int16_t row_idx = lane_to_idx[lane];
@@ -221,21 +171,10 @@ static void BidirectionalIterativeLengthFunction(DataChunk &args, ExpressionStat
 	}
 }
 
-static unique_ptr<FunctionData> BidirectionalIterativeLengthBind(ClientContext &context, ScalarFunction &bound_function,
-                                                    vector<unique_ptr<Expression>> &arguments) {
-	string file_name;
-	if (arguments.size() == 5) {
-		file_name = ExpressionExecutor::EvaluateScalar(*arguments[4]).GetValue<string>();
-	} else {
-		file_name = "timings-test.txt";
-	}
-	return make_unique<BidirectionalIterativeLengthBindData>(context, file_name);
-}
-
 CreateScalarFunctionInfo SQLPGQFunctions::GetBidirectionalIterativeLengthFunction() {
     auto fun = ScalarFunction("bidirectionaliterativelength",
 	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	                          LogicalType::BIGINT, BidirectionalIterativeLengthFunction, false, BidirectionalIterativeLengthBind);
+	                          LogicalType::BIGINT, BidirectionalIterativeLengthFunction, IterativeLengthFunctionData::IterativeLengthBind);
 	return CreateScalarFunctionInfo(fun);
 }
 
