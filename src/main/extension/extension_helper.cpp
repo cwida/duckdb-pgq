@@ -59,6 +59,13 @@
 #define JSON_STATICALLY_LOADED false
 #endif
 
+#if defined(BUILD_SQLPGQ_EXTENSION) && !defined(DISABLE_BUILTIN_EXTENSIONS)
+#define SQLPGQ_STATICALLY_LOADED true
+#include "sqlpgq-extension.hpp"
+#else
+#define SQLPGQ_STATICALLY_LOADED false
+#endif
+
 #if defined(BUILD_JEMALLOC_EXTENSION) && !defined(DISABLE_BUILTIN_EXTENSIONS)
 #define JEMALLOC_STATICALLY_LOADED true
 #include "jemalloc-extension.hpp"
@@ -216,6 +223,13 @@ ExtensionLoadResult ExtensionHelper::LoadExtensionInternal(DuckDB &db, const std
 		db.LoadExtension<JEMallocExtension>();
 #else
 		// jemalloc extension required but not build: skip this test
+		return ExtensionLoadResult::NOT_LOADED;
+#endif
+	} else if (extension == "sqlpgq") {
+#if defined(BUILD_SQLPGQ_EXTENSION) && !defined(DISABLE_BUILTIN_EXTENSIONS)
+		db.LoadExtension<SQLPGQExtension>();
+#else
+		// SQL/PGQ extension required but not build: skip this test
 		return ExtensionLoadResult::NOT_LOADED;
 #endif
 	} else if (extension == "inet") {
