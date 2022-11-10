@@ -2,11 +2,22 @@ require sqlpgq
 
 require parquet
 
-statement ok
-CREATE TABLE v AS SELECT * FROM read_parquet('data/sqlpgq-testing/graphalytics/v.parquet');
+
 
 statement ok
-CREATE TABLE e AS SELECT * FROM read_parquet('data/sqlpgq-testing/graphalytics/e.parquet');
+CREATE TABLE v (id bigint)
+
+statement ok
+COPY v FROM 'data/sqlpgq-testing/graphalytics/example-directed.v' ( DELIMITER ' ');
+
+statement ok
+CREATE TABLE e (source bigint, target bigint, weight bigint)
+
+statement ok
+COPY e FROM 'data/sqlpgq-testing/graphalytics/example-directed.e' ( DELIMITER ' ');
+
+statement ok
+INSERT INTO e (SELECT target, source, weight from e);
 
 statement ok
 CREATE TEMP TABLE PersonKnows AS (SELECT DISTINCT r.Person1id as id
@@ -66,8 +77,8 @@ INSERT INTO all_options(
       JOIN personknows s2 ON s2.id = src_dst_pairs.dst
 );
 
-statement ok
-SELECT min(weight) FROM (
+query I nosort shortestpathlength
+SELECT weight FROM (
     SELECT  p.person1id, p.person2id,
             iterativelength(0, (SELECT count(*) FROM personKnows),
                 p.person1rowid, p.person2rowid) AS weight
@@ -77,6 +88,20 @@ SELECT min(weight) FROM (
        WHERE (ao.rowid / 512) % 240 = 0
       ) p
 );
+----
 
+
+query I nosort shortestpathlength
+SELECT weight FROM (
+    SELECT  p.person1id, p.person2id,
+            iterativelengthbidirectional(0, (SELECT count(*) FROM personKnows),
+                p.person1rowid, p.person2rowid) AS weight
+    FROM
+      (SELECT *
+       FROM all_options ao
+       WHERE (ao.rowid / 512) % 240 = 0
+      ) p
+);
+----
 
 
