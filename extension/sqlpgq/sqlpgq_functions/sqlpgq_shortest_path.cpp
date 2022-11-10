@@ -2,8 +2,10 @@
 #include "duckdb/common/profiler.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/main/client_context.hpp"
+#include "duckdb/main/client_data.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
+#include "sqlpgq_common.hpp"
 #include "sqlpgq_functions.hpp"
 
 #include <iostream>
@@ -17,29 +19,6 @@ std::ostream &operator<<(std::ostream &os, const std::vector<T> &v) {
 	}
 	return os;
 }
-
-struct ShortestPathBindData : public FunctionData {
-	ClientContext &context;
-	string file_name;
-
-	ShortestPathBindData(ClientContext &context, string &file_name) : context(context), file_name(file_name) {
-	}
-
-	unique_ptr<FunctionData> Copy() override {
-		return make_unique<ShortestPathBindData>(context, file_name);
-	}
-};
-
-struct AnyShortestPathBindData : public FunctionData {
-	ClientContext &context;
-
-	explicit AnyShortestPathBindData(ClientContext &context) : context(context) {
-	}
-
-	unique_ptr<FunctionData> Copy() override {
-		return make_unique<AnyShortestPathBindData>(context);
-	}
-};
 
 struct BfsParent {
 	int64_t index;
@@ -149,7 +128,7 @@ void UpdateBfsDepth(const vector<std::bitset<LANE_LIMIT>> &visit_next, uint64_t 
 }
 
 template <typename T>
-static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, ShortestPathBindData &info,
+static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, IterativeLengthFunctionData &info,
                             vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                             vector<std::bitset<LANE_LIMIT>> &visit_next, uint64_t bfs_depth,
                             unordered_map<int16_t, vector<T>> &depth_map) {
@@ -159,11 +138,11 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Sho
 			continue;
 		}
 
-		D_ASSERT(info.context.csr_list[id]);
-		for (auto index = (int64_t)info.context.csr_list[id]->v[i];
-		     index < (int64_t)info.context.csr_list[id]->v[i + 1]; // v or v_weight depending on what was last called?
+		D_ASSERT(info.context.client_data->csr_list[id]);
+		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i];
+		     index < (int64_t)info.context.client_data->csr_list[id]->v[i + 1]; // v or v_weight depending on what was last called?
 		     index++) {
-			auto n = info.context.csr_list[id]->e[index];
+			auto n = info.context.client_data->csr_list[id]->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
 	}
@@ -186,7 +165,7 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Sho
 }
 
 template <typename T>
-static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, AnyShortestPathBindData &info,
+static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, IterativeLengthFunctionData &info,
                             vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                             vector<std::bitset<LANE_LIMIT>> &visit_next, uint64_t bfs_depth,
                             unordered_map<int16_t, vector<T>> &depth_map,
@@ -197,11 +176,11 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Any
 			continue;
 		}
 
-		D_ASSERT(info.context.csr_list[id]);
-		for (auto index = (int64_t)info.context.csr_list[id]->v[i];
-		     index < (int64_t)info.context.csr_list[id]->v[i + 1]; // v or v_weight depending on what was last called?
+		D_ASSERT(info.context.client_data->csr_list[id]);
+		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i];
+		     index < (int64_t)info.context.client_data->csr_list[id]->v[i + 1]; // v or v_weight depending on what was last called?
 		     index++) {
-			auto n = info.context.csr_list[id]->e[index];
+			auto n = info.context.client_data->csr_list[id]->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 			for (uint64_t idx = 0; idx < visit_next[n].size(); idx++) {
 				if (intermediate_path.find(idx) != intermediate_path.end()) {
@@ -239,7 +218,7 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Any
 }
 
 template <typename T>
-static void CreateResultShortestPath(const VectorData &vdata_target, const uint64_t *target_data, uint64_t *result_data,
+static void CreateResultShortestPath(const UnifiedVectorFormat &vdata_target, const uint64_t *target_data, uint64_t *result_data,
                                      ValidityMask &validity,
                                      unordered_map<int64_t, pair<int16_t, vector<int64_t>>> &lane_map,
                                      unordered_map<int16_t, vector<T>> &depth_map) {
@@ -259,7 +238,7 @@ static void CreateResultShortestPath(const VectorData &vdata_target, const uint6
 
 static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	auto &info = (ShortestPathBindData &)*func_expr.bind_info;
+	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
 	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
 //	bool is_variant = args.data[1].GetValue(0).GetValue<bool>();
@@ -267,13 +246,13 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 
 	auto &src = args.data[3];
 
-	VectorData vdata_src, vdata_target;
-	src.Orrify(args.size(), vdata_src);
+	UnifiedVectorFormat vdata_src, vdata_target;
+	src.ToUnifiedFormat(args.size(), vdata_src);
 
 	auto src_data = (int64_t *)vdata_src.data;
 
 	auto &target = args.data[4];
-	target.Orrify(args.size(), vdata_target);
+	target.ToUnifiedFormat(args.size(), vdata_target);
 	auto target_data = (uint64_t *)vdata_target.data;
 
 	idx_t result_size = 0;
@@ -357,20 +336,13 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 		}
 
 		result_size = result_size + curr_batch_size;
-		//		log_file << "Batch size: " << std::to_string(curr_batch_size) << endl;
-		//		log_file << "Result size: " << std::to_string(result_size) << endl;
 	}
-	//	auto end = std::chrono::high_resolution_clock::now();
-	//	outer_profiler.End();
-	//	log_file << "Entire program time: " << std::to_string(outer_profiler.Elapsed()) << endl;
-	//	log_file << "-" << endl;
-	//	auto int_s = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
 }
 
 static void AnyShortestPathFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	auto &info = (AnyShortestPathBindData &)*func_expr.bind_info;
+	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
 	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
 //	bool is_variant = args.data[1].GetValue(0).GetValue<bool>();
@@ -378,13 +350,13 @@ static void AnyShortestPathFunction(DataChunk &args, ExpressionState &state, Vec
 
 	auto &src = args.data[3];
 
-	VectorData vdata_src, vdata_target;
-	src.Orrify(args.size(), vdata_src);
+	UnifiedVectorFormat vdata_src, vdata_target;
+	src.ToUnifiedFormat(args.size(), vdata_src);
 
 	auto src_data = (int64_t *)vdata_src.data;
 
 	auto &target = args.data[4];
-	target.Orrify(args.size(), vdata_target);
+	target.ToUnifiedFormat(args.size(), vdata_target);
 	auto target_data = (int64_t *)vdata_target.data;
 
 	idx_t result_size = 0;
@@ -485,36 +457,11 @@ static void AnyShortestPathFunction(DataChunk &args, ExpressionState &state, Vec
 	D_ASSERT(ListVector::GetListSize(result) == total_len);
 }
 
-static unique_ptr<FunctionData> ShortestPathBind(ClientContext &context, ScalarFunction &bound_function,
-                                                 vector<unique_ptr<Expression>> &arguments) {
-//	int32_t id = ExpressionExecutor::EvaluateScalar(*arguments[0]).GetValue<int32_t>();
-	//	if ((uint64_t)id + 1 > context.csr_list.size()) {
-	//		throw ConstraintException("Invalid ID");
-	//	}
-	//	if (!(context.csr_list[id]->initialized_v && context.csr_list[id]->initialized_e)) {
-	//		throw ConstraintException("Need to initialize CSR before doing shortest path");
-	//	}
-	string file_name;
-	if (arguments.size() == 6) {
-		file_name = ExpressionExecutor::EvaluateScalar(*arguments[5]).GetValue<string>();
-	} else {
-		file_name = "timings-test.txt";
-	}
-
-	return make_unique<ShortestPathBindData>(context, file_name);
-}
-
-static unique_ptr<FunctionData> AnyShortestPathBind(ClientContext &context, ScalarFunction &bound_function,
-                                                    vector<unique_ptr<Expression>> &arguments) {
-
-	return make_unique<AnyShortestPathBindData>(context);
-}
-
 CreateScalarFunctionInfo SQLPGQFunctions::GetShortestPathFunction() {
 	auto fun = ScalarFunction(
 	    "shortest_path",
 	    {LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	    LogicalType::UBIGINT, ShortestPathFunction, false, ShortestPathBind);
+	    LogicalType::UBIGINT, ShortestPathFunction, IterativeLengthFunctionData::IterativeLengthBind);
 	return CreateScalarFunctionInfo(fun);
 }
 
@@ -523,7 +470,7 @@ CreateScalarFunctionInfo SQLPGQFunctions::GetAnyShortestPathFunction() {
 	auto fun = ScalarFunction(
 	    "any_shortest_path",
 	    {LogicalType::INTEGER, LogicalType::BOOLEAN, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	    LogicalType::LIST(LogicalType::INTEGER), AnyShortestPathFunction, false, AnyShortestPathBind);
+	    LogicalType::LIST(LogicalType::INTEGER), AnyShortestPathFunction, IterativeLengthFunctionData::IterativeLengthBind);
 	return CreateScalarFunctionInfo(fun);
 }
 
