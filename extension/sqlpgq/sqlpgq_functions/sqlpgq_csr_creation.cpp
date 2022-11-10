@@ -11,7 +11,6 @@
 
 #include <chrono>
 #include <mutex>
-#include <thread>
 #include <math.h>
 
 namespace duckdb {
@@ -31,7 +30,7 @@ static void CsrInitializeVertex(ClientContext &context, int32_t id, int64_t v_si
 		auto csr = make_unique<CSR>();
 		// extra 2 spaces required for CSR padding
 		// data contains a vector of elements so will need an anonymous function to apply the
-		// the first element id is repeated across, can I access the value directly?
+		// first element id is repeated across, can I access the value directly?
 		csr->v = new std::atomic<int64_t>[v_size + 2];
 
 		for (idx_t i = 0; i < (idx_t)v_size + 1; i++) {
@@ -47,7 +46,7 @@ static void CsrInitializeVertex(ClientContext &context, int32_t id, int64_t v_si
 
 	} catch (std::bad_alloc const &) {
 		throw Exception("Unable to initialise vector of size for csr vertex table representation");
-	};
+	}
 
 	return;
 }
@@ -71,7 +70,7 @@ static void CsrInitializeEdge(ClientContext &context, int32_t id, int64_t v_size
 	return;
 }
 
-static void CsrInitializeWeight(ClientContext &context, int32_t id, int64_t v_size, int64_t e_size,
+static void CsrInitializeWeight(ClientContext &context, int32_t id, int64_t e_size,
                                 PhysicalType weight_type) {
 	const lock_guard<mutex> csr_init_lock(context.client_data->csr_lock);
 	auto csr_entry = context.client_data->csr_list.find(id);
@@ -143,7 +142,7 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 	} else {
 		auto weight_type = args.data[5].GetType().InternalType();
 		if (!csr_entry->second->initialized_w) {
-			CsrInitializeWeight(info.context, info.id, vertex_size, edge_size, args.data[5].GetType().InternalType());
+			CsrInitializeWeight(info.context, info.id, edge_size, args.data[5].GetType().InternalType());
 		}
 		if (weight_type == PhysicalType::INT64) {
 			TernaryExecutor::Execute<int64_t, int64_t, int64_t, int32_t>(
