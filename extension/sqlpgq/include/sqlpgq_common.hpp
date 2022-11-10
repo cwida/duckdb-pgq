@@ -44,4 +44,19 @@ public:
 	bool Equals(const FunctionData &other_p) const override;
 };
 
+struct CheapestPathLengthFunctionData : public FunctionData {
+	ClientContext &context;
+	string file_name;
+
+	CheapestPathLengthFunctionData(ClientContext &context, string file_name) : context(context), file_name(file_name) {
+	}
+	static unique_ptr<FunctionData> CheapestPathLengthBind(ClientContext &context, ScalarFunction &bound_function,
+	                                                       vector<unique_ptr<Expression>> &arguments);
+
+	unique_ptr<FunctionData> Copy() const override;
+	bool Equals(const FunctionData &other_p) const override;
+
+
+};
+
 } // namespace duckdb
