@@ -1,31 +1,21 @@
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/main/client_context.hpp"
+#include "duckdb/main/client_data.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
+#include "sqlpgq_common.hpp"
 #include "sqlpgq_functions.hpp"
 
 #include <chrono>
-#include <float.h>
-#include <iostream>
 using namespace std::chrono;
 
 namespace duckdb {
 
-struct CheapestPathLengthBindData : public FunctionData {
-	ClientContext &context;
-	string file_name;
 
-	CheapestPathLengthBindData(ClientContext &context, string &file_name) : context(context), file_name(file_name) {
-	}
-
-	unique_ptr<FunctionData> Copy() override {
-		return make_unique<CheapestPathLengthBindData>(context, file_name);
-	}
-};
 
 template <typename T, int16_t lane_limit>
 static int16_t InitialiseBellmanFord(ClientContext &context, const DataChunk &args, int64_t input_size,
-                                     const VectorData &vdata_src, const int64_t *src_data, idx_t result_size,
+                                     const UnifiedVectorFormat &vdata_src, const int64_t *src_data, idx_t result_size,
                                      vector<vector<T>> &dists) {
 	dists.resize(input_size, std::vector<T>(lane_limit, std::numeric_limits<T>::max() / 2));
 
@@ -65,8 +55,8 @@ bool UpdateLanes(vector<vector<T>> &dists, T v, T n, T weight) {
 }
 
 template <typename T, int16_t lane_limit>
-int16_t TemplatedBatchBellmanFord(CheapestPathLengthBindData &info, DataChunk &args, int64_t input_size, Vector &result,
-                                  VectorData vdata_src, int64_t *src_data, const VectorData &vdata_target,
+int16_t TemplatedBatchBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args, int64_t input_size, Vector &result,
+                                  UnifiedVectorFormat vdata_src, int64_t *src_data, const UnifiedVectorFormat &vdata_target,
                                   int64_t *target_data, int32_t id, std::vector<T> weight_array, int16_t result_size,
                                   T *result_data, ValidityMask &result_validity) {
 	vector<vector<T>> dists;
@@ -78,10 +68,10 @@ int16_t TemplatedBatchBellmanFord(CheapestPathLengthBindData &info, DataChunk &a
 		//! For every v in the input
 		for (int64_t v = 0; v < input_size; v++) {
 			//! Loop through all the n neighbours of v
-			for (auto index = (int64_t)info.context.csr_list[id]->v[v];
-			     index < (int64_t)info.context.csr_list[id]->v[v + 1]; index++) {
+			for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[v];
+			     index < (int64_t)info.context.client_data->csr_list[id]->v[v + 1]; index++) {
 				//! Get weight of (v,n)
-				changed = UpdateLanes<T>(dists, v, info.context.csr_list[id]->e[index], weight_array[index]) | changed;
+				changed = UpdateLanes<T>(dists, v, info.context.client_data->csr_list[id]->e[index], weight_array[index]) | changed;
 			}
 		}
 	}
@@ -105,8 +95,8 @@ int16_t TemplatedBatchBellmanFord(CheapestPathLengthBindData &info, DataChunk &a
 }
 
 template <typename T>
-void TemplatedBellmanFord(CheapestPathLengthBindData &info, DataChunk &args, int64_t input_size, Vector &result,
-                          VectorData vdata_src, int64_t *src_data, const VectorData &vdata_target, int64_t *target_data,
+void TemplatedBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args, int64_t input_size, Vector &result,
+                          UnifiedVectorFormat vdata_src, int64_t *src_data, const UnifiedVectorFormat &vdata_target, int64_t *target_data,
                           int32_t id, std::vector<T> weight_array) {
 	idx_t result_size = 0;
 	result.SetVectorType(VectorType::FLAT_VECTOR);
@@ -160,67 +150,38 @@ void TemplatedBellmanFord(CheapestPathLengthBindData &info, DataChunk &args, int
 
 static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	auto &info = (CheapestPathLengthBindData &)*func_expr.bind_info;
+	auto &info = (CheapestPathLengthFunctionData &)*func_expr.bind_info;
 
 	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
 	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
 
 	auto &src = args.data[2];
 
-	VectorData vdata_src, vdata_target;
-	src.Orrify(args.size(), vdata_src);
+	UnifiedVectorFormat vdata_src, vdata_target;
+	src.ToUnifiedFormat(args.size(), vdata_src);
 
 	auto src_data = (int64_t *)vdata_src.data;
 
 	auto &target = args.data[3];
-	target.Orrify(args.size(), vdata_target);
+	target.ToUnifiedFormat(args.size(), vdata_target);
 	auto target_data = (int64_t *)vdata_target.data;
 
-	if (info.context.csr_list[id]->w.empty()) {
+	if (info.context.client_data->csr_list[id]->w.empty()) {
 		TemplatedBellmanFord<double_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                               id, info.context.csr_list[id]->w_double);
+		                               id, info.context.client_data->csr_list[id]->w_double);
 	} else {
 		TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                              id, info.context.csr_list[id]->w);
+		                              id, info.context.client_data->csr_list[id]->w);
 	}
 }
 
-static unique_ptr<FunctionData> CheapestPathLengthBind(ClientContext &context, ScalarFunction &bound_function,
-                                                 vector<unique_ptr<Expression>> &arguments) {
-
-	if (!arguments[0]->IsFoldable()) {
-		throw InvalidInputException("Id must be constant.");
-	}
-
-	int32_t id = ExpressionExecutor::EvaluateScalar(*arguments[0]).GetValue<int32_t>();
-	if ((uint64_t)id + 1 > context.csr_list.size()) {
-		throw ConstraintException("Invalid ID");
-	}
-	auto csr_entry = context.csr_list.find((uint64_t)id);
-	if (csr_entry == context.csr_list.end()) {
-		throw ConstraintException("Need to initialize CSR before doing cheapest path");
-	}
-
-	if (!(csr_entry->second->initialized_v && csr_entry->second->initialized_e && csr_entry->second->initialized_w)) {
-		throw ConstraintException("Need to initialize CSR before doing cheapest path");
-	}
-	string file_name;
-
-	if (context.csr_list[id]->w.empty()) {
-		bound_function.return_type = LogicalType::DOUBLE;
-	} else {
-		bound_function.return_type = LogicalType::BIGINT;
-	}
-
-	return make_unique<CheapestPathLengthBindData>(context, file_name);
-}
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetCheapestPathLengthFunction() {
 	ScalarFunctionSet set("cheapest_path_length");
 
 	set.AddFunction(
 	    ScalarFunction({LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	                   LogicalType::ANY, CheapestPathLengthFunction, false, CheapestPathLengthBind));
+	                   LogicalType::ANY, CheapestPathLengthFunction, CheapestPathLengthFunctionData::CheapestPathLengthBind));
 
 	return CreateScalarFunctionInfo(set);
 }
