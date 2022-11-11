@@ -26,7 +26,7 @@ unique_ptr<FunctionData> CSRFunctionData::CSRVertexBind(ClientContext &context, 
 		throw InvalidInputException("Id must be constant.");
 	}
 
-	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
+	Value id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
 	if (arguments.size() == 4) {
 		auto logical_type = LogicalType::SQLNULL;
 		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
@@ -40,7 +40,7 @@ unique_ptr<FunctionData> CSRFunctionData::CSREdgeBind(ClientContext &context, Sc
 	if (!arguments[0]->IsFoldable()) {
 		throw InvalidInputException("Id must be constant.");
 	}
-	Value id = ExpressionExecutor::EvaluateScalar(*arguments[0]);
+	Value id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
 	if (arguments.size() == 6) {
 		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[5]->return_type);
 	} else {
@@ -63,7 +63,7 @@ unique_ptr<FunctionData> IterativeLengthFunctionData::IterativeLengthBind(Client
                                                                           vector<unique_ptr<Expression>> &arguments) {
 	string file_name;
 	if (arguments.size() == 5) {
-		file_name = ExpressionExecutor::EvaluateScalar(*arguments[4]).GetValue<string>();
+		file_name = ExpressionExecutor::EvaluateScalar(context, *arguments[4]).GetValue<string>();
 	} else {
 		file_name = "timings-test.txt";
 	}
@@ -78,7 +78,7 @@ CheapestPathLengthFunctionData::CheapestPathLengthBind(ClientContext &context, S
 		throw InvalidInputException("Id must be constant.");
 	}
 
-	int32_t id = ExpressionExecutor::EvaluateScalar(*arguments[0]).GetValue<int32_t>();
+	int32_t id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]).GetValue<int32_t>();
 	if ((uint64_t)id + 1 > context.client_data->csr_list.size()) {
 		throw ConstraintException("Invalid ID");
 	}
