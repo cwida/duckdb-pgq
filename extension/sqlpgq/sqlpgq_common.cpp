@@ -2,6 +2,7 @@
 
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/main/client_data.hpp"
+#include "duckdb/execution/expression_executor.hpp"
 
 #include <utility>
 
