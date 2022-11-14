@@ -85,7 +85,7 @@ create temp table all_options
 );
 
 statement ok
-copy parameters from 'data/sqlpgq-testing/parameters/q13.csv' (DELIMITER '|', HEADER);
+copy parameters from 'data/sqlpgq-testing/snb/parameters/q13.csv' (DELIMITER '|', HEADER);
 
 
 statement ok
