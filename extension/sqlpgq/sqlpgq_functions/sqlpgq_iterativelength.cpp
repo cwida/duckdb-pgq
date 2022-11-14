@@ -49,6 +49,9 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 	auto src_data = (int64_t *)vdata_src.data;
 	auto dst_data = (int64_t *)vdata_dst.data;
 
+	ValidityMask &result_validity = FlatVector::Validity(result);
+
+
 	// create result vector
 	result.SetVectorType(VectorType::FLAT_VECTOR);
 	auto result_data = FlatVector::GetData<int64_t>(result);
@@ -82,6 +85,7 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 				int64_t src_pos = vdata_src.sel->get_index(search_num);
 				int64_t dst_pos = vdata_dst.sel->get_index(search_num);
 				if (!vdata_src.validity.RowIsValid(src_pos)) {
+					result_validity.SetInvalid(search_num);
 					result_data[search_num] = (uint64_t)-1; /* no path */
 				} else if (src_data[src_pos] == dst_data[dst_pos]) {
 					result_data[search_num] = (uint64_t)0; // path of length 0 does not require a search
@@ -118,6 +122,7 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 			int64_t search_num = lane_to_num[lane];
 			if (search_num >= 0) {                     // active lane
+				result_validity.SetInvalid(search_num);
 				result_data[search_num] = (int64_t)-1; /* no path */
 				lane_to_num[lane] = -1;                // mark inactive
 			}
