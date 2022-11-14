@@ -650,4 +650,23 @@ Value ThreadsSetting::GetSetting(ClientContext &context) {
 	return Value::BIGINT(config.options.maximum_threads);
 }
 
+//===--------------------------------------------------------------------===//
+// CSR Setting
+//===--------------------------------------------------------------------===//
+void DeleteCSRSetting::SetLocal(ClientContext &context, const Value &input) {
+	auto id = input.GetValue<int32_t>();
+	auto &client_data = ClientData::Get(context);
+	auto csr_entry = client_data.csr_list.find(id);
+	D_ASSERT(csr_entry != client_data.csr_list.end());
+	csr_entry->second.reset();
+	client_data.csr_list.erase(id);
+}
+Value DeleteCSRSetting::GetSetting(ClientContext &context) {
+	auto &client_data = ClientData::Get(context);
+	vector<string> keys;
+	for (auto &key: client_data.csr_list) {
+		keys.push_back(to_string(key.first));
+	}
+	return Value(StringUtil::Join(keys, ","));
+}
 } // namespace duckdb
