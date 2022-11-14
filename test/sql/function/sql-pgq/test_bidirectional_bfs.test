@@ -38,8 +38,38 @@ statement ok
 INSERT INTO src_dst VALUES (0, 5, 0, 4), (0, 5, 2, 1), (0, 5, 0, 3), (0, 5, 4, 2), (0, 5, NULL, 0), (0, 5, 0, 0);
 
 
-query T
+query T nosort small_test
+SELECT iterativelength(0, v_size, src, dst) FROM src_dst;
+----
+3
+1
+2
+2
+NULL
+0
+
+query T nosort small_test
+SELECT iterativelength2(0, v_size, src, dst) FROM src_dst;
+----
+3
+1
+2
+2
+NULL
+0
+
+query T nosort small_test
 SELECT iterativelengthbidirectional(0, v_size, src, dst) FROM src_dst;
+----
+3
+1
+2
+2
+NULL
+0
+
+query T nosort small_test
+SELECT bidirectionaliterativelength(0, v_size, src, dst) FROM src_dst;
 ----
 3
 1
