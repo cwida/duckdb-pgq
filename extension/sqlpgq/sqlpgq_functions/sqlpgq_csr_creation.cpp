@@ -1,16 +1,15 @@
-#include "duckdb/planner/expression/bound_function_expression.hpp"
-#include "sqlpgq_functions.hpp"
-#include "sqlpgq_common.hpp"
+#include "duckdb/common/vector_operations/quaternary_executor.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/client_data.hpp"
+#include "duckdb/planner/expression/bound_function_expression.hpp"
+#include "sqlpgq_common.hpp"
+#include "sqlpgq_functions.hpp"
 
 #include <chrono>
-#include <mutex>
 #include <math.h>
+#include <mutex>
 
 namespace duckdb {
-
-
 
 static void CsrInitializeVertex(ClientContext &context, int32_t id, int64_t v_size) {
 	lock_guard<mutex> csr_init_lock(context.client_data->csr_lock);
@@ -55,6 +54,7 @@ static void CsrInitializeEdge(ClientContext &context, int32_t id, int64_t v_size
 	}
 	try {
 		csr_entry->second->e.resize(e_size, 0);
+		csr_entry->second->edge_ids.resize(e_size, 0);
 	} catch (std::bad_alloc const &) {
 		throw Exception("Unable to initialise vector of size for csr edge table representation");
 	}
@@ -65,8 +65,7 @@ static void CsrInitializeEdge(ClientContext &context, int32_t id, int64_t v_size
 	return;
 }
 
-static void CsrInitializeWeight(ClientContext &context, int32_t id, int64_t e_size,
-                                PhysicalType weight_type) {
+static void CsrInitializeWeight(ClientContext &context, int32_t id, int64_t e_size, PhysicalType weight_type) {
 	const lock_guard<mutex> csr_init_lock(context.client_data->csr_lock);
 	auto csr_entry = context.client_data->csr_list.find(id);
 
@@ -142,24 +141,23 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 	}
 	if (weight_type == PhysicalType::INT64) {
 		TernaryExecutor::Execute<int64_t, int64_t, int64_t, int32_t>(
-			args.data[3], args.data[4], args.data[5], result, args.size(),
-			[&](int64_t src, int64_t dst, int64_t weight) {
-				auto pos = ++csr_entry->second->v[src + 1];
-				csr_entry->second->e[(int64_t)pos - 1] = dst;
-				csr_entry->second->w[(int64_t)pos - 1] = weight;
-				return weight;
-			});
+		    args.data[3], args.data[4], args.data[5], result, args.size(),
+		    [&](int64_t src, int64_t dst, int64_t weight) {
+			    auto pos = ++csr_entry->second->v[src + 1];
+			    csr_entry->second->e[(int64_t)pos - 1] = dst;
+			    csr_entry->second->w[(int64_t)pos - 1] = weight;
+			    return weight;
+		    });
 		return;
 	}
 
 	TernaryExecutor::Execute<int64_t, int64_t, double_t, int32_t>(
-		args.data[3], args.data[4], args.data[5], result, args.size(),
-		[&](int64_t src, int64_t dst, double_t weight) {
-			auto pos = ++csr_entry->second->v[src + 1];
-			csr_entry->second->e[(int64_t)pos - 1] = dst;
-			csr_entry->second->w_double[(int64_t)pos - 1] = weight;
-			return weight;
-		});
+	    args.data[3], args.data[4], args.data[5], result, args.size(), [&](int64_t src, int64_t dst, double_t weight) {
+		    auto pos = ++csr_entry->second->v[src + 1];
+		    csr_entry->second->e[(int64_t)pos - 1] = dst;
+		    csr_entry->second->w_double[(int64_t)pos - 1] = weight;
+		    return weight;
+	    });
 
 	return;
 }
