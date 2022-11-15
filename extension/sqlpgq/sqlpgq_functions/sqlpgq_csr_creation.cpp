@@ -127,12 +127,14 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 		CsrInitializeEdge(info.context, info.id, vertex_size, edge_size);
 	}
 	if (info.weight_type == LogicalType::SQLNULL) {
-		BinaryExecutor::Execute<int64_t, int64_t, int32_t>(args.data[3], args.data[4], result, args.size(),
-		                                                   [&](int64_t src, int64_t dst) {
-			                                                   auto pos = ++csr_entry->second->v[src + 1];
-			                                                   csr_entry->second->e[(int64_t)pos - 1] = dst;
-			                                                   return 1;
-		                                                   });
+		TernaryExecutor::Execute<int64_t, int64_t, int64_t, int32_t>(
+		    args.data[3], args.data[4], args.data[5], result, args.size(),
+		    [&](int64_t src, int64_t dst, int64_t edge_id) {
+			    auto pos = ++csr_entry->second->v[src + 1];
+			    csr_entry->second->e[(int64_t)pos - 1] = dst;
+			    csr_entry->second->edge_ids[(int64_t)pos - 1] = edge_id;
+			    return 1;
+		    });
 		return;
 	}
 	auto weight_type = args.data[5].GetType().InternalType();
@@ -140,21 +142,24 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 		CsrInitializeWeight(info.context, info.id, edge_size, args.data[5].GetType().InternalType());
 	}
 	if (weight_type == PhysicalType::INT64) {
-		TernaryExecutor::Execute<int64_t, int64_t, int64_t, int32_t>(
-		    args.data[3], args.data[4], args.data[5], result, args.size(),
-		    [&](int64_t src, int64_t dst, int64_t weight) {
+		QuaternaryExecutor::Execute<int64_t, int64_t, int64_t, int64_t, int32_t>(
+		    args.data[3], args.data[4], args.data[5], args.data[6], result, args.size(),
+		    [&](int64_t src, int64_t dst, int64_t edge_id, int64_t weight) {
 			    auto pos = ++csr_entry->second->v[src + 1];
 			    csr_entry->second->e[(int64_t)pos - 1] = dst;
+			    csr_entry->second->edge_ids[(int64_t)pos - 1] = edge_id;
 			    csr_entry->second->w[(int64_t)pos - 1] = weight;
 			    return weight;
 		    });
 		return;
 	}
 
-	TernaryExecutor::Execute<int64_t, int64_t, double_t, int32_t>(
-	    args.data[3], args.data[4], args.data[5], result, args.size(), [&](int64_t src, int64_t dst, double_t weight) {
+	QuaternaryExecutor::Execute<int64_t, int64_t, int64_t, double_t, int32_t>(
+	    args.data[3], args.data[4], args.data[5], args.data[6], result, args.size(),
+	    [&](int64_t src, int64_t dst, int64_t edge_id, double_t weight) {
 		    auto pos = ++csr_entry->second->v[src + 1];
 		    csr_entry->second->e[(int64_t)pos - 1] = dst;
+		    csr_entry->second->edge_ids[(int64_t)pos - 1] = edge_id;
 		    csr_entry->second->w_double[(int64_t)pos - 1] = weight;
 		    return weight;
 	    });
@@ -174,14 +179,19 @@ CreateScalarFunctionInfo SQLPGQFunctions::GetCsrVertexFunction() {
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetCsrEdgeFunction() {
 	ScalarFunctionSet set("create_csr_edge");
-	set.AddFunction(ScalarFunction(
-	    {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	    LogicalType::INTEGER, CreateCsrEdgeFunction, CSRFunctionData::CSREdgeBind));
+	//! No edge weight
 	set.AddFunction(ScalarFunction({LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT,
 	                                LogicalType::BIGINT, LogicalType::BIGINT},
 	                               LogicalType::INTEGER, CreateCsrEdgeFunction, CSRFunctionData::CSREdgeBind));
+
+	//! Integer for edge weight
 	set.AddFunction(ScalarFunction({LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT,
-	                                LogicalType::BIGINT, LogicalType::DOUBLE},
+	                                LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
+	                               LogicalType::INTEGER, CreateCsrEdgeFunction, CSRFunctionData::CSREdgeBind));
+
+	//! Double for edge weight
+	set.AddFunction(ScalarFunction({LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT,
+	                                LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::DOUBLE},
 	                               LogicalType::INTEGER, CreateCsrEdgeFunction, CSRFunctionData::CSREdgeBind));
 
 	return CreateScalarFunctionInfo(set);
