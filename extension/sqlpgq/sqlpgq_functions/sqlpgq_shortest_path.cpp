@@ -51,9 +51,10 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 	vector<std::bitset<LANE_LIMIT>> seen(v_size);
 	vector<std::bitset<LANE_LIMIT>> visit1(v_size);
 	vector<std::bitset<LANE_LIMIT>> visit2(v_size);
+	vector<std::vector<int64_t>> parents(v_size, std::vector<int64_t>(LANE_LIMIT, -1));
 
 	// maps lane to search number
-	short lane_to_num[LANE_LIMIT];
+	int16_t lane_to_num[LANE_LIMIT];
 	for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 		lane_to_num[lane] = -1; // inactive
 	}
@@ -86,6 +87,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 					ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
 				} else {
 					visit1[src_data[src_pos]][lane] = true;
+					parents[src_data[src_pos]][lane] = src_data[src_pos];
 					lane_to_num[lane] = search_num; // active lane
 					active++;
 					break;
@@ -93,15 +95,12 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			}
 		}
 
-
-
-
 		// no changes anymore: any still active searches have no path
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 			int64_t search_num = lane_to_num[lane];
 			if (search_num >= 0) {
 				result_validity.SetInvalid(search_num);
-				lane_to_num[lane] = -1;                // mark inactive
+				lane_to_num[lane] = -1; // mark inactive
 			}
 		}
 	}
