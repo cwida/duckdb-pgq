@@ -4,8 +4,8 @@
 
 #include "duckdb/common/atomic.hpp"
 #include "duckdb/execution/executor.hpp"
-#include <math.h>
 
+#include <math.h>
 
 namespace duckdb {
 
@@ -24,6 +24,7 @@ public:
 	atomic<int64_t> *v;
 
 	vector<int64_t> e;
+	vector<int64_t> edge_ids;
 
 	vector<int64_t> w;
 	vector<double_t> w_double;
@@ -33,4 +34,4 @@ public:
 	bool initialized_w = false;
 };
 
-}
+} // namespace duckdb

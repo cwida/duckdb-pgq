@@ -23,9 +23,8 @@ public:
         // Create functions
 		functions.push_back(GetCsrVertexFunction());
 		functions.push_back(GetCsrEdgeFunction());
-		functions.push_back(GetShortestPathFunction());
 		functions.push_back(GetCheapestPathLengthFunction());
-        functions.push_back(GetAnyShortestPathFunction());
+        functions.push_back(GetShortestPathFunction());
 		functions.push_back(GetReachabilityFunction());
 		functions.push_back(GetIterativeLengthFunction());
 //        functions.push_back(GetBidirectionalIterativeLengthFunction());
@@ -53,12 +52,11 @@ private:
 	static CreateScalarFunctionInfo GetCsrVertexFunction();
 	static CreateScalarFunctionInfo GetCsrEdgeFunction();
 	static CreateScalarFunctionInfo GetCheapestPathLengthFunction();
-    static CreateScalarFunctionInfo GetAnyShortestPathFunction();
+    static CreateScalarFunctionInfo GetShortestPathFunction();
     static CreateScalarFunctionInfo GetReachabilityFunction();
     static CreateScalarFunctionInfo GetIterativeLengthFunction();
     //	static CreateScalarFunctionInfo GetStructureFunction();
     //
-    static CreateScalarFunctionInfo GetShortestPathFunction();
 //    static CreateScalarFunctionInfo GetBidirectionalIterativeLengthFunction();
     static CreateScalarFunctionInfo GetIterativeLengthBidirectionalFunction();
     static CreateScalarFunctionInfo GetIterativeLength2Function();

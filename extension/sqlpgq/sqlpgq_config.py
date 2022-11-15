@@ -9,4 +9,5 @@ source_files = [os.path.sep.join(x.split('/')) for x in
                  'extension/sqlpgq/sqlpgq_functions/sqlpgq_shortest_path.cpp', 'extension/sqlpgq/sqlpgq_functions/sqlpgq_iterativelength.cpp',
                  'extension/sqlpgq/sqlpgq_functions/sqlpgq_iterativelength2.cpp',
                  # 'extension/sqlpgq/sqlpgq_functions/sqlpgq_bidirectional_iterativelength.cpp',
-                 'extension/sqlpgq/sqlpgq_functions/sqlpgq_iterativelength_bidirectional.cpp' ]]
+                 'extension/sqlpgq/sqlpgq_functions/sqlpgq_iterativelength_bidirectional.cpp',
+                 'extension/sqlpgq/sqlpgq_functions/iterativepath.cpp']]
