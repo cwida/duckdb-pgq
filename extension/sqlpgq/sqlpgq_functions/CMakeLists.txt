@@ -3,6 +3,7 @@ add_library_unity(
         OBJECT
         sqlpgq_csr_creation.cpp
         sqlpgq_cheapest_path_length.cpp
+        sqlpgq_shortest_path.cpp
         sqlpgq_reachability.cpp
         sqlpgq_iterativepath.cpp
         sqlpgq_iterativelength.cpp
