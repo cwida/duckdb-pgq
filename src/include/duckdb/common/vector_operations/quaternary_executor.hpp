@@ -98,7 +98,7 @@ public:
 			ExecuteLoop<A_TYPE, B_TYPE, C_TYPE, D_TYPE, RESULT_TYPE, OPWRAPPER>(
 			    (A_TYPE *)adata.data, (B_TYPE *)bdata.data, (C_TYPE *)cdata.data, (D_TYPE *)ddata.data,
 			    FlatVector::GetData<RESULT_TYPE>(result), count, *adata.sel, *bdata.sel, *cdata.sel, *ddata.sel,
-			    adata.validity, bdata.validity, cdata.validity, FlatVector::Validity(result), fun);
+			    adata.validity, bdata.validity, cdata.validity, ddata.validity, FlatVector::Validity(result), fun);
 		}
 	}
 
