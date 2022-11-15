@@ -22,6 +22,34 @@ struct BfsParent {
 	}
 };
 
+static bool IterativeLength(int64_t v_size, int64_t *V, vector<int64_t> &E, vector<std::vector<int64_t>> &parents,
+                            vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
+                            vector<std::bitset<LANE_LIMIT>> &next) {
+	bool change = false;
+	for (auto v = 0; v < v_size; v++) {
+		next[v] = 0;
+	}
+	//! Keep track of edge id through which the node was reached
+	for (auto v = 0; v < v_size; v++) {
+		if (visit[v].any()) {
+			for (auto e = V[v]; e < V[v + 1]; e++) {
+				auto n = E[e];
+				next[n] = next[n] | visit[v];
+				for (auto l = 0; l < LANE_LIMIT; l++) {
+					parents[n][l] = parents[n][l] == -1 ? v : parents[n][l];
+				}
+			}
+		}
+	}
+
+	for (auto v = 0; v < v_size; v++) {
+		next[v] = next[v] & ~seen[v];
+		seen[v] = seen[v] | next[v];
+		change |= next[v].any();
+	}
+	return change;
+}
+
 static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
@@ -31,7 +59,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 
 	int64_t *v = (int64_t *)info.context.client_data->csr_list[id]->v;
 	vector<int64_t> &e = info.context.client_data->csr_list[id]->e;
-	vector<int64_t> &edge_ids = info.context.client_data->csr_list[id]->edge_ids;
+	vector<int64_t> &edge_ids __attribute__((unused)) = info.context.client_data->csr_list[id]->edge_ids;
 
 	auto &src = args.data[2];
 	auto &target = args.data[3];
@@ -87,10 +115,35 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 					ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
 				} else {
 					visit1[src_data[src_pos]][lane] = true;
-					parents[src_data[src_pos]][lane] = src_data[src_pos];
-					lane_to_num[lane] = search_num; // active lane
+					parents[src_data[src_pos]][lane] = -2; // Mark source with -2
+					lane_to_num[lane] = search_num;        // active lane
 					active++;
 					break;
+				}
+			}
+		}
+
+		// make passes while a lane is still active
+		for (int64_t iter = 1; active; iter++) {
+			//! Perform one step of bfs exploration
+			if (!IterativeLength(v_size, v, e, parents, seen, (iter & 1) ? visit1 : visit2,
+			                     (iter & 1) ? visit2 : visit1)) {
+				break;
+			}
+			// detect lanes that finished
+			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+				int64_t search_num = lane_to_num[lane];
+				if (search_num >= 0) { // active lane
+					                   //! Check if dst for a source has been seen
+
+					//! Reconstruct path (v, e, v, e, ...)
+
+					//					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
+					//					if (seen[dst_data[dst_pos]][lane]) {
+					//						result_data[search_num] = iter; /* found at iter => iter = path length */
+					//						lane_to_num[lane] = -1;         // mark inactive
+					//						active--;
+					//					}
 				}
 			}
 		}
