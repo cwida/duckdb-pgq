@@ -51,7 +51,6 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 
 	ValidityMask &result_validity = FlatVector::Validity(result);
 
-
 	// create result vector
 	result.SetVectorType(VectorType::FLAT_VECTOR);
 	auto result_data = FlatVector::GetData<int64_t>(result);
@@ -90,7 +89,7 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 				} else if (src_data[src_pos] == dst_data[dst_pos]) {
 					result_data[search_num] = (uint64_t)0; // path of length 0 does not require a search
 				} else {
-					visit1[src_data[src_pos]][lane] = 1;
+					visit1[src_data[src_pos]][lane] = true;
 					lane_to_num[lane] = search_num; // active lane
 					active++;
 					break;
@@ -100,8 +99,6 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 
 		// make passes while a lane is still active
 		for (int64_t iter = 1; active; iter++) {
-			//            std::cout << "Single direction iteration: " << iter << std::endl;
-
 			if (!IterativeLength(v_size, v, e, seen, (iter & 1) ? visit1 : visit2, (iter & 1) ? visit2 : visit1)) {
 				break;
 			}
@@ -118,10 +115,11 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 				}
 			}
 		}
+
 		// no changes anymore: any still active searches have no path
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 			int64_t search_num = lane_to_num[lane];
-			if (search_num >= 0) {                     // active lane
+			if (search_num >= 0) { // active lane
 				result_validity.SetInvalid(search_num);
 				result_data[search_num] = (int64_t)-1; /* no path */
 				lane_to_num[lane] = -1;                // mark inactive
