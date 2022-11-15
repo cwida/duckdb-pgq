@@ -1,7 +1,7 @@
 #include "sqlpgq_common.hpp"
 
-#include "duckdb/main/client_data.hpp"
 #include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/main/client_data.hpp"
 
 #include <utility>
 
@@ -41,8 +41,8 @@ unique_ptr<FunctionData> CSRFunctionData::CSREdgeBind(ClientContext &context, Sc
 		throw InvalidInputException("Id must be constant.");
 	}
 	Value id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
-	if (arguments.size() == 6) {
-		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[5]->return_type);
+	if (arguments.size() == 7) {
+		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), arguments[6]->return_type);
 	} else {
 		auto logical_type = LogicalType::SQLNULL;
 		return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), logical_type);
