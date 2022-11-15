@@ -106,7 +106,7 @@ unique_ptr<FunctionData> CheapestPathLengthFunctionData::Copy() const {
 }
 
 bool CheapestPathLengthFunctionData::Equals(const FunctionData &other_p) const {
-	auto &other = (const IterativeLengthFunctionData &)other_p;
+	auto &other = (const CheapestPathLengthFunctionData &)other_p;
 	return file_name == other.file_name;
 }
 

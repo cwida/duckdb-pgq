@@ -134,31 +134,32 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 			                                                   csr_entry->second->e[(int64_t)pos - 1] = dst;
 			                                                   return 1;
 		                                                   });
-	} else {
-		auto weight_type = args.data[5].GetType().InternalType();
-		if (!csr_entry->second->initialized_w) {
-			CsrInitializeWeight(info.context, info.id, edge_size, args.data[5].GetType().InternalType());
-		}
-		if (weight_type == PhysicalType::INT64) {
-			TernaryExecutor::Execute<int64_t, int64_t, int64_t, int32_t>(
-			    args.data[3], args.data[4], args.data[5], result, args.size(),
-			    [&](int64_t src, int64_t dst, int64_t weight) {
-				    auto pos = ++csr_entry->second->v[src + 1];
-				    csr_entry->second->e[(int64_t)pos - 1] = dst;
-				    csr_entry->second->w[(int64_t)pos - 1] = weight;
-				    return weight;
-			    });
-		} else if (weight_type == PhysicalType::DOUBLE) {
-			TernaryExecutor::Execute<int64_t, int64_t, double_t, int32_t>(
-			    args.data[3], args.data[4], args.data[5], result, args.size(),
-			    [&](int64_t src, int64_t dst, double_t weight) {
-				    auto pos = ++csr_entry->second->v[src + 1];
-				    csr_entry->second->e[(int64_t)pos - 1] = dst;
-				    csr_entry->second->w_double[(int64_t)pos - 1] = weight;
-				    return weight;
-			    });
-		}
+		return;
 	}
+	auto weight_type = args.data[5].GetType().InternalType();
+	if (!csr_entry->second->initialized_w) {
+		CsrInitializeWeight(info.context, info.id, edge_size, args.data[5].GetType().InternalType());
+	}
+	if (weight_type == PhysicalType::INT64) {
+		TernaryExecutor::Execute<int64_t, int64_t, int64_t, int32_t>(
+			args.data[3], args.data[4], args.data[5], result, args.size(),
+			[&](int64_t src, int64_t dst, int64_t weight) {
+				auto pos = ++csr_entry->second->v[src + 1];
+				csr_entry->second->e[(int64_t)pos - 1] = dst;
+				csr_entry->second->w[(int64_t)pos - 1] = weight;
+				return weight;
+			});
+		return;
+	}
+
+	TernaryExecutor::Execute<int64_t, int64_t, double_t, int32_t>(
+		args.data[3], args.data[4], args.data[5], result, args.size(),
+		[&](int64_t src, int64_t dst, double_t weight) {
+			auto pos = ++csr_entry->second->v[src + 1];
+			csr_entry->second->e[(int64_t)pos - 1] = dst;
+			csr_entry->second->w_double[(int64_t)pos - 1] = weight;
+			return weight;
+		});
 
 	return;
 }
