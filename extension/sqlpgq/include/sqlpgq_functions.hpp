@@ -28,7 +28,7 @@ public:
         functions.push_back(GetAnyShortestPathFunction());
 		functions.push_back(GetReachabilityFunction());
 		functions.push_back(GetIterativeLengthFunction());
-        functions.push_back(GetBidirectionalIterativeLengthFunction());
+//        functions.push_back(GetBidirectionalIterativeLengthFunction());
         functions.push_back(GetIterativeLengthBidirectionalFunction());
         functions.push_back(GetIterativeLength2Function());
 
@@ -59,7 +59,7 @@ private:
     //	static CreateScalarFunctionInfo GetStructureFunction();
     //
     static CreateScalarFunctionInfo GetShortestPathFunction();
-    static CreateScalarFunctionInfo GetBidirectionalIterativeLengthFunction();
+//    static CreateScalarFunctionInfo GetBidirectionalIterativeLengthFunction();
     static CreateScalarFunctionInfo GetIterativeLengthBidirectionalFunction();
     static CreateScalarFunctionInfo GetIterativeLength2Function();
     //	static CreateScalarFunctionInfo GetTransformFunction();
