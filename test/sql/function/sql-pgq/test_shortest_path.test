@@ -42,7 +42,7 @@ statement ok
 CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 
 statement ok
-INSERT INTO src_dest VALUES(0, 4, 0, 2), (0, 4, 1, 2), (0, 4, 2, 0), (0, 4, 0, 1);
+INSERT INTO src_dest VALUES(0, 4, 0, 2), (0, 4, 1, 2), (0, 4, 3, 0), (0, 4, 0, 1), (0, 4, 0, 0);
 
 query T
 SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
@@ -51,3 +51,4 @@ SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
 1
 NULL
 1
+[0]
