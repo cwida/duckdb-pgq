@@ -36,7 +36,7 @@ static bool IterativeLength(int64_t v_size, int64_t *V, vector<int64_t> &E, vect
 				auto n = E[e];
 				next[n] = next[n] | visit[v];
 				for (auto l = 0; l < LANE_LIMIT; l++) {
-					parents[n][l] = parents[n][l] == -1 ? v : parents[n][l];
+						parents[n][l] = ((parents[n][l] == -1) && visit[v][l]) ? v : parents[n][l];
 				}
 			}
 		}
@@ -115,7 +115,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 					ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
 				} else {
 					visit1[src_data[src_pos]][lane] = true;
-					parents[src_data[src_pos]][lane] = -2; // Mark source with -2
+					parents[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
 					lane_to_num[lane] = search_num;        // active lane
 					active++;
 					break;
@@ -123,7 +123,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			}
 		}
 
-		// make passes while a lane is still active
+		//! make passes while a lane is still active
 		for (int64_t iter = 1; active; iter++) {
 			//! Perform one step of bfs exploration
 			if (!IterativeLength(v_size, v, e, parents, seen, (iter & 1) ? visit1 : visit2,
@@ -134,16 +134,38 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 				int64_t search_num = lane_to_num[lane];
 				if (search_num >= 0) { // active lane
-					                   //! Check if dst for a source has been seen
+				   	//! Check if dst for a source has been seen
+					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
+					int64_t src_pos = vdata_src.sel->get_index(search_num);
+					if (seen[dst_data[dst_pos]][lane]) {
+						//! Reconstruct path (v, e, v, e, ...)
+						std::vector<int64_t> output_vector;
+						output_vector.push_back(dst_data[dst_pos]);
+						auto source_v = parents[src_data[src_pos]][lane];
+						auto vertex_on_path = parents[dst_data[dst_pos]][lane];
+						while (vertex_on_path != source_v) { //! -2 is used to signify source of path, -1 is used to signify no parent
+							output_vector.push_back(vertex_on_path);
+							vertex_on_path = parents[vertex_on_path][lane];
+							if (vertex_on_path == -1) {
+								result_validity.SetInvalid(search_num);
+								break;
+							}
+						}
+						output_vector.push_back(source_v);
+						std::reverse(output_vector.begin(), output_vector.end());
+						auto output = make_unique<Vector>(LogicalType::LIST(LogicalType::INTEGER));
+						for (auto val : output_vector) {
+							Value value_to_insert = val;
+							ListVector::PushBack(*output, value_to_insert);
+						}
+						result_data[search_num].length = ListVector::GetListSize(*output);
+						result_data[search_num].offset = total_len;
+						total_len += ListVector::GetListSize(*output);
+						ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
 
-					//! Reconstruct path (v, e, v, e, ...)
-
-					//					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
-					//					if (seen[dst_data[dst_pos]][lane]) {
-					//						result_data[search_num] = iter; /* found at iter => iter = path length */
-					//						lane_to_num[lane] = -1;         // mark inactive
-					//						active--;
-					//					}
+						lane_to_num[lane] = -1; // Set lane inactive
+						active--;
+					}
 				}
 			}
 		}
