@@ -110,7 +110,7 @@ FROM (
     LEFT JOIN  Transfers_float t ON t.from_id = c.cid
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, t.amount))
+src.rowid, dst.rowid, t.rowid, t.amount))
 FROM
   Transfers_float t
   JOIN Customer src ON t.from_id = src.cid
