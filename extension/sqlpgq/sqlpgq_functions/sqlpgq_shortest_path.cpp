@@ -176,12 +176,9 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			std::reverse(output_vector.begin(), output_vector.end());
 			auto output = make_unique<Vector>(LogicalType::LIST(LogicalType::BIGINT));
 			for (auto val : output_vector) {
-				std::cout << val << " " << std::endl;
 				Value value_to_insert = val;
 				ListVector::PushBack(*output, value_to_insert);
 			}
-			std::cout << "List size: " << ListVector::GetListSize(*output) << std::endl;
-			std::cout << "----" << std::endl;
 
 			result_data[search_num].length = ListVector::GetListSize(*output);
 			result_data[search_num].offset = total_len;
