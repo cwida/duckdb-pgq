@@ -12,7 +12,8 @@
 
 namespace duckdb {
 
-static bool IterativeLength(int64_t v_size, int64_t *V, vector<int64_t> &E, vector<std::vector<int64_t>> &parents,
+static bool IterativeLength(int64_t v_size, int64_t *V, vector<int64_t> &E, vector<int64_t> &edge_ids,
+                            vector<std::vector<int64_t>> &parents_v, vector<std::vector<int64_t>> &parents_e,
                             vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                             vector<std::bitset<LANE_LIMIT>> &next) {
 	bool change = false;
@@ -24,9 +25,11 @@ static bool IterativeLength(int64_t v_size, int64_t *V, vector<int64_t> &E, vect
 		if (visit[v].any()) {
 			for (auto e = V[v]; e < V[v + 1]; e++) {
 				auto n = E[e];
+				auto edge_id = edge_ids[e];
 				next[n] = next[n] | visit[v];
 				for (auto l = 0; l < LANE_LIMIT; l++) {
-					parents[n][l] = ((parents[n][l] == -1) && visit[v][l]) ? v : parents[n][l];
+					parents_v[n][l] = ((parents_v[n][l] == -1) && visit[v][l]) ? v : parents_v[n][l];
+					parents_e[n][l] = ((parents_e[n][l] == -1) && visit[v][l]) ? edge_id : parents_e[n][l];
 				}
 			}
 		}
@@ -49,7 +52,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 
 	int64_t *v = (int64_t *)info.context.client_data->csr_list[id]->v;
 	vector<int64_t> &e = info.context.client_data->csr_list[id]->e;
-	vector<int64_t> &edge_ids __attribute__((unused)) = info.context.client_data->csr_list[id]->edge_ids;
+	vector<int64_t> &edge_ids = info.context.client_data->csr_list[id]->edge_ids;
 
 	auto &src = args.data[2];
 	auto &target = args.data[3];
@@ -69,7 +72,9 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 	vector<std::bitset<LANE_LIMIT>> seen(v_size);
 	vector<std::bitset<LANE_LIMIT>> visit1(v_size);
 	vector<std::bitset<LANE_LIMIT>> visit2(v_size);
-	vector<std::vector<int64_t>> parents(v_size, std::vector<int64_t>(LANE_LIMIT, -1));
+	vector<std::vector<int64_t>> parents_v(v_size, std::vector<int64_t>(LANE_LIMIT, -1));
+	vector<std::vector<int64_t>> parents_e(v_size, std::vector<int64_t>(LANE_LIMIT, -1));
+
 
 	// maps lane to search number
 	int16_t lane_to_num[LANE_LIMIT];
@@ -98,7 +103,8 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 					result_validity.SetInvalid(search_num);
 				} else {
 					visit1[src_data[src_pos]][lane] = true;
-					parents[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
+					parents_v[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
+
 					lane_to_num[lane] = search_num;                       // active lane
 					active++;
 					break;
@@ -109,7 +115,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 		//! make passes while a lane is still active
 		for (int64_t iter = 1; active; iter++) {
 			//! Perform one step of bfs exploration
-			if (!IterativeLength(v_size, v, e, parents, seen, (iter & 1) ? visit1 : visit2,
+			if (!IterativeLength(v_size, v, e, edge_ids, parents_v, parents_e, seen, (iter & 1) ? visit1 : visit2,
 			                     (iter & 1) ? visit2 : visit1)) {
 				break;
 			}
@@ -152,17 +158,20 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			}
 			std::vector<int64_t> output_vector;
 			output_vector.push_back(dst_data[dst_pos]);
-			auto source_v = parents[src_data[src_pos]][lane];
-			auto vertex_on_path = parents[dst_data[dst_pos]][lane];
+			auto source_v = parents_v[src_data[src_pos]][lane];
+			auto vertex_on_path = parents_v[dst_data[dst_pos]][lane];
+			auto edge_on_path = parents_e[dst_data[dst_pos]][lane];
+			output_vector.push_back(edge_on_path);
+
 			while (vertex_on_path != source_v) {
 			    //! -1 is used to signify no parent
-				if (vertex_on_path == -1 || vertex_on_path == parents[vertex_on_path][lane]) {
+				if (vertex_on_path == -1 || vertex_on_path == parents_v[vertex_on_path][lane]) {
 					no_path = true;
 					result_validity.SetInvalid(search_num);
 					break;
 				}
 				output_vector.push_back(vertex_on_path);
-				vertex_on_path = parents[vertex_on_path][lane];
+				vertex_on_path = parents_v[vertex_on_path][lane];
 			}
 			if (no_path) {
 				continue;
