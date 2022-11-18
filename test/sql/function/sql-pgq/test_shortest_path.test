@@ -137,7 +137,7 @@ statement ok
 DELETE FROM src_dest;
 
 statement ok
-CREATE TABLE person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person.csv') LIMIT 100;
+CREATE TABLE person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person.csv') LIMIT 200;
 
 statement ok
 CREATE TABLE person_knows_person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person_knows_person.csv')
