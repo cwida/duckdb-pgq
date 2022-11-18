@@ -12,16 +12,6 @@
 
 namespace duckdb {
 
-struct BfsParent {
-	int64_t index;
-	bool is_set = false;
-
-	explicit BfsParent(int64_t index) : index(index), is_set(false) {
-	}
-	BfsParent(int64_t index, bool is_set) : index(index), is_set(is_set) {
-	}
-};
-
 static bool IterativeLength(int64_t v_size, int64_t *V, vector<int64_t> &E, vector<std::vector<int64_t>> &parents,
                             vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                             vector<std::bitset<LANE_LIMIT>> &next) {
@@ -123,21 +113,25 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			                     (iter & 1) ? visit2 : visit1)) {
 				break;
 			}
+			int64_t finished_searches = 0;
 			// detect lanes that finished
 			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 				int64_t search_num = lane_to_num[lane];
 				if (search_num >= 0) { // active lane
-					                   //! Check if dst for a source has been seen
+					//! Check if dst for a source has been seen
 					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
 					if (seen[dst_data[dst_pos]][lane]) {
-						active--;
+						finished_searches++;
 					}
 				}
 			}
+			if (finished_searches == LANE_LIMIT) {
+				break;
+			}
 		}
-
 		//! Reconstruct the paths
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+
 			bool no_path = false;
 			int64_t search_num = lane_to_num[lane];
 			if (search_num == -1) {
@@ -153,6 +147,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 				result_data[search_num].length = ListVector::GetListSize(*output);
 				result_data[search_num].offset = total_len;
 				ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
+				total_len += result_data[search_num].length;
 				continue;
 			}
 			std::vector<int64_t> output_vector;
@@ -161,7 +156,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			auto vertex_on_path = parents[dst_data[dst_pos]][lane];
 			while (vertex_on_path != source_v) {
 			    //! -1 is used to signify no parent
-				if (vertex_on_path == -1) {
+				if (vertex_on_path == -1 || vertex_on_path == parents[vertex_on_path][lane]) {
 					no_path = true;
 					result_validity.SetInvalid(search_num);
 					break;
@@ -186,6 +181,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			total_len += result_data[search_num].length;
 		}
 	}
+	std::cout << "--------" << std::endl;
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetShortestPathFunction() {
