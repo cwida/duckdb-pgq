@@ -181,7 +181,6 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			total_len += result_data[search_num].length;
 		}
 	}
-	std::cout << "--------" << std::endl;
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetShortestPathFunction() {
