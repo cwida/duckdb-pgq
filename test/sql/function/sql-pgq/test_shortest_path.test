@@ -32,7 +32,7 @@ FROM (
     LEFT JOIN  Transfers t ON t.from_id = c.cid
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, t.rowid, t.amount))
+src.rowid, dst.rowid, CAST(CAST(src.rowid AS VARCHAR) || CAST(dst.rowid AS VARCHAR) AS BIGINT), t.amount))
 FROM
   Transfers t
   JOIN Customer src ON t.from_id = src.cid
@@ -47,10 +47,10 @@ INSERT INTO src_dest VALUES(0, 4, 0, 2), (0, 4, 1, 2), (0, 4, 3, 0), (0, 4, 0, 1
 query T
 SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
 ----
-[0, 2]
-[1, 2]
+[0, 2, 2]
+[1, 12, 2]
 NULL
-[0, 1]
+[0, 1, 1]
 [0]
 
 statement ok
@@ -77,7 +77,7 @@ FROM (
     LEFT JOIN  Transfers t ON t.from_id = c.cid
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, t.rowid, t.amount))
+src.rowid, dst.rowid, CAST(CAST(src.rowid AS VARCHAR) || CAST(dst.rowid AS VARCHAR) AS BIGINT), t.amount))
 FROM
   Transfers t
   JOIN Customer src ON t.from_id = src.cid
@@ -86,7 +86,7 @@ FROM
 query T
 SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
 ----
-[0, 2, 3]
+[0, 2, 2, 23, 3]
 
 statement ok
 PRAGMA delete_csr=0;
@@ -113,7 +113,7 @@ FROM (
     LEFT JOIN  Transfers t ON t.from_id = c.cid
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, t.rowid, t.amount))
+src.rowid, dst.rowid, CAST(CAST(src.rowid AS VARCHAR) || CAST(dst.rowid AS VARCHAR) AS BIGINT), t.amount))
 FROM
   Transfers t
   JOIN Customer src ON t.from_id = src.cid
@@ -127,8 +127,8 @@ INSERT INTO src_dest VALUES
 query T
 SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
 ----
-[0, 2, 3]
-[1, 2, 3]
+[0, 2, 2, 23, 3]
+[1, 12, 2, 23, 3]
 
 statement ok
 pragma delete_csr=0;
@@ -154,7 +154,7 @@ FROM (
     LEFT JOIN person_knows_person t ON t.person1id = c.id
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, t.rowid))
+src.rowid, dst.rowid, CAST(CAST(src.rowid AS VARCHAR) || CAST(dst.rowid AS VARCHAR) AS BIGINT)))
 FROM
   person_knows_person t
   JOIN person src ON t.person1id = src.id
