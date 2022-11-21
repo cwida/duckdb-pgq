@@ -137,12 +137,10 @@ statement ok
 DELETE FROM src_dest;
 
 statement ok
-CREATE TABLE person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person.csv') LIMIT 200;
+CREATE TABLE person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person.csv');
 
 statement ok
-CREATE TABLE person_knows_person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person_knows_person.csv')
-    WHERE   person1id IN (FROM person)
-        AND person2id IN (FROM person);
+CREATE TABLE person_knows_person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person_knows_person.csv');
 
 statement ok
 SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM person c),
@@ -168,16 +166,20 @@ CREATE TABLE all_options(   person1id BIGINT,
                             person2rowid BIGINT);
 
 statement ok
-INSERT INTO all_options (SELECT p.id as person1id, p.rowid as person1rowid, p2.id as person2id, p2.rowid as person2rowid
-                            FROM person p
-                            CROSS JOIN person p2);
+INSERT INTO all_options (
+    SELECT p.id as person1id, p.rowid as person1rowid, p2.id as person2id, p2.rowid as person2rowid
+    FROM
+        (select id, rowid from person p LIMIT 1) p
+    CROSS JOIN person p2)
+    LIMIT 2000;
 
 query IIIIII
 SELECT p.person1id, p.person1rowid, p.person2id, p.person2rowid,
-    shortestpath(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS weight
+    shortestpath(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path,
+    iterativelength(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS length
     FROM all_options p
-    WHERE weight IS NOT NULL;
+    WHERE path IS NOT NULL;
 ----
-1	1	1	1	1
+1	1	1	1	1   1
 
 
