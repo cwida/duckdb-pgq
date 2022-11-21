@@ -104,7 +104,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 				} else {
 					visit1[src_data[src_pos]][lane] = true;
 					parents_v[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
-
+					parents_e[src_data[src_pos]][lane] = -2; // Mark the source with -2, there is no incoming edge for the source.
 					lane_to_num[lane] = search_num;                       // active lane
 					active++;
 					break;
@@ -137,10 +137,8 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 		}
 		//! Reconstruct the paths
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
-
-			bool no_path = false;
 			int64_t search_num = lane_to_num[lane];
-			if (search_num == -1) {
+			if (search_num == -1) { // empty lanes
 				continue;
 			}
 
@@ -150,30 +148,34 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			if (src_data[src_pos] == dst_data[dst_pos]) { // Source == destination
 				unique_ptr<Vector> output = make_unique<Vector>(LogicalType::LIST(LogicalType::BIGINT));
 				ListVector::PushBack(*output, src_data[src_pos]);
+				ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
 				result_data[search_num].length = ListVector::GetListSize(*output);
 				result_data[search_num].offset = total_len;
-				ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
 				total_len += result_data[search_num].length;
 				continue;
 			}
 			std::vector<int64_t> output_vector;
-			output_vector.push_back(dst_data[dst_pos]);
-			auto source_v = parents_v[src_data[src_pos]][lane];
-			auto vertex_on_path = parents_v[dst_data[dst_pos]][lane];
-			auto edge_on_path = parents_e[dst_data[dst_pos]][lane];
-			output_vector.push_back(edge_on_path);
+			std::vector<int64_t> output_edge;
+			auto source_v = src_data[src_pos]; // Take the source
 
-			while (vertex_on_path != source_v) {
-			    //! -1 is used to signify no parent
-				if (vertex_on_path == -1 || vertex_on_path == parents_v[vertex_on_path][lane]) {
-					no_path = true;
+			auto parent_vertex = parents_v[dst_data[dst_pos]][lane]; // Take the parent vertex of the destination vertex
+			auto parent_edge = parents_e[dst_data[dst_pos]][lane]; // Take the parent edge of the destination vertex
+
+			output_vector.push_back(dst_data[dst_pos]); // Add destination vertex
+			output_vector.push_back(parent_edge);
+			while (parent_vertex != source_v) { // Continue adding vertices until we have reached the source vertex
+				//! -1 is used to signify no parent
+				if (parent_vertex == -1 || parent_vertex == parents_v[parent_vertex][lane]) {
 					result_validity.SetInvalid(search_num);
 					break;
 				}
-				output_vector.push_back(vertex_on_path);
-				vertex_on_path = parents_v[vertex_on_path][lane];
+				output_vector.push_back(parent_vertex);
+				parent_edge = parents_e[parent_vertex][lane];
+				parent_vertex = parents_v[parent_vertex][lane];
+				output_vector.push_back(parent_edge);
 			}
-			if (no_path) {
+
+			if (!result_validity.RowIsValid(search_num)) {
 				continue;
 			}
 			output_vector.push_back(source_v);
