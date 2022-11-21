@@ -51,6 +51,7 @@ static int16_t InitialiseBfs(idx_t curr_batch, idx_t size, int64_t *src_data, co
 	int16_t lanes = 0;
 	int16_t curr_batch_size = 0;
 
+
 	for (idx_t i = curr_batch; i < size && lanes < LANE_LIMIT; i++) {
 		auto src_index = src_sel->get_index(i);
 
