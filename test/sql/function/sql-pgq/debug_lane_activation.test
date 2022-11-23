@@ -53,6 +53,8 @@ SELECT iterativelength(0, v_size, src, dst) FROM src_dest;
 NULL
 1
 
+statement ok
+pragma delete_csr=0;
 
 statement ok
 CREATE TABLE person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person.csv');
@@ -61,16 +63,19 @@ statement ok
 CREATE TABLE person_knows_person AS SELECT * FROM read_csv_auto('data/sqlpgq-testing/snb/sf1/person_knows_person.csv');
 
 statement ok
+CREATE TABLE parameters as SELECT * FROM read_csv_auto('/Users/dljtw/git/duckpgq-experiments/parameters/sf1/q13a.csv') LIMIT 64;
+
+statement ok
 SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM person c),
 CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.id) as vcount FROM person c),
-sub.dense_id, sub.cnt )) AS numEdges
+sub.dense_id, sub.cnt)) AS numEdges
 FROM (
     SELECT c.rowid as dense_id, count(t.person1id) as cnt
     FROM person c
     LEFT JOIN person_knows_person t ON t.person1id = c.id
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, CAST(CAST(src.rowid AS VARCHAR) || CAST(dst.rowid AS VARCHAR) AS BIGINT)))
+src.rowid, dst.rowid, t.weight))
 FROM
   person_knows_person t
   JOIN person src ON t.person1id = src.id
@@ -83,17 +88,25 @@ CREATE TABLE all_options(   person1id BIGINT,
                             person2id BIGINT,
                             person2rowid BIGINT);
 
+
 statement ok
 INSERT INTO all_options (
-    SELECT p.id as person1id, p.rowid as person1rowid, p2.id as person2id, p2.rowid as person2rowid
-    FROM
-        (select id, rowid from person p LIMIT 1) p
-    CROSS JOIN person p2)
-    LIMIT 8;
+    SELECT p.person1id as person1id, p2.rowid as person1rowid, p.person2id as person2id, p3.rowid as person2rowid
+    FROM parameters p
+        JOIN person p2 on p.person1id = p2.id
+        JOIN person p3 on p.person2id = p3.id
+    )
 
 query IIIII
 SELECT p.person1id, p.person1rowid, p.person2id, p.person2rowid,
     iterativelength(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS length
     FROM all_options p;
 ----
-1	1	1	1	1
+24189255820950	6702	17592186054199	5021	NULL
+21990232555638	5620	24189255813043	6287	NULL
+19791209300876	5113	26388279067805	6796	4
+8796093032749	2814	32985348842400	8878	2
+8796093032451	2803	32985348842698	8897	3
+8796093031814	10163	32985348843335	8927	4
+8796093031490	2743	32985348843659	8945	NULL
+4398046520615	1648	37383395354534	9973	3

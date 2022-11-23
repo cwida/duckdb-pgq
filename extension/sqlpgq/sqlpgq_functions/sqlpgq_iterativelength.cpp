@@ -8,7 +8,7 @@
 
 namespace duckdb {
 
-static bool IterativeLength(int64_t v_size, int64_t *v, vector<int64_t> &e, vector<std::bitset<LANE_LIMIT>> &seen,
+static bool IterativeLength(int64_t v_size, int64_t *v, vector<int64_t> &e, short lane_to_num[], vector<std::bitset<LANE_LIMIT>> &seen,
                             vector<std::bitset<LANE_LIMIT>> &visit, vector<std::bitset<LANE_LIMIT>> &next) {
 	bool change = false;
 	for (auto i = 0; i < v_size; i++) {
@@ -33,9 +33,28 @@ static bool IterativeLength(int64_t v_size, int64_t *v, vector<int64_t> &e, vect
 		change |= next[i].any();
 	}
 
+	auto _vertices_with_one_lane = 0;
+	auto _vertices_seen = 0;
+
 	for (auto i = 0; i < v_size; i++) {
-		std::cout << "Vertex: " << i << " seen: " << seen[i].count() << " next: " << next[i].count() << std::endl;
+		if (seen[i].none()) continue;
+		_vertices_seen++;
+		//		std::cout << "Vertex: " << i << " seen: " << seen[i].count() << " next: " << next[i].count() << std::endl;
 	}
+
+	for (auto i = 0; i < v_size; i++) {
+		if (next[i].none()) continue;
+		_vertices_with_one_lane++;
+//		std::cout << "Vertex: " << i << " seen: " << seen[i].count() << " next: " << next[i].count() << std::endl;
+	}
+
+	std::cout << "Vertices with at least one lane active next iteration: " << _vertices_with_one_lane << std::endl;
+	std::cout << "That is " << ((float)_vertices_with_one_lane/(float)v_size) * 100 << "% of all vertices" << std::endl;
+
+	std::cout << "Vertices that have been seen by at least one lane so far: " << _vertices_seen << std::endl;
+	std::cout << "That is " << ((float)_vertices_seen/(float)v_size) * 100 << "% of all vertices" << std::endl;
+
+
 
 	std::vector<int> _counter(LANE_LIMIT, 0);
 	for (auto i = 0; i < v_size; i++) {
@@ -46,14 +65,19 @@ static bool IterativeLength(int64_t v_size, int64_t *v, vector<int64_t> &e, vect
 		}
 	}
 
-	for (auto i = 0; i < _counter.size(); i++) {
-		std::cout << "Lane " << i << " has discovered " << _counter[i] << " new node(s) this iteration" << std::endl;
+	for (auto i = 0; i < LANE_LIMIT; i++) {
+		if (lane_to_num[i] < 0) {
+			std::cout << "Lane " << i << " has finished already" << std::endl;
+		} else {
+			std::cout << "Lane " << i << " has discovered " << _counter[i] << " new node(s) this iteration" << std::endl;
+		}
 	}
 
 	return change;
 }
 
 static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+	std::cout << "\n------\nNew vector\n------";
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
@@ -131,7 +155,7 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 		// make passes while a lane is still active
 		for (int64_t iter = 1; active; iter++) {
 			auto _finished_searches_iter = 0;
-			if (!IterativeLength(v_size, v, e, seen, (iter & 1) ? visit1 : visit2, (iter & 1) ? visit2 : visit1)) {
+			if (!IterativeLength(v_size, v, e, lane_to_num, seen, (iter & 1) ? visit1 : visit2, (iter & 1) ? visit2 : visit1)) {
 				break;
 			}
 			// detect lanes that finished
@@ -150,7 +174,7 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 				}
 			}
 			_iterations++;
-			std::cout << "Finished " << _finished_searches_iter << " searches this iteration." << std::endl;
+			std::cout << "Finished " << _finished_searches_iter << " searches this iteration (" << iter << ")." << std::endl;
 			std::cout << "Finished " << _finished_searches_total << " searches so far." << std::endl;
 		}
 		// no changes anymore: any still active searches have no path
