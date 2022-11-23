@@ -28,6 +28,9 @@ CREATE TEMP TABLE Message as (SELECT p.id as messageid, NULL as ParentMessageId,
 
 
 
+
+
+
 statement ok
 CREATE TEMP TABLE interactions as (select least(m1.creatorpersonid, m2.creatorpersonid) as src,
                                          greatest(m1.creatorpersonid, m2.creatorpersonid) as dst,
