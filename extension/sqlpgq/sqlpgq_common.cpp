@@ -3,6 +3,7 @@
 #include "duckdb/main/client_data.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 
+#include <stdio.h>
 #include <utility>
 
 namespace duckdb {
@@ -61,12 +62,8 @@ bool IterativeLengthFunctionData::Equals(const FunctionData &other_p) const {
 unique_ptr<FunctionData> IterativeLengthFunctionData::IterativeLengthBind(ClientContext &context,
                                                                           ScalarFunction &bound_function,
                                                                           vector<unique_ptr<Expression>> &arguments) {
-	string file_name;
-	if (arguments.size() == 5) {
-		file_name = ExpressionExecutor::EvaluateScalar(context, *arguments[4]).GetValue<string>();
-	} else {
-		file_name = "timings-test.txt";
-	}
+	string file_name = "iterative_length.log";
+	std::remove(file_name.c_str());
 	return make_unique<IterativeLengthFunctionData>(context, file_name);
 }
 
