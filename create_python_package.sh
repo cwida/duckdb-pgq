@@ -10,6 +10,8 @@ if command -v deactivate; then
 fi
 rm -rf .venv
 
+make clean
+
 virtualenv .venv
 source .venv/bin/activate
 python3 -m pip install pandas numpy jproperties
