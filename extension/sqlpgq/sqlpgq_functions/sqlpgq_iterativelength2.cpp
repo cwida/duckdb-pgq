@@ -20,7 +20,7 @@ static bool IterativeLength2(int64_t v_size, int64_t *V, vector<int64_t> &E, vec
 			for (auto e = V[v]; e < V[v + 1]; e++) {
 				auto n = E[e];
 				auto unseen = visit[v] & ~seen[n];
-				next[n] |= visit[v];
+				next[n] |= unseen;
 				change |= unseen;
 			}
 		}
