@@ -28,3 +28,6 @@ ggplot(data_long %>% filter(category == "discovered_cumulative_mean" | category 
   geom_point(aes(col=category, group=category), size=2.5) +
   geom_line(aes(col=category, group=category)) +
   theme_classic()
+
+
+
