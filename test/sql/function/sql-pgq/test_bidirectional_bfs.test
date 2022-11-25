@@ -68,22 +68,6 @@ SELECT iterativelengthbidirectional(0, v_size, src, dst) FROM src_dst;
 NULL
 0
 
-query T nosort small_test
-SELECT bidirectionaliterativelength(0, v_size, src, dst) FROM src_dst;
-----
-3
-1
-2
-2
-NULL
-0
-
-#statement ok
-#INSERT INTO src_dst VALUES (0, 5, 0, 10);
-
-#statement error
-#SELECT iterativelengthbidirectional(0, v_size, src, dst) FROM src_dst;
-
 statement ok
 pragma delete_csr=0;
 
@@ -115,7 +99,7 @@ create temp table all_options
 );
 
 statement ok
-copy parameters from 'data/sqlpgq-testing/snb/parameters/q13.csv' (DELIMITER '|', HEADER);
+copy parameters from 'data/sqlpgq-testing/snb/parameters/q13a-sample.csv' (DELIMITER '|', HEADER);
 
 
 statement ok
