@@ -6,11 +6,18 @@
 
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 namespace duckdb {
 
 static bool IterativeLength(std::ofstream &file_stream, int64_t v_size, int64_t *v, vector<int64_t> &e, short lane_to_num[], vector<std::bitset<LANE_LIMIT>> &seen,
                             vector<std::bitset<LANE_LIMIT>> &visit, vector<std::bitset<LANE_LIMIT>> &next) {
+	using std::chrono::high_resolution_clock;
+	using std::chrono::duration_cast;
+	using std::chrono::duration;
+	using std::chrono::milliseconds;
+
+	auto t1 = high_resolution_clock::now();
 	bool change = false;
 	for (auto i = 0; i < v_size; i++) {
 		next[i] = 0;
@@ -31,6 +38,13 @@ static bool IterativeLength(std::ofstream &file_stream, int64_t v_size, int64_t 
 		seen[i] = seen[i] | next[i];
 		change |= next[i].any();
 	}
+
+	auto t2 = high_resolution_clock::now();
+
+	/* Getting number of milliseconds as an integer. */
+	auto ms_int = duration_cast<milliseconds>(t2 - t1);
+
+	file_stream << "This iteration took " << ms_int.count() << " ms" << std::endl;
 
 	auto _vertices_with_one_lane = 0;
 	auto _vertices_seen = 0;

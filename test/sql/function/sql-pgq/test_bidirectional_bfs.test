@@ -68,12 +68,6 @@ SELECT iterativelengthbidirectional(0, v_size, src, dst) FROM src_dst;
 NULL
 0
 
-#statement ok
-#INSERT INTO src_dst VALUES (0, 5, 0, 10);
-
-#statement error
-#SELECT iterativelengthbidirectional(0, v_size, src, dst) FROM src_dst;
-
 statement ok
 pragma delete_csr=0;
 

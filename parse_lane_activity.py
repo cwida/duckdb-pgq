@@ -13,7 +13,7 @@ searches_in_vector = []
 
 output_file = open("lane_activity.csv", "w")
 
-output_file.write("vector,batch,iteration,discovered_cumulative,discovered_iteration,finished_iteration,finished_total\n")
+output_file.write("vector,batch,iteration,discovered_cumulative,discovered_iteration,finished_iteration,finished_total,time_taken\n")
 
 for idx_vector, vector in enumerate(vectors_split):
     if vector == '':
@@ -26,9 +26,9 @@ for idx_vector, vector in enumerate(vectors_split):
         for idx_iter, iteration in enumerate(iterations_split[1:]):
             lane_info = iteration.split("!\n")
             iteration_info = lane_info[0].split('\n')
-
-            discovered_iter = float(iteration_info[2].split()[2].replace("%", ""))
-            discovered_cumulative = float(iteration_info[4].split()[2].replace("%", ""))
+            time_taken_iter = iteration_info[1].split()[-2]
+            discovered_iter = float(iteration_info[3].split()[2].replace("%", ""))
+            discovered_cumulative = float(iteration_info[5].split()[2].replace("%", ""))
 
             finished_searches_this_iteration = lane_info[-1].split("&\n")[-1].split("*\n")[0]
             finished_iteration = (int(finished_searches_this_iteration.split()[1]))
@@ -36,5 +36,5 @@ for idx_vector, vector in enumerate(vectors_split):
             total_finished_searches = lane_info[-1].split("*\n")[-1].split()[1]
             lanes = lane_info[-1].split('\n')
             output_file.write(f"{idx_vector},{idx_batch},{idx_iter},{discovered_cumulative},{discovered_iter},"
-                              f"{finished_iteration},{total_finished_searches}\n")
+                              f"{finished_iteration},{total_finished_searches},{time_taken_iter}\n")
 
