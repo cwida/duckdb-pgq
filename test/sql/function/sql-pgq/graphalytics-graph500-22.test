@@ -1,12 +1,17 @@
+# name: test/sql/function/sqlpgq/graphalytics-graph500-22.test
+# description: Perform pathfinding operations on graphalytics graph 500 SF 22 dataset
+# group: [sql-pgq]
+
+# The files are too big for Github, you can download them using the following command
+# curl --silent --fail https://surfdrive.surf.nl/files/index.php/s/0ix5lmNLsUsbx5W/download | tar -xv --use-compress-program=unzstd --directory=data/sqlpgq-testing/graphalytics
+
 require sqlpgq
 
-require parquet
+statement ok
+CREATE TABLE v AS SELECT * FROM read_csv('data/sqlpgq-testing/graphalytics/graph500-22.v', columns={'id': 'BIGINT'});
 
 statement ok
-CREATE TABLE v AS SELECT * FROM read_parquet('data/sqlpgq-testing/graphalytics/v.parquet');
-
-statement ok
-CREATE TABLE e AS SELECT * FROM read_parquet('data/sqlpgq-testing/graphalytics/e.parquet');
+CREATE TABLE e AS SELECT * FROM read_csv('data/sqlpgq-testing/graphalytics/graph500-22.e', delim=' ', columns={'source': 'BIGINT', 'target': 'BIGINT'});
 
 statement ok
 CREATE TEMP TABLE PersonKnows AS (SELECT DISTINCT r.Person1id as id
@@ -54,7 +59,7 @@ statement ok
 CREATE TABLE src_dst_pairs (src bigint NOT NULL, dst bigint NOT NULL);
 
 statement ok
-INSERT INTO src_dst_pairs (select (select * from v limit 1), * from v limit 10)
+INSERT INTO src_dst_pairs (select (select * from v limit 1), * from v limit 1024)
 
 statement ok
 INSERT INTO all_options(
