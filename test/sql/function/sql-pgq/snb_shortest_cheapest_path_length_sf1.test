@@ -50,42 +50,28 @@ INSERT INTO all_options(
 );
 
 
-query III
+query III nosort shortest_path_length
 SELECT s.person1id, s.person2id, iterativelength(0, (select count(*) from person), s.person1rowid, s.person2rowid)
 FROM all_options s
-order by s.person1id, s.person2id
-limit 10;
-----
-27	2199023260862	3
-27	4398046518431	3
-27	8796093032126	3
-27	17592186051640	2
-27	24189255812497	2
-27	26388279076238	3
-100	8796093032126	3
-137	30786325582731	3
-167	7146	3
-235	6597069772053	3
+order by s.person1id, s.person2id;
+
+query III nosort shortest_path_length
+SELECT s.person1id, s.person2id, iterativelengthbidirectional(0, (select count(*) from person), s.person1rowid, s.person2rowid)
+FROM all_options s
+order by s.person1id, s.person2id;
+
+query III nosort shortest_path_length
+SELECT s.person1id, s.person2id, iterativelength2(0, (select count(*) from person), s.person1rowid, s.person2rowid)
+FROM all_options s
+order by s.person1id, s.person2id;
 
 
-query III
+query III nosort cheapest_path_length
 SELECT s.person1id, s.person2id, cheapest_path_length(0, (select count(*) from person), s.person1rowid, s.person2rowid)
 FROM all_options s
-order by s.person1id, s.person2id
-limit 10;
-----
-27	2199023260862	6
-27	4398046518431	5
-27	8796093032126	5
-27	17592186051640	6
-27	24189255812497	4
-27	26388279076238	5
-100	8796093032126	7
-137	30786325582731	7
-167	7146	5
-235	6597069772053	8
+order by s.person1id, s.person2id;
 
-query III
+query III nosort cheapest_path_length
 SELECT c1id, c2id, weight
 FROM (
     WITH cte1 AS (
@@ -113,16 +99,5 @@ FROM (
     SELECT s.person1id AS c1id, s.person2id AS c2id, cheapest_path_length(0, cte1.vcount, s.person1rowid, s.person2rowid) as weight
     FROM cte1, all_options s
     WHERE ( cheapest_path_length(0, cte1.vcount, s.person1rowid, s.person2rowid))
-    order by person1id, person2id limit 10
+    order by person1id, person2id
     );
-----
-27	2199023260862	6
-27	4398046518431	5
-27	8796093032126	5
-27	17592186051640	6
-27	24189255812497	4
-27	26388279076238	5
-100	8796093032126	7
-137	30786325582731	7
-167	7146	5
-235	6597069772053	8
