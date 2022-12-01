@@ -58,24 +58,6 @@ CREATE TABLE PersonUniversity AS (SELECT DISTINCT Person1id as id
                                         FROM Person_UniversityKnows_Person))
                                  ORDER BY id);
 
-
-#statement ok
-#SELECT DISTINCT CREATE_CSR(
-#               0,
-#               v.vcount,
-#               e.ecount,
-#               r.src,
-#               r.dst,
-#               r.weight
-#           )
-#FROM (SELECT count(p.id) as vcount FROM PersonUniversity p) v,
-#     (select count(t.Person1id) as ecount FROM Person_UniversityKnows_Person t) e,
-#     (SELECT src.rowid as src, dst.rowid as dst, t.weight as weight
-#      FROM Person_UniversityKnows_Person t
-#       JOIN PersonUniversity src ON t.Person1id = src.id
-#       JOIN PersonUniversity dst ON t.Person2id = dst.id) r;
-
-
 statement ok
 SELECT CREATE_CSR_VERTEX(
 0,
@@ -105,22 +87,6 @@ FROM
   Person_UniversityKnows_Person t
   JOIN PersonUniversity src ON t.person1id = src.id
   JOIN PersonUniversity dst ON t.person2id = dst.id;
-
-#statement ok
-#SELECT DISTINCT CREATE_CSR(
-#               0,
-#               v.vcount,
-#               e.ecount,
-#               r.src,
-#               r.dst,
-#               r.weight
-#           )
-#FROM (SELECT count(p.id) as vcount FROM PersonUniversity p) v,
-#     (SELECT count(t.Person1id) as ecount from Person_UniversityKnows_Person t) e,
-#     (SELECT src.rowid as src, dst.rowid as dst, t.weight as weight
-#      FROM Person_UniversityKnows_Person t
-#       JOIN PersonUniversity src ON t.Person1id = src.id
-#       JOIN PersonUniversity dst ON t.Person2id = dst.id) r;
 
 query IIII
 SELECT  p.id                                                                           as Person1id,
