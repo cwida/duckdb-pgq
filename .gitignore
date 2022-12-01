@@ -269,7 +269,6 @@ docs
 
 # tests
 test/test.sql
-data/sqlpgq-testing/graphalytics/*
 
 # SQLite logic tests
 test/evidence/
@@ -316,4 +315,3 @@ zig-cache/*
 
 # .db files
 *.db
-/data/sqlpgq-testing/graphalytics/
