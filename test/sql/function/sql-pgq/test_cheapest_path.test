@@ -1,5 +1,6 @@
 # name: test/sql/function/sql-pgq/test_cheapest_path.test
 # group: [sql-pgq]
+
 require sqlpgq
 
 statement ok
@@ -24,60 +25,45 @@ INSERT INTO Transfers VALUES
   (127, 101, 406, 150),
   (126, 807, 101, 100);
 
-#statement ok
-#SELECT CREATE_CSR_VERTEX(
-#0,
-#v.vcount,
-#sub.dense_id,
-#sub.cnt
-#) AS numEdges
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub,  (SELECT count(c.cid) as vcount FROM Customer c) v
-#
-#statement ok
-#SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
-#CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
-#sub.dense_id, sub.cnt )) AS numEdges
-#FROM (
-#    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-#    FROM Customer c
-#    LEFT JOIN  Transfers t ON t.from_id = c.cid
-#    GROUP BY c.rowid
-#) sub) AS BIGINT),
-#src.rowid, dst.rowid, t.amount ))
-#FROM
-#  Transfers t
-#  JOIN Customer src ON t.from_id = src.cid
-#  JOIN Customer dst ON t.to_id = dst.cid
-#
-#statement ok
-#CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
-#
-#statement ok
-#INSERT INTO src_dest VALUES(0, 6, 0, 5), (0, 6, 0, 4), (0, 6, 5, 3), (0, 6, 0, 2), (0, 6, 2, 3), (0, 6, 1, 5), (0, 6, 3, 2), (0, 6, 0, 1) ;
-#
-#csr will be deleted after calling cheapest_path.
-#query T
-#SELECT cheapest_path(id, v_size, src, dst) FROM src_dest;
-#----
-#180
-#280
-#250
-#150
-#10
-#80
-#200
-#100
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id, sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid, t.amount ))
+FROM
+  Transfers t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
 
-#statement ok
-#drop table src_dest
+statement ok
+CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 
-#statement ok
-#drop table Transfers
+statement ok
+INSERT INTO src_dest VALUES(0, 6, 0, 5), (0, 6, 0, 4), (0, 6, 5, 3), (0, 6, 0, 2), (0, 6, 2, 3), (0, 6, 1, 5), (0, 6, 3, 2), (0, 6, 0, 1) ;
+
+query T
+SELECT cheapest_path_length(0, v_size, src, dst) FROM src_dest;
+----
+180
+280
+250
+150
+10
+80
+200
+100
+
+statement ok
+pragma delete_csr=0
+
+statement ok
+drop table src_dest
 
 statement ok
 CREATE TABLE Transfers_float(tid bigint, from_id bigint, to_id bigint, amount double);
@@ -96,33 +82,30 @@ INSERT INTO Transfers_float VALUES
   (126, 807, 101, 100.5);
 
 statement ok
-SELECT DISTINCT CREATE_CSR(
-0,
-v.vcount,
-r.ecount,
-r.src,
-r.dst,
-r.weight
-)
-FROM
-    (SELECT count(c.cid) as vcount FROM Customer c) v,
-    (SELECT src.rowid as src, dst.rowid as dst, t.amount as weight, count(src.rowid) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) as ecount
-        FROM Transfers_float t
-        JOIN Customer src ON t.from_id = src.cid
-        JOIN Customer dst ON t.to_id = dst.cid
-        GROUP BY src.rowid, dst.rowid, t.amount) r
-#----
-#{'id': 0, 'vertices': 6, 'edges': 10, 'weight': double}
-
-statement ok
 CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 
 statement ok
 INSERT INTO src_dest VALUES(0, 6, 0, 5), (0, 6, 0, 4), (0, 6, 5, 3), (0, 6, 0, 2), (0, 6, 2, 3), (0, 6, 1, 5), (0, 6, 3, 2), (0, 6, 0, 1) ;
 
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id, sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN Transfers_float t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid, t.amount ))
+FROM
+  Transfers_float t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
+
 
 query I
-SELECT cheapest_path(0, v_size, src, dst) FROM src_dest;
+SELECT cheapest_path_length(0, v_size, src, dst) FROM src_dest;
 ----
 181.200000
 281.700000
