@@ -75,6 +75,3 @@ JOIN    Company c on (pwc.organisationid = c.id AND c.name = 'Macedonian_Airline
 JOIN    PersonUniversity p2 on p2.id = 28587302322576
 order by weight, p.id;
 ----
-4398046517881	28587302322576	Macedonian_Airlines	NULL
-10995116285528	28587302322576	Macedonian_Airlines	NULL
-4398046517652	28587302322576	Macedonian_Airlines	5
