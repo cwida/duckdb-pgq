@@ -27,20 +27,6 @@ INSERT INTO Transfers VALUES
   (769, 6, 4, 50);
 
 statement ok
-SELECT CREATE_CSR_VERTEX(
-0,
-v.vcount,
-sub.dense_id,
-sub.cnt
-) AS numEdges
-FROM (
-    SELECT c.rowid as dense_id, count(t.from_id) as cnt
-    FROM Customer c
-    LEFT JOIN  Transfers t ON t.from_id = c.cid
-    GROUP BY c.rowid
-) sub,  (SELECT count(c.cid) as vcount FROM Customer c) v
-
-statement ok
 SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
 CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
 sub.dense_id , sub.cnt )) AS numEdges
@@ -65,7 +51,7 @@ INSERT INTO src_dest VALUES(0, 7, 0, 5), (0, 7, 1, 5), (0, 7, 1, 6), (0, 7, 1, 1
 
 #csr will be deleted after calling reachability.
 query III
-SELECT s.src, s.dst, any_shortest_path(s.id, false, v_size, s.src, s.dst) FROM src_dest s
+SELECT s.src, s.dst, any_shortest_path(0, false, v_size, s.src, s.dst) FROM src_dest s
 ----
 0	5	[0, 3, 2, 5]
 1	5	[1, 4, 5]
@@ -76,7 +62,5 @@ SELECT s.src, s.dst, any_shortest_path(s.id, false, v_size, s.src, s.dst) FROM s
 0	2	[0, 3, 2]
 0	6	[0, 1, 6]
 
-#SELECT c.id, c2.id, shortest_path(s.id, false, v_size, s.src, s.dst) FROM src_dest s
-#LEFT JOIN Customer c ON s.src = c.rowid
-#LEFT JOIN Customer p2 ON s.dst = c2.rowid
-#order by c.id, c2.id;
+statement ok
+pragma delete_csr=0;
