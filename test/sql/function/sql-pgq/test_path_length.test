@@ -89,6 +89,23 @@ CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 statement ok
 INSERT INTO src_dest VALUES(0, 6, 0, 5), (0, 6, 0, 4), (0, 6, 5, 3), (0, 6, 0, 2), (0, 6, 2, 3), (0, 6, 1, 5), (0, 6, 3, 2), (0, 6, 0, 1) ;
 
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id , sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid))
+FROM
+  Transfers t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
+
+
 query I
 SELECT iterativelength(0, v_size, src, dst) FROM src_dest;
 ----
