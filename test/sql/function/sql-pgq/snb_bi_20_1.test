@@ -4,34 +4,24 @@
 require sqlpgq
 
 statement ok
-create table person as (select * from '/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person/part-00001-354b330a-be7e-4581-99ab-dfe73df59470-c000.csv');
+create table person as (select * from read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/dynamic/person_0_0.csv'));
 
 statement ok
-insert into person (select * from '/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person/part-00000-354b330a-be7e-4581-99ab-dfe73df59470-c000.csv');
+create table person_knows_person as (select * from read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/dynamic/person_knows_person_0_0.csv', delim='|', columns={'person1id':'bigint', 'person2id':'bigint', 'creationdate': 'bigint'}));
 
 statement ok
-create table person_knows_person as select * from read_csv_auto('/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person_knows_Person/part-00001-97235d24-1e63-44da-a16e-fbec913d8097-c000.csv') ;
+insert into person_knows_person (select person2id, person1id, creationdate from person_knows_person);
 
 statement ok
-insert into person_knows_person (select * from read_csv_auto('/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person_knows_Person/part-00000-97235d24-1e63-44da-a16e-fbec913d8097-c000.csv', SAMPLE_SIZE=-1));
+create table person_studyat_organisation as (
+    select * from
+    read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/dynamic/person_studyAt_organisation_0_0.csv', columns={'personid':'bigint', 'organisationid':'bigint', 'classyear': 'bigint'}));
 
 statement ok
-insert into person_knows_person (select creationdate, person2id, person1id from person_knows_person);
+create table person_workat_organisation as (select * from read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/dynamic/person_workAt_organisation_0_0.csv', columns={'personid':'bigint', 'organisationid':'bigint', 'workfrom': 'bigint'}, SAMPLE_SIZE=-1));
 
 statement ok
-create table person_studyat_university as (select * from '/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person_studyAt_University/part-00001-a7960d43-e786-49e2-b86e-f47edafde7fb-c000.csv');
-
-statement ok
-insert into person_studyat_university (select * from '/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person_studyAt_University/part-00000-a7960d43-e786-49e2-b86e-f47edafde7fb-c000.csv');
-
-statement ok
-create table person_workat_company as (select * from read_csv_auto('/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person_workAt_Company/part-00001-2c95aeeb-87c8-470d-8438-3b6ad49a5131-c000.csv', SAMPLE_SIZE=-1));
-
-statement ok
-insert into person_workat_company (select * from '/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/dynamic/Person_workAt_Company/part-00000-2c95aeeb-87c8-470d-8438-3b6ad49a5131-c000.csv');
-
-statement ok
-create table organisation as (select * from read_csv_auto('/home/daniel/Documents/ldbc_snb_datagen_spark/out-sf1/graphs/csv/bi/composite-merged-fk/initial_snapshot/static/Organisation/part-00000-c885b73f-7f2e-4109-9acd-65fabee6c16a-c000.csv', SAMPLE_SIZE=-1));
+create table organisation as (select * from read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/static/organisation_0_0.csv', SAMPLE_SIZE=-1));
 
 statement ok
 create view company as (select * from organisation where type = 'Company');
@@ -43,9 +33,9 @@ CREATE TABLE Person_UniversityKnows_Person AS (SELECT p.id                      
                                                FROM Person p
                                                         JOIN Person_knows_Person k on p.id = k.Person1id
                                                         JOIN Person p2 on p2.id = k.Person2id
-                                                        JOIN Person_studyAt_University u on p.id = u.PersonId
-                                                        JOIN Person_studyAt_University u2 on p2.id = u2.PersonId
-                                               WHERE u.UniversityId = u2.UniversityId
+                                                        JOIN Person_studyAt_organisation u on p.id = u.PersonId
+                                                        JOIN Person_studyAt_organisation u2 on p2.id = u2.PersonId
+                                               WHERE u.organisationid = u2.organisationid
                                                GROUP BY p.id, p2.id
                                                ORDER BY p.id, p2.id);
 
@@ -57,20 +47,6 @@ CREATE TABLE PersonUniversity AS (SELECT DISTINCT Person1id as id
                                        (SELECT Person2id AS Person1id
                                         FROM Person_UniversityKnows_Person))
                                  ORDER BY id);
-
-statement ok
-SELECT CREATE_CSR_VERTEX(
-0,
-v.vcount,
-sub.dense_id,
-sub.cnt
-) AS numEdges
-FROM (
-    SELECT c.rowid as dense_id, count(t.person1id) as cnt
-    FROM PersonUniversity c
-    LEFT JOIN Person_UniversityKnows_Person t ON t.person1id = c.id
-    GROUP BY c.rowid
-) sub, (SELECT count(c.id) as vcount FROM PersonUniversity c) v;
 
 statement ok
 SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM PersonUniversity c),
@@ -92,10 +68,10 @@ query IIII
 SELECT  p.id                                                                           as Person1id,
         p2.id                                                                          as Person2id,
         c.name                                                                         as Company,
-        cheapest_path(0, (select count(*) from PersonUniversity p), p.rowid, p2.rowid) as weight
+        cheapest_path_length(0, (select count(*) from PersonUniversity p), p.rowid, p2.rowid) as weight
 FROM    PersonUniversity p
-JOIN    Person_workAt_Company pwc on p.id = pwc.PersonId
-JOIN    Company c on (pwc.CompanyId = c.id AND c.name = 'Macedonian_Airlines')
+JOIN    person_workat_organisation pwc on p.id = pwc.PersonId
+JOIN    Company c on (pwc.organisationid = c.id AND c.name = 'Macedonian_Airlines')
 JOIN    PersonUniversity p2 on p2.id = 28587302322576
 order by weight, p.id;
 ----
