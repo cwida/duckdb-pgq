@@ -2,8 +2,6 @@ require sqlpgq
 
 require parquet
 
-
-
 statement ok
 CREATE TABLE v (id bigint)
 
