@@ -146,8 +146,7 @@ SELECT s.person1id, s.person2id, iterativelengthbidirectional(0, (select count(*
 FROM all_options s
 order by s.person1id, s.person2id;
 
-#query III nosort r43
-#SELECT s.person1id, s.person2id, bidirectionaliterativelength(0, (select count(*) from person), s.person1rowid, s.person2rowid)
-#FROM all_options s
-#order by s.person1id, s.person2id;
+
+
+
 

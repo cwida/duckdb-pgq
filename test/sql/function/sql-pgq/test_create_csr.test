@@ -127,3 +127,46 @@ NULL
 
 statement ok
 pragma delete_csr=0
+
+statement ok
+create table person (id bigint);
+
+statement ok
+insert into person values (0), (1), (2);
+
+statement ok
+create table person_knows_person (person1id bigint, person2id bigint);
+
+statement ok
+insert into person_knows_person values (0, 1), (2, 0), (2, 1);
+
+statement ok
+insert into person_knows_person (select person2id, person1id from person_knows_person);
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM person c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.id) as vcount FROM person c),
+sub.dense_id, sub.cnt)) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.person1id) as cnt
+    FROM person c
+    LEFT JOIN  person_knows_person t ON t.person1id = c.id
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid))
+FROM
+  person_knows_person t
+  JOIN person src ON t.person1id = src.id
+  JOIN person dst ON t.person2id = dst.id
+
+statement ok
+delete from src_dest;
+
+statement ok
+INSERT INTO src_dest VALUES(0, 3, 2, 0), (0, 3, 1, 2);
+
+query T
+SELECT iterativelengthbidirectional(0, v_size, src, dst) from src_dest;
+----
+1
+NULL
