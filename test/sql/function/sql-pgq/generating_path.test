@@ -1,0 +1,92 @@
+# name: test/sql/function/sql-pgq/debug_generating_path.test
+# group: [sql-pgq]
+
+
+require parquet
+
+require sqlpgq
+
+statement ok
+CREATE TABLE "Person"(id BIGINT);
+
+statement ok
+CREATE TABLE "Person_knows_Person"("Person1Id" BIGINT NOT NULL, "Person2Id" BIGINT NOT NULL, weight BIGINT);
+
+statement ok
+COPY "Person" FROM 'data/sqlpgq-testing/snb/sf1/person.csv' (FORMAT 'csv');
+
+statement ok
+COPY "Person_knows_Person" FROM 'data/sqlpgq-testing/snb/sf1/person_knows_person.csv' (FORMAT 'csv');
+
+statement ok
+CREATE TEMP TABLE personOrdered AS (SELECT * from person order by id asc);
+
+#statement ok
+#CREATE TEMP TABLE PersonKnows AS (SELECT DISTINCT r.Person1id as id
+#                                    FROM ((SELECT Person1id
+#                                            FROM person_knows_person)
+#                                          UNION ALL
+#                                          (SELECT Person2id AS Person1id
+#                                           FROM person_knows_person)) r
+#                                    ORDER BY id);
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM personOrdered c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.id) as vcount FROM personOrdered c),
+sub.dense_id, sub.cnt)) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.person1id) as cnt
+    FROM personOrdered c
+    LEFT JOIN  Person_knows_Person t ON t.person1id = c.id
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid))
+FROM
+  Person_knows_Person t
+  JOIN personOrdered src ON t.person1id = src.id
+  JOIN personOrdered dst ON t.person2id = dst.id;
+
+
+statement ok
+create temp table results
+(
+    Person1id bigint,
+    Person2id bigint,
+    weight bigint
+);
+
+statement ok
+create temp table all_options
+(
+    Person1id bigint,
+    Person1rowid bigint,
+    Person2id bigint,
+    Person2rowid bigint,
+    p1c bigint,
+    p2c bigint
+);
+
+
+statement ok
+create table pkpc as (from read_parquet('data/sqlpgq-testing/snb/sf1/factors/connected-components.snappy.parquet'));
+
+statement ok
+insert into all_options (select p1.personid as person1id, pe1.rowid as person1rowid,
+                                p2.personid as person2id, pe2.rowid as person2rowid,
+                                p1.component as p1c, p2.component as p2c
+                   from pkpc p1
+                   join pkpc p2 on p1.component <> p2.component
+                   join personOrdered pe1 on p1.personid = pe1.id
+                   join personOrdered pe2 on p2.personid = pe2.id);
+
+statement ok
+INSERT INTO results(
+    SELECT p.person1id, p.person2id,
+    iterativelength(0, (select count(*) from personOrdered), p.person1rowid, p.person2rowid ) as weight
+    FROM all_options p
+    limit 1024
+    );
+
+query III
+SELECT * FROM results where weight is not null;
+----
