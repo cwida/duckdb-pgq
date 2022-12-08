@@ -13,10 +13,10 @@ statement ok
 CREATE TABLE "Person_knows_Person"("Person1Id" BIGINT NOT NULL, "Person2Id" BIGINT NOT NULL, weight BIGINT);
 
 statement ok
-COPY "Person" FROM '/Users/dljtw/git/duckpgq-experiments/data/SNB/sf1/parquet/person.parquet' (FORMAT 'parquet');
+COPY "Person" FROM 'data/sqlpgq-testing/snb/sf1/person.csv' (FORMAT 'csv');
 
 statement ok
-COPY "Person_knows_Person" FROM '/Users/dljtw/git/duckpgq-experiments/data/SNB/sf1/parquet/person_knows_person.parquet' (FORMAT 'parquet');
+COPY "Person_knows_Person" FROM 'data/sqlpgq-testing/snb/sf1/person_knows_person.csv' (FORMAT 'csv');
 
 statement ok
 CREATE TEMP TABLE personOrdered AS (SELECT * from person order by id asc);
@@ -68,7 +68,7 @@ create temp table all_options
 
 
 statement ok
-create table pkpc as (from read_parquet('/Users/dljtw/git/duckpgq-experiments/factors/sf1/part-00000-d2657d11-ccb1-4233-982c-679803f6ab47-c000.snappy.parquet'));
+create table pkpc as (from read_parquet('data/sqlpgq-testing/snb/sf1/factors/connected-components.snappy.parquet'));
 
 statement ok
 insert into all_options (select p1.personid as person1id, pe1.rowid as person1rowid,
