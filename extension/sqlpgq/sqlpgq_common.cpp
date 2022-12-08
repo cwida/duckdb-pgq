@@ -55,7 +55,8 @@ unique_ptr<FunctionData> IterativeLengthFunctionData::Copy() const {
 }
 
 bool IterativeLengthFunctionData::Equals(const FunctionData &other_p) const {
-	return false;
+	// TODO: Change this to check if both are on same CSR
+	return true;
 }
 
 unique_ptr<FunctionData> IterativeLengthFunctionData::IterativeLengthBind(ClientContext &context,
