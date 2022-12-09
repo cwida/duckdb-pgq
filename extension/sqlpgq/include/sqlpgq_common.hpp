@@ -33,8 +33,9 @@ public:
 struct IterativeLengthFunctionData : public FunctionData {
 public:
 	ClientContext &context;
+	int32_t csr_id;
 
-	IterativeLengthFunctionData(ClientContext &context) : context(context) {
+	IterativeLengthFunctionData(ClientContext &context, int32_t csr_id) : context(context), csr_id(csr_id) {
 	}
 	static unique_ptr<FunctionData> IterativeLengthBind(ClientContext &context, ScalarFunction &bound_function,
 	                                                    vector<unique_ptr<Expression>> &arguments);
@@ -45,8 +46,9 @@ public:
 
 struct CheapestPathLengthFunctionData : public FunctionData {
 	ClientContext &context;
+	int32_t csr_id;
 
-	CheapestPathLengthFunctionData(ClientContext &context) : context(context) {
+	CheapestPathLengthFunctionData(ClientContext &context, int32_t csr_id) : context(context), csr_id(csr_id) {
 	}
 	static unique_ptr<FunctionData> CheapestPathLengthBind(ClientContext &context, ScalarFunction &bound_function,
 	                                                       vector<unique_ptr<Expression>> &arguments);
