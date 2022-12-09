@@ -240,10 +240,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
-	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
-//	bool is_variant = args.data[1].GetValue(0).GetValue<bool>();
 	int64_t input_size = args.data[2].GetValue(0).GetValue<int64_t>();
-
 	auto &src = args.data[3];
 
 	UnifiedVectorFormat vdata_src, vdata_target;
@@ -301,16 +298,16 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			//			phase_profiler.Start();
 
 			if (bfs_depth < UINT8_MAX) {
-				exit_early = BfsWithoutArray<uint8_t>(exit_early, id, input_size, info, seen, visit, visit_next,
+				exit_early = BfsWithoutArray<uint8_t>(exit_early, info.csr_id, input_size, info, seen, visit, visit_next,
 				                                      bfs_depth, depth_map_uint8);
 			} else if (bfs_depth >= UINT8_MAX && bfs_depth < UINT16_MAX) {
-				exit_early = BfsWithoutArray<uint16_t>(exit_early, id, input_size, info, seen, visit, visit_next,
+				exit_early = BfsWithoutArray<uint16_t>(exit_early, info.csr_id, input_size, info, seen, visit, visit_next,
 				                                       bfs_depth, depth_map_uint16);
 			} else if (bfs_depth >= UINT16_MAX && bfs_depth < UINT32_MAX) {
-				exit_early = BfsWithoutArray<uint32_t>(exit_early, id, input_size, info, seen, visit, visit_next,
+				exit_early = BfsWithoutArray<uint32_t>(exit_early, info.csr_id, input_size, info, seen, visit, visit_next,
 				                                       bfs_depth, depth_map_uint32);
 			} else if (bfs_depth >= UINT32_MAX && bfs_depth < UINT64_MAX) {
-				exit_early = BfsWithoutArray<uint64_t>(exit_early, id, input_size, info, seen, visit, visit_next,
+				exit_early = BfsWithoutArray<uint64_t>(exit_early, info.csr_id, input_size, info, seen, visit, visit_next,
 				                                       bfs_depth, depth_map_uint64);
 			}
 			//			phase_profiler.End();

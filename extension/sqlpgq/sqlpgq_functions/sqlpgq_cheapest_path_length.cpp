@@ -152,7 +152,6 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (CheapestPathLengthFunctionData &)*func_expr.bind_info;
 
-	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
 	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
 
 	auto &src = args.data[2];
@@ -166,12 +165,12 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 	target.ToUnifiedFormat(args.size(), vdata_target);
 	auto target_data = (int64_t *)vdata_target.data;
 
-	if (info.context.client_data->csr_list[id]->w.empty()) {
+	if (info.context.client_data->csr_list[info.csr_id]->w.empty()) {
 		TemplatedBellmanFord<double_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                               id, info.context.client_data->csr_list[id]->w_double);
+		                               info.csr_id, info.context.client_data->csr_list[info.csr_id]->w_double);
 	} else {
 		TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                              id, info.context.client_data->csr_list[id]->w);
+		                              info.csr_id, info.context.client_data->csr_list[info.csr_id]->w);
 	}
 }
 
