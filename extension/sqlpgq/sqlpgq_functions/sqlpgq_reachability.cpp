@@ -173,7 +173,6 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
-	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
 	bool is_variant = args.data[1].GetValue(0).GetValue<bool>();
 	int64_t input_size = args.data[2].GetValue(0).GetValue<int64_t>();
 
@@ -212,14 +211,14 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 				mode = FindMode(mode, visit_list.size(), visit_limit, num_nodes_to_visit);
 				switch (mode) {
 				case 1:
-					exit_early = BfsWithArrayVariant(exit_early, id, info, seen, visit, visit_next, visit_list);
+					exit_early = BfsWithArrayVariant(exit_early, info.csr_id, info, seen, visit, visit_next, visit_list);
 					break;
 				case 0:
 					exit_early =
-					    BfsWithoutArrayVariant(exit_early, id, input_size, info, seen, visit, visit_next, visit_list);
+					    BfsWithoutArrayVariant(exit_early, info.csr_id, input_size, info, seen, visit, visit_next, visit_list);
 					break;
 				case 2: {
-					auto return_pair = BfsTempStateVariant(exit_early, id, input_size, info, seen, visit, visit_next);
+					auto return_pair = BfsTempStateVariant(exit_early, info.csr_id, input_size, info, seen, visit, visit_next);
 					exit_early = return_pair.first;
 					num_nodes_to_visit = return_pair.second;
 					break;
@@ -228,7 +227,7 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 					throw Exception("Unknown mode encountered");
 				}
 			} else {
-				exit_early = BfsWithoutArray(exit_early, id, input_size, info.context, seen, visit, visit_next);
+				exit_early = BfsWithoutArray(exit_early, info.csr_id, input_size, info.context, seen, visit, visit_next);
 			}
 
 			visit = visit_next;
