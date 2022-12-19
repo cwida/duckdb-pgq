@@ -10,8 +10,11 @@ if command -v deactivate; then
 fi
 rm -rf .venv
 
+make clean
+
 virtualenv .venv
 source .venv/bin/activate
 python3 -m pip install pandas numpy jproperties
 
-EXTENSION_STATIC_BUILD=1 BUILD_JEMALLOC=1 BUILD_SQLPGQ=1 BUILD_PYTHON=1 make GEN=ninja
+
+EXTENSION_STATIC_BUILD=1 BUILD_SQLPGQ=1 BUILD_PYTHON=1 make GEN=ninja
