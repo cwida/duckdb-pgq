@@ -164,22 +164,12 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 	auto &target = args.data[3];
 	target.ToUnifiedFormat(args.size(), vdata_target);
 	auto target_data = (int64_t *)vdata_target.data;
-
-<<<<<<< HEAD
-	if (info.context.client_data->csr_list[id]->w.empty()) {
-		TemplatedBellmanFord<double_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                               id, info.context.client_data->csr_list[id]->w_double);
-	} else {
-		TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                              id, info.context.client_data->csr_list[id]->w);
-=======
 	if (info.context.client_data->csr_list[info.csr_id]->w.empty()) {
 		TemplatedBellmanFord<double_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
 		                               info.csr_id, info.context.client_data->csr_list[info.csr_id]->w_double);
 	} else {
 		TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
 		                              info.csr_id, info.context.client_data->csr_list[info.csr_id]->w);
->>>>>>> refs/remotes/origin/master
 	}
 }
 

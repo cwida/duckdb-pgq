@@ -40,14 +40,7 @@ struct DeleteCSRSetting {
 	static constexpr const char *Description = "The ID of the CSR to delete";
 	static constexpr const LogicalTypeId InputType = LogicalTypeId::VARCHAR;
 	static void SetLocal(ClientContext &context, const Value &parameter);
-	static Value GetSetting(ClientContext &context);
-};
-
-struct DeleteCSRSetting {
-	static constexpr const char *Name = "delete_csr";
-	static constexpr const char *Description = "The ID of the CSR to delete";
-	static constexpr const LogicalTypeId InputType = LogicalTypeId::VARCHAR;
-	static void SetLocal(ClientContext &context, const Value &parameter);
+	static void ResetLocal(ClientContext &context);
 	static Value GetSetting(ClientContext &context);
 };
 

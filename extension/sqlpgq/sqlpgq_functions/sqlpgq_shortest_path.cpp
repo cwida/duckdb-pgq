@@ -240,7 +240,6 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
-<<<<<<< HEAD
 	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
 //	bool is_variant = args.data[1].GetValue(0).GetValue<bool>();
 	int64_t input_size = args.data[2].GetValue(0).GetValue<int64_t>();

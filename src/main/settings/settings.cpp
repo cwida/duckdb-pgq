@@ -954,6 +954,7 @@ void DeleteCSRSetting::SetLocal(ClientContext &context, const Value &input) {
 	csr_entry->second.reset();
 	client_data.csr_list.erase(id);
 }
+
 Value DeleteCSRSetting::GetSetting(ClientContext &context) {
 	auto &client_data = ClientData::Get(context);
 	vector<string> keys;
@@ -962,4 +963,10 @@ Value DeleteCSRSetting::GetSetting(ClientContext &context) {
 	}
 	return Value(StringUtil::Join(keys, ","));
 }
+
+void DeleteCSRSetting::ResetLocal(ClientContext &context) {
+	auto &client_data = ClientData::Get(context);
+	client_data.csr_list.clear();
+}
+
 } // namespace duckdb
