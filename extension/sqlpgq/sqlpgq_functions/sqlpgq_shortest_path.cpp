@@ -9,6 +9,7 @@
 #include "sqlpgq_functions.hpp"
 
 #include <iostream>
+#include <algorithm>
 
 namespace duckdb {
 
@@ -36,7 +37,7 @@ std::unordered_map<int16_t, std::vector<S>> CreateCopy(unordered_map<int16_t, st
 
 	for (auto val : dict) {
 		std::vector<S> old_vector = std::vector<S>(val.second.begin(), val.second.end());
-		replace(old_vector.begin(), old_vector.end(), (S)std::numeric_limits<T>::max(),
+		std::replace(old_vector.begin(), old_vector.end(), (S)std::numeric_limits<T>::max(),
 		             std::numeric_limits<S>::max());
 		new_dict[val.first] = old_vector;
 	}
@@ -440,7 +441,7 @@ static void AnyShortestPathFunction(DataChunk &args, ExpressionState &state, Vec
 					break;
 				}
 			}
-			reverse(output_vector.begin(), output_vector.end());
+			std::reverse(output_vector.begin(), output_vector.end());
 			auto output = make_unique<Vector>(LogicalType::LIST(LogicalType::INTEGER));
 			for (auto val : output_vector) {
 				Value value_to_insert = val;
