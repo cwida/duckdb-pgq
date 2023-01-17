@@ -12,7 +12,7 @@
 
 namespace duckdb {
 
-#define LANE_LIMIT         8
+#define LANE_LIMIT         2
 #define VISIT_SIZE_DIVISOR 2
 
 class SQLPGQFunctions {

@@ -90,6 +90,10 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 		for (auto i = 0; i < v_size; i++) {
 			seen[i] = 0;
 			visit1[i] = 0;
+			for (auto j = 0; j < LANE_LIMIT; j++) {
+				parents_v[i][j] = -1;
+				parents_e[i][j] = -1;
+			}
 		}
 
 		// add search jobs to free lanes
