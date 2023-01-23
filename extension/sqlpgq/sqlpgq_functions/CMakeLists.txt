@@ -2,8 +2,8 @@ add_library_unity(
         duckdb_sqlpgq_functions
         OBJECT
         sqlpgq_csr_creation.cpp
-        sqlpgq_shortest_path.cpp
         sqlpgq_cheapest_path_length.cpp
+        sqlpgq_shortest_path.cpp
         sqlpgq_reachability.cpp
         sqlpgq_iterativelength.cpp
         sqlpgq_iterativelength2.cpp
