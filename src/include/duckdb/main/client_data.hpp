@@ -12,13 +12,16 @@
 #include "duckdb/common/enums/output_type.hpp"
 #include "duckdb/common/types/value.hpp"
 #include "duckdb/common/unordered_map.hpp"
+#include "duckdb/common/atomic.hpp"
 #include "duckdb/common/compressed_sparse_row.h"
 
 namespace duckdb {
+class AttachedDatabase;
 class BufferedFileWriter;
 class ClientContext;
 class CatalogSearchPath;
 class FileOpener;
+class HTTPStats;
 class QueryProfiler;
 class QueryProfilerHistory;
 class PreparedStatementData;
@@ -38,7 +41,7 @@ struct ClientData {
 	unique_ptr<QueryProfilerHistory> query_profiler_history;
 
 	//! The set of temporary objects that belong to this client
-	shared_ptr<SchemaCatalogEntry> temporary_objects;
+	shared_ptr<AttachedDatabase> temporary_objects;
 	//! The set of bound prepared statements that belong to this client
 	unordered_map<string, shared_ptr<PreparedStatementData>> prepared_statements;
 
@@ -52,6 +55,9 @@ struct ClientData {
 
 	//! The file opener of the client context
 	unique_ptr<FileOpener> file_opener;
+
+	//! Statistics on HTTP traffic
+	unique_ptr<HTTPStats> http_stats;
 
 	//! The file search path
 	string file_search_path;

@@ -55,7 +55,6 @@ projects/*
 config/
 configure
 config-h.in
-autom4te.cache
 *Makefile.in
 third_party/*/Makefile
 libtool
@@ -79,7 +78,6 @@ duckdb_benchmark_data/
 *.o
 *.lo
 *.la
-*~
 *.pdf
 *.swp
 a.out
@@ -94,7 +92,6 @@ a.out
 # Backup artifacts
 #==============================================================================#
 ~*
-*~
 tmp/
 
 #==============================================================================#
@@ -160,10 +157,8 @@ third_party/logcabin/
 
 .metadata
 bin/
-tmp/
 *.tmp
 *.bak
-*.swp
 *~.nib
 local.properties
 .settings/
@@ -174,8 +169,6 @@ local.properties
 /.cache/clangd
 .ccls-cache
 
-# Eclipse Core
-.project
 
 # External tool builders
 .externalToolBuilders/
@@ -185,12 +178,6 @@ local.properties
 
 # PyDev specific (Python IDE for Eclipse)
 *.pydevproject
-
-# CDT-specific (C/C++ Development Tooling)
-.cproject
-
-# JDT-specific (Eclipse Java Development Tools)
-.classpath
 
 # RStudio specific
 .Rproj.user
@@ -221,8 +208,6 @@ io_file
 
 # Compiled Object files
 *.slo
-*.lo
-*.o
 *.cuo
 
 # Compiled Dynamic libraries
@@ -232,15 +217,11 @@ io_file
 
 # Compiled Static libraries
 *.lai
-*.la
 *.a
 *.lib
 
 # Compiled protocol buffers
 *_pb2.py
-
-# Compiled python
-*.pyc
 
 # Compiled MATLAB
 *.mex*
@@ -248,9 +229,6 @@ io_file
 # IPython notebook checkpoints
 .ipynb_checkpoints
 
-# Editor temporaries
-*.swp
-*~
 
 # Sublime Text settings
 *.sublime-workspace
@@ -258,8 +236,6 @@ io_file
 
 # Eclipse Project settings
 *.*project
-.settings
-.csettings
 
 # Visual Studio
 .vs
@@ -269,8 +245,6 @@ settings.json
 # QtCreator files
 *.user
 
-# PyCharm files
-.idea
 
 # OSX dir files
 .DS_Store
@@ -295,8 +269,6 @@ docs
 
 # tests
 test/test.sql
-duckdb_benchmark_data/
-data/sqlpgq-testing/graphalytics
 
 # SQLite logic tests
 test/evidence/
@@ -343,4 +315,3 @@ zig-cache/*
 
 # .db files
 *.db
-/data/sqlpgq-testing/graphalytics/

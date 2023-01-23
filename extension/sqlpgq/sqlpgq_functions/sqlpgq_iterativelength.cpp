@@ -33,11 +33,11 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
 	// get csr info (TODO: do not store in context -- make global map in module that is indexed by id+&context)
-	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
-	D_ASSERT(info.context.client_data->csr_list[id]);
+
+	D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
 	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
-	int64_t *v = (int64_t *)info.context.client_data->csr_list[id]->v;
-	vector<int64_t> &e = info.context.client_data->csr_list[id]->e;
+	int64_t *v = (int64_t *)info.context.client_data->csr_list[info.csr_id]->v;
+	vector<int64_t> &e = info.context.client_data->csr_list[info.csr_id]->e;
 
 	// get src and dst vectors for searches
 	auto &src = args.data[2];
@@ -50,7 +50,7 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 	auto dst_data = (int64_t *)vdata_dst.data;
 
 	ValidityMask &result_validity = FlatVector::Validity(result);
-
+  
 	// create result vector
 	result.SetVectorType(VectorType::FLAT_VECTOR);
 	auto result_data = FlatVector::GetData<int64_t>(result);

@@ -11,7 +11,7 @@ void SQLPGQExtension::Load(DuckDB &db) {
 	Connection con(db);
 	con.BeginTransaction();
 
-	auto &catalog = Catalog::GetCatalog(*con.context);
+	auto &catalog = Catalog::GetSystemCatalog(*con.context);
 	for (auto &fun : SQLPGQFunctions::GetFunctions()) {
 		catalog.CreateFunction(*con.context, &fun);
 	}

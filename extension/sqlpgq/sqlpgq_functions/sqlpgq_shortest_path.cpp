@@ -9,6 +9,7 @@
 #include "sqlpgq_functions.hpp"
 
 #include <iostream>
+#include <algorithm>
 
 namespace duckdb {
 
@@ -74,7 +75,6 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 	vector<std::bitset<LANE_LIMIT>> visit2(v_size);
 	vector<std::vector<int64_t>> parents_v(v_size, std::vector<int64_t>(LANE_LIMIT, -1));
 	vector<std::vector<int64_t>> parents_e(v_size, std::vector<int64_t>(LANE_LIMIT, -1));
-
 
 	// maps lane to search number
 	int16_t lane_to_num[LANE_LIMIT];

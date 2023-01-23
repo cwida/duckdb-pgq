@@ -50,24 +50,35 @@ unique_ptr<FunctionData> CSRFunctionData::CSREdgeBind(ClientContext &context, Sc
 }
 
 unique_ptr<FunctionData> IterativeLengthFunctionData::Copy() const {
-	return make_unique<IterativeLengthFunctionData>(context, file_name);
+	return make_unique<IterativeLengthFunctionData>(context, csr_id);
 }
 
 bool IterativeLengthFunctionData::Equals(const FunctionData &other_p) const {
 	auto &other = (const IterativeLengthFunctionData &)other_p;
-	return file_name == other.file_name;
+	return other.csr_id == csr_id;
 }
 
 unique_ptr<FunctionData> IterativeLengthFunctionData::IterativeLengthBind(ClientContext &context,
                                                                           ScalarFunction &bound_function,
                                                                           vector<unique_ptr<Expression>> &arguments) {
-	string file_name;
-	if (arguments.size() == 5) {
-		file_name = ExpressionExecutor::EvaluateScalar(context, *arguments[4]).GetValue<string>();
-	} else {
-		file_name = "timings-test.txt";
+	if (!arguments[0]->IsFoldable()) {
+		throw InvalidInputException("Id must be constant.");
 	}
-	return make_unique<IterativeLengthFunctionData>(context, file_name);
+
+	int32_t csr_id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]).GetValue<int32_t>();
+	if ((uint64_t)csr_id + 1 > context.client_data->csr_list.size()) {
+		throw ConstraintException("Invalid ID");
+	}
+	auto csr_entry = context.client_data->csr_list.find((uint64_t)csr_id);
+	if (csr_entry == context.client_data->csr_list.end()) {
+		throw ConstraintException("Need to initialize CSR before doing shortest path");
+	}
+
+	if (!(csr_entry->second->initialized_v && csr_entry->second->initialized_e)) {
+		throw ConstraintException("Need to initialize CSR before doing shortest path");
+	}
+
+	return make_unique<IterativeLengthFunctionData>(context, csr_id);
 }
 
 unique_ptr<FunctionData>
@@ -78,11 +89,11 @@ CheapestPathLengthFunctionData::CheapestPathLengthBind(ClientContext &context, S
 		throw InvalidInputException("Id must be constant.");
 	}
 
-	int32_t id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]).GetValue<int32_t>();
-	if ((uint64_t)id + 1 > context.client_data->csr_list.size()) {
+	int32_t csr_id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]).GetValue<int32_t>();
+	if ((uint64_t)csr_id + 1 > context.client_data->csr_list.size()) {
 		throw ConstraintException("Invalid ID");
 	}
-	auto csr_entry = context.client_data->csr_list.find((uint64_t)id);
+	auto csr_entry = context.client_data->csr_list.find((uint64_t)csr_id);
 	if (csr_entry == context.client_data->csr_list.end()) {
 		throw ConstraintException("Need to initialize CSR before doing cheapest path");
 	}
@@ -90,24 +101,23 @@ CheapestPathLengthFunctionData::CheapestPathLengthBind(ClientContext &context, S
 	if (!(csr_entry->second->initialized_v && csr_entry->second->initialized_e && csr_entry->second->initialized_w)) {
 		throw ConstraintException("Need to initialize CSR before doing cheapest path");
 	}
-	string file_name;
 
-	if (context.client_data->csr_list[id]->w.empty()) {
+	if (context.client_data->csr_list[csr_id]->w.empty()) {
 		bound_function.return_type = LogicalType::DOUBLE;
 	} else {
 		bound_function.return_type = LogicalType::BIGINT;
 	}
 
-	return make_unique<CheapestPathLengthFunctionData>(context, file_name);
+	return make_unique<CheapestPathLengthFunctionData>(context, csr_id);
 }
 
 unique_ptr<FunctionData> CheapestPathLengthFunctionData::Copy() const {
-	return make_unique<CheapestPathLengthFunctionData>(context, file_name);
+	return make_unique<CheapestPathLengthFunctionData>(context, csr_id);
 }
 
 bool CheapestPathLengthFunctionData::Equals(const FunctionData &other_p) const {
 	auto &other = (const CheapestPathLengthFunctionData &)other_p;
-	return file_name == other.file_name;
+	return other.csr_id == csr_id;
 }
 
 } // namespace duckdb

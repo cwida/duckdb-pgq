@@ -2,19 +2,17 @@ require sqlpgq
 
 require parquet
 
-
-
 statement ok
 CREATE TABLE v (id bigint)
 
 statement ok
-COPY v FROM 'data/sqlpgq-testing/graphalytics/example-directed.v' ( DELIMITER ' ');
+COPY v FROM 'data/sqlpgq-testing/graphalytics/example-undirected.v' ( DELIMITER ' ');
 
 statement ok
 CREATE TABLE e (source bigint, target bigint, weight bigint)
 
 statement ok
-COPY e FROM 'data/sqlpgq-testing/graphalytics/example-directed.e' ( DELIMITER ' ');
+COPY e FROM 'data/sqlpgq-testing/graphalytics/example-undirected.e' ( DELIMITER ' ');
 
 statement ok
 INSERT INTO e (SELECT target, source, weight from e);
