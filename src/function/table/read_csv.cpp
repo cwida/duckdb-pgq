@@ -50,6 +50,7 @@ static unique_ptr<FunctionData> ReadCSVBind(ClientContext &context, TableFunctio
 	if (!config.options.enable_external_access) {
 		throw PermissionException("Scanning CSV files is disabled through configuration");
 	}
+
 	auto result = make_unique<ReadCSVData>();
 	auto &options = result->options;
 
@@ -84,7 +85,7 @@ static unique_ptr<FunctionData> ReadCSVBind(ClientContext &context, TableFunctio
 				if (val.type().id() != LogicalTypeId::VARCHAR) {
 					throw BinderException("read_csv requires a type specification as string");
 				}
-				return_types.emplace_back(TransformStringToLogicalType(StringValue::Get(val)));
+				return_types.emplace_back(TransformStringToLogicalType(StringValue::Get(val), context));
 			}
 			if (names.empty()) {
 				throw BinderException("read_csv requires at least a single column as input!");
@@ -698,6 +699,7 @@ static void ReadCSVAddNamedParameters(TableFunction &table_function) {
 	table_function.named_parameters["ignore_errors"] = LogicalType::BOOLEAN;
 	table_function.named_parameters["union_by_name"] = LogicalType::BOOLEAN;
 	table_function.named_parameters["buffer_size"] = LogicalType::UBIGINT;
+	table_function.named_parameters["decimal_separator"] = LogicalType::VARCHAR;
 }
 
 double CSVReaderProgress(ClientContext &context, const FunctionData *bind_data_p,
@@ -775,6 +777,7 @@ void BufferedCSVReaderOptions::Serialize(FieldWriter &writer) const {
 	writer.WriteString(file_path);
 	writer.WriteField<bool>(include_file_name);
 	writer.WriteField<bool>(include_parsed_hive_partitions);
+	writer.WriteString(decimal_separator);
 	// write options
 	writer.WriteListNoReference<bool>(force_quote);
 }
@@ -807,6 +810,7 @@ void BufferedCSVReaderOptions::Deserialize(FieldReader &reader) {
 	file_path = reader.ReadRequired<string>();
 	include_file_name = reader.ReadRequired<bool>();
 	include_parsed_hive_partitions = reader.ReadRequired<bool>();
+	decimal_separator = reader.ReadRequired<string>();
 	// write options
 	force_quote = reader.ReadRequiredList<bool>();
 }
@@ -875,8 +879,7 @@ void ReadCSVTableFunction::RegisterFunction(BuiltinFunctions &set) {
 	set.AddFunction(read_csv_auto);
 }
 
-unique_ptr<TableFunctionRef> ReadCSVReplacement(ClientContext &context, const string &table_name,
-                                                ReplacementScanData *data) {
+unique_ptr<TableRef> ReadCSVReplacement(ClientContext &context, const string &table_name, ReplacementScanData *data) {
 	auto lower_name = StringUtil::Lower(table_name);
 	// remove any compression
 	if (StringUtil::EndsWith(lower_name, ".gz")) {
@@ -892,7 +895,7 @@ unique_ptr<TableFunctionRef> ReadCSVReplacement(ClientContext &context, const st
 	vector<unique_ptr<ParsedExpression>> children;
 	children.push_back(make_unique<ConstantExpression>(Value(table_name)));
 	table_function->function = make_unique<FunctionExpression>("read_csv_auto", std::move(children));
-	return table_function;
+	return std::move(table_function);
 }
 
 void BuiltinFunctions::RegisterReadFunctions() {
