@@ -32,8 +32,6 @@ static void IterativeLengthLaneReuseFunction(DataChunk &args, ExpressionState &s
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
-	// get csr info (TODO: do not store in context -- make global map in module that is indexed by id+&context)
-
 	D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
 	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
 	int64_t *v = (int64_t *)info.context.client_data->csr_list[info.csr_id]->v;
@@ -64,6 +62,11 @@ static void IterativeLengthLaneReuseFunction(DataChunk &args, ExpressionState &s
 	short lane_to_num[LANE_LIMIT];
 	for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 		lane_to_num[lane] = -1; // inactive
+	}
+
+	int16_t lane_to_iter[LANE_LIMIT];
+	for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+		lane_to_iter[lane] = 0;
 	}
 
 	idx_t started_searches = 0;
@@ -108,10 +111,40 @@ static void IterativeLengthLaneReuseFunction(DataChunk &args, ExpressionState &s
 				if (search_num >= 0) { // active lane
 					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
 					if (seen[dst_data[dst_pos]][lane]) {
-						result_data[search_num] = iter; /* found at iter => iter = path length */
+						result_data[search_num] = iter - lane_to_iter[lane]; /* found at iter => iter = path length */
 						lane_to_num[lane] = -1;         // mark inactive
 						active--;
 					}
+				}
+			}
+			// refill empty lanes
+			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+				if (lane_to_num[lane] != -1) {
+					continue;
+				}
+				while (started_searches < args.size()) {
+					int64_t search_num = started_searches++;
+					int64_t src_pos = vdata_src.sel->get_index(search_num);
+					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
+					if (!vdata_src.validity.RowIsValid(src_pos)) {
+						result_validity.SetInvalid(search_num);
+						result_data[search_num] = (uint64_t)-1; /* no path */
+					} else if (src_data[src_pos] == dst_data[dst_pos]) {
+						result_data[search_num] = (uint64_t)0; // path of length 0 does not require a search
+					} else {
+						// empty visit vectors
+						for (auto i = 0; i < v_size; i++) {
+							seen[i][lane] = false;
+							visit1[i][lane] = false;
+							visit2[i][lane] = false;
+						}
+						(iter & 1) ? visit2[src_data[src_pos]][lane] = true : visit1[src_data[src_pos]][lane] = true;
+						lane_to_num[lane] = search_num; // active lane
+						lane_to_iter[lane] = iter;
+						active++;
+						break;
+					}
+
 				}
 			}
 		}
