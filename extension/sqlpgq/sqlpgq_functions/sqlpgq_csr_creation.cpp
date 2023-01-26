@@ -137,9 +137,9 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 		    });
 		return;
 	}
-	auto weight_type = args.data[5].GetType().InternalType();
+	auto weight_type = args.data[6].GetType().InternalType();
 	if (!csr_entry->second->initialized_w) {
-		CsrInitializeWeight(info.context, info.id, edge_size, args.data[5].GetType().InternalType());
+		CsrInitializeWeight(info.context, info.id, edge_size, weight_type);
 	}
 	if (weight_type == PhysicalType::INT64) {
 		QuaternaryExecutor::Execute<int64_t, int64_t, int64_t, int64_t, int32_t>(
