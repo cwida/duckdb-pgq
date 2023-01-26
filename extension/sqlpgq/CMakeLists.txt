@@ -16,6 +16,7 @@ set(SQLPGQ_EXTENSION_FILES
         sqlpgq_functions/sqlpgq_iterativelength2.cpp
         sqlpgq_functions/sqlpgq_bidirectional_iterativelength.cpp
         sqlpgq_functions/sqlpgq_iterativelength_bidirectional.cpp
+        sqlpgq_functions/sqlpgq_iterativelength_lane_reuse.cpp
         sqlpgq_common.cpp)
 
 add_library(sqlpgq_extension STATIC ${SQLPGQ_EXTENSION_FILES})
