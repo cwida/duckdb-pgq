@@ -13,10 +13,10 @@ statement ok
 CREATE TABLE "Person_knows_Person"("Person1Id" BIGINT NOT NULL, "Person2Id" BIGINT NOT NULL, weight BIGINT);
 
 statement ok
-COPY "Person" FROM 'data/sqlpgq-testing/snb/sf1/person.csv' (FORMAT 'csv');
+COPY "Person" FROM 'data/sqlpgq-testing/snb/sf1/person.csv' (HEADER, FORMAT 'csv');
 
 statement ok
-COPY "Person_knows_Person" FROM 'data/sqlpgq-testing/snb/sf1/person_knows_person.csv' (FORMAT 'csv');
+COPY "Person_knows_Person" FROM 'data/sqlpgq-testing/snb/sf1/person_knows_person.csv' (HEADER, FORMAT 'csv');
 
 statement ok
 CREATE TEMP TABLE personOrdered AS (SELECT * from person order by id asc);
@@ -40,7 +40,7 @@ FROM (
     LEFT JOIN  Person_knows_Person t ON t.person1id = c.id
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid))
+src.rowid, dst.rowid, t.rowid))
 FROM
   Person_knows_Person t
   JOIN personOrdered src ON t.person1id = src.id

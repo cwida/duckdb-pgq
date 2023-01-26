@@ -58,7 +58,7 @@ FROM (
     LEFT JOIN  Person_UniversityKnows_Person t ON t.person1id = c.id
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, t.weight))
+src.rowid, dst.rowid, t.rowid, t.weight))
 FROM
   Person_UniversityKnows_Person t
   JOIN PersonUniversity src ON t.person1id = src.id

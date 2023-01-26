@@ -36,7 +36,7 @@ FROM (
     LEFT JOIN  Transfers t ON t.from_id = c.cid
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid))
+src.rowid, dst.rowid, t.rowid))
 FROM
   Transfers t
   JOIN Customer src ON t.from_id = src.cid
@@ -49,9 +49,8 @@ CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 statement ok
 INSERT INTO src_dest VALUES(0, 7, 0, 5), (0, 7, 1, 5), (0, 7, 1, 6), (0, 7, 1, 1), (0, 7, 1, 0), (0, 7, 3, 0), (0, 7, 0, 2), (0, 7, 0, 6);
 
-#csr will be deleted after calling reachability.
 query III
-SELECT s.src, s.dst, any_shortest_path(0, false, v_size, s.src, s.dst) FROM src_dest s
+SELECT s.src, s.dst, shortest_path(0, false, v_size, s.src, s.dst) FROM src_dest s
 ----
 0	5	[0, 3, 2, 5]
 1	5	[1, 4, 5]

@@ -32,7 +32,7 @@ FROM (
     LEFT JOIN e t ON t.source = c.id
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid))
+src.rowid, dst.rowid, t.rowid))
 FROM
   e t
   JOIN PersonKnows src ON t.source = src.id

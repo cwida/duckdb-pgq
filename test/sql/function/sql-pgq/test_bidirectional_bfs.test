@@ -28,7 +28,7 @@ FROM (
     LEFT JOIN  Edges t ON t.from_id = c.cid
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid))
+src.rowid, dst.rowid, t.rowid))
 FROM
   Edges t
   JOIN Nodes src ON t.from_id = src.cid
@@ -78,13 +78,13 @@ statement ok
 CREATE TABLE person_knows_person(person1id BIGINT NOT NULL, person2id BIGINT NOT NULL, weight bigint);
 
 statement ok
-COPY person_knows_person FROM 'data/sqlpgq-testing/snb/sf1/person_knows_person.csv' (FORMAT 'csv', DELIMITER ',');
+COPY person_knows_person FROM 'data/sqlpgq-testing/snb/sf1/person_knows_person.csv' (HEADER, FORMAT 'csv', DELIMITER ',');
 
 statement ok
 insert into person_knows_person select person2id, person1id, weight from person_knows_person
 
 statement ok
-COPY person FROM 'data/sqlpgq-testing/snb/sf1/person.csv' (FORMAT 'csv', DELIMITER ',');
+COPY person FROM 'data/sqlpgq-testing/snb/sf1/person.csv' (HEADER, FORMAT 'csv', DELIMITER ',');
 
 statement ok
 create table parameters (src bigint, dst bigint);
@@ -123,7 +123,7 @@ FROM (
     LEFT JOIN  person_knows_person k ON k.person1id = p.id
     GROUP BY p.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid))
+src.rowid, dst.rowid, k.rowid))
 FROM
   person_knows_person k
   JOIN person src ON k.person1id = src.id
