@@ -3,13 +3,13 @@
 require sqlpgq
 
 statement ok
-CREATE TABLE person_knows_person AS FROM read_csv('data/sqlpgq-testing/snb/sf1/person_knows_person.csv', delim=',', header=False, columns={'person1id':'BIGINT','person2id':'BIGINT','weight':'BIGINT'});
+CREATE TABLE person_knows_person AS FROM read_csv('data/sqlpgq-testing/snb/sf1/person_knows_person.csv', delim=',', header=True, columns={'person1id':'BIGINT','person2id':'BIGINT','weight':'BIGINT'});
 
 statement ok
 insert into person_knows_person select person2id, person1id, weight from person_knows_person
 
 statement ok
-CREATE TABLE person AS FROM read_csv('data/sqlpgq-testing/snb/sf1/person.csv', delim=',', header=False, columns={'id':'BIGINT'});
+CREATE TABLE person AS FROM read_csv('data/sqlpgq-testing/snb/sf1/person.csv', delim=',', header=True, columns={'id':'BIGINT'});
 
 statement ok
 create table parameters AS FROM read_csv('data/sqlpgq-testing/snb/parameters/q13a-sample.csv', delim='|', header=True, columns={'person1id':'BIGINT', 'person2id':'BIGINT'});
@@ -33,7 +33,7 @@ FROM (
     LEFT JOIN  person_knows_person k ON k.person1id = p.id
     GROUP BY p.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, k.weight))
+src.rowid, dst.rowid, k.rowid, k.weight))
 FROM
   person_knows_person k
   JOIN person src ON k.person1id = src.id

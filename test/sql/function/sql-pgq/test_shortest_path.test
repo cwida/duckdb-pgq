@@ -159,7 +159,7 @@ FROM (
     LEFT JOIN person_knows_person t ON t.person1id = c.id
     GROUP BY c.rowid
 ) sub) AS BIGINT),
-src.rowid, dst.rowid, dst.id))
+src.rowid, dst.rowid, t.rowid, dst.id))
 FROM
   person_knows_person t
   JOIN person src ON t.person1id = src.id
@@ -193,7 +193,7 @@ insert into all_options VALUES (13194139540172,3760,17592186048824,4761),
 #    join person pe on p.person1id = pe.id
 #    join person pe2 on p.person2id = pe2.id)
 
-query IIIIII
+statement ok
 SELECT p.person1id, p.person1rowid, p.person2id, p.person2rowid,
     shortestpath(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path,
     iterativelength(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS length
