@@ -395,8 +395,8 @@ void CheckpointReader::ReadIndex(ClientContext &context, MetaBlockReader &reader
 //===--------------------------------------------------------------------===//
 // Custom Types
 //===--------------------------------------------------------------------===//
-void CheckpointWriter::WriteType(TypeCatalogEntry &table) {
-	table.Serialize(GetMetaBlockWriter());
+void CheckpointWriter::WriteType(TypeCatalogEntry &type) {
+	type.Serialize(GetMetaBlockWriter());
 }
 
 void CheckpointReader::ReadType(ClientContext &context, MetaBlockReader &reader) {
