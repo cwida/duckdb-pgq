@@ -6,7 +6,7 @@
 
 namespace duckdb {
 
-static bool IterativeLength(int64_t v_size, int64_t *v, vector<int64_t> &e, vector<std::bitset<LANE_LIMIT>> &seen,
+static bool IterativeLengthLaneReuse(int64_t v_size, int64_t *v, vector<int64_t> &e, vector<std::bitset<LANE_LIMIT>> &seen,
                             vector<std::bitset<LANE_LIMIT>> &visit, vector<std::bitset<LANE_LIMIT>> &next) {
 	bool change = false;
 	for (auto i = 0; i < v_size; i++) {
@@ -102,7 +102,7 @@ static void IterativeLengthLaneReuseFunction(DataChunk &args, ExpressionState &s
 
 		// make passes while a lane is still active
 		for (int64_t iter = 1; active; iter++) {
-			if (!IterativeLength(v_size, v, e, seen, (iter & 1) ? visit1 : visit2, (iter & 1) ? visit2 : visit1)) {
+			if (!IterativeLengthLaneReuse(v_size, v, e, seen, (iter & 1) ? visit1 : visit2, (iter & 1) ? visit2 : visit1)) {
 				break;
 			}
 			// detect lanes that finished
