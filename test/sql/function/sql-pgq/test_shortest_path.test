@@ -44,8 +44,17 @@ CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 statement ok
 INSERT INTO src_dest VALUES(0, 4, 0, 2), (0, 4, 1, 2), (0, 4, 3, 0), (0, 4, 0, 1), (0, 4, 0, 0);
 
-query T
+query T nosort shortestpath_small
 SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
+----
+[0, 2, 2]
+[1, 12, 2]
+NULL
+[0, 1, 1]
+[0]
+
+query T nosort shortestpath_small
+SELECT shortestpath2(0, v_size, src, dst) FROM src_dest;
 ----
 [0, 2, 2]
 [1, 12, 2]
@@ -84,8 +93,13 @@ FROM
   JOIN Customer dst ON t.to_id = dst.cid
 
 
-query T
+query T nosort shortestpath_small2
 SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
+----
+[0, 2, 2, 23, 3]
+
+query T nosort shortestpath_small2
+SELECT shortestpath2(0, v_size, src, dst) FROM src_dest;
 ----
 [0, 2, 2, 23, 3]
 
@@ -125,11 +139,18 @@ INSERT INTO src_dest VALUES
     (0, 4, 0, 3),
     (0, 4, 1, 3)
 
-query T
+query T nosort shortestpath_small3
 SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
 ----
 [0, 2, 2, 23, 3]
 [1, 12, 2, 23, 3]
+
+query T nosort shortestpath_small3
+SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
+----
+[0, 2, 2, 23, 3]
+[1, 12, 2, 23, 3]
+
 
 statement ok
 pragma delete_csr=0;
@@ -190,10 +211,15 @@ insert into all_options VALUES (13194139540172,3760,17592186048824,4761),
 #    join person pe on p.person1id = pe.id
 #    join person pe2 on p.person2id = pe2.id)
 
-query IIIIIII
+query IIIII nosort shortestpath_big
 SELECT p.person1id, p.person1rowid, p.person2id, p.person2rowid,
     shortestpath(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path,
-    shortestpath2(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path2,
-    iterativelength(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS length
     FROM all_options p
+----
+
+query IIIII nosort shortestpath_big
+SELECT p.person1id, p.person1rowid, p.person2id, p.person2rowid,
+    shortestpath2(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path2,
+    FROM all_options p
+----
 

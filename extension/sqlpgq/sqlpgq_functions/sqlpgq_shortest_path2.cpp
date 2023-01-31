@@ -109,15 +109,16 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 				if (!vdata_src.validity.RowIsValid(src_pos) || !vdata_dst.validity.RowIsValid(dst_pos)) {
 					result_validity.SetInvalid(search_num);
 				} else if (src_data[src_pos] == dst_data[dst_pos]) {
-					final_path[search_num] = std::vector<int64_t>(src_data[src_pos]);
+					std::vector<int64_t> output = {src_data[src_pos]};
+					final_path[search_num] = output;
 				} else {
-						visit1[src_data[src_pos]][lane] = true;
-						parents_v[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
-						parents_e[src_data[src_pos]][lane] =
-						    -2; // Mark the source with -2, there is no incoming edge for the source.
-						lane_to_num[lane] = search_num; // active lane
-						active++;
-						break;
+					visit1[src_data[src_pos]][lane] = true;
+					parents_v[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
+					parents_e[src_data[src_pos]][lane] =
+						-2; // Mark the source with -2, there is no incoming edge for the source.
+					lane_to_num[lane] = search_num; // active lane
+					active++;
+					break;
 				}
 			}
 		}
