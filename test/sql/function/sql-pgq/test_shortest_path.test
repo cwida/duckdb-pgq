@@ -44,14 +44,14 @@ CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
 statement ok
 INSERT INTO src_dest VALUES(0, 4, 0, 2), (0, 4, 1, 2), (0, 4, 3, 0), (0, 4, 0, 1), (0, 4, 0, 0);
 
-#query T
-#SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
-#----
-#[0, 2, 2]
-#[1, 12, 2]
-#NULL
-#[0, 1, 1]
-#[0]
+query T
+SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
+----
+[0, 2, 2]
+[1, 12, 2]
+NULL
+[0, 1, 1]
+[0]
 
 statement ok
 INSERT INTO Transfers VALUES
@@ -83,14 +83,11 @@ FROM
   JOIN Customer src ON t.from_id = src.cid
   JOIN Customer dst ON t.to_id = dst.cid
 
-#-- CAST(CAST(src.rowid AS VARCHAR) || CAST(dst.rowid AS VARCHAR) AS BIGINT),
 
-#query T
-#SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
-#----
-#[0, 2, 2, 23, 3]
-
-#-- [0, 2, 2, 23, 3]
+query T
+SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
+----
+[0, 2, 2, 23, 3]
 
 statement ok
 PRAGMA delete_csr=0;
@@ -127,12 +124,12 @@ statement ok
 INSERT INTO src_dest VALUES
     (0, 4, 0, 3),
     (0, 4, 1, 3)
-#
-#query T
-#SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
-#----
-#[0, 2, 2, 23, 3]
-#[1, 12, 2, 23, 3]
+
+query T
+SELECT shortestpath(0, v_size, src, dst) FROM src_dest;
+----
+[0, 2, 2, 23, 3]
+[1, 12, 2, 23, 3]
 
 statement ok
 pragma delete_csr=0;
@@ -193,7 +190,7 @@ insert into all_options VALUES (13194139540172,3760,17592186048824,4761),
 #    join person pe on p.person1id = pe.id
 #    join person pe2 on p.person2id = pe2.id)
 
-statement ok
+query IIIIIII
 SELECT p.person1id, p.person1rowid, p.person2id, p.person2rowid,
     shortestpath(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path,
     shortestpath2(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path2,
