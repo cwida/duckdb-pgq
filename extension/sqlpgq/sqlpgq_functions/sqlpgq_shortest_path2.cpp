@@ -44,7 +44,7 @@ static bool IterativeLength2(int64_t v_size, int64_t *V, vector<int64_t> &E, vec
 	return change;
 }
 
-static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector &result) {
+static void ShortestPathFunction2(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
@@ -192,7 +192,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 CreateScalarFunctionInfo SQLPGQFunctions::GetShortestPath2Function() {
 	auto fun = ScalarFunction("shortestpath2",
 	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	                          LogicalType::LIST(LogicalType::BIGINT), ShortestPathFunction,
+	                          LogicalType::LIST(LogicalType::BIGINT), ShortestPathFunction2,
 	                          IterativeLengthFunctionData::IterativeLengthBind);
 	return CreateScalarFunctionInfo(fun);
 }
