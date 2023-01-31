@@ -76,12 +76,13 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 	vector<std::vector<int64_t>> parents_v(v_size, std::vector<int64_t>(LANE_LIMIT, -1));
 	vector<std::vector<int64_t>> parents_e(v_size, std::vector<int64_t>(LANE_LIMIT, -1));
 
+	vector<std::vector<int64_t>> final_path(args.size(), std::vector<int64_t>());
+
 	// maps lane to search number
 	int16_t lane_to_num[LANE_LIMIT];
 	for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 		lane_to_num[lane] = -1; // inactive
 	}
-	int64_t total_len = 0;
 
 	idx_t started_searches = 0;
 	while (started_searches < args.size()) {
@@ -103,15 +104,20 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			while (started_searches < args.size()) {
 				int64_t search_num = started_searches++;
 				int64_t src_pos = vdata_src.sel->get_index(search_num);
-				if (!vdata_src.validity.RowIsValid(src_pos)) {
+				int64_t dst_pos = vdata_dst.sel->get_index(search_num);
+
+				if (!vdata_src.validity.RowIsValid(src_pos) || !vdata_dst.validity.RowIsValid(dst_pos)) {
 					result_validity.SetInvalid(search_num);
+				} else if (src_data[src_pos] == dst_data[dst_pos]) {
+					final_path[search_num] = std::vector<int64_t>(src_data[src_pos]);
 				} else {
-					visit1[src_data[src_pos]][lane] = true;
-					parents_v[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
-					parents_e[src_data[src_pos]][lane] = -2; // Mark the source with -2, there is no incoming edge for the source.
-					lane_to_num[lane] = search_num;                       // active lane
-					active++;
-					break;
+						visit1[src_data[src_pos]][lane] = true;
+						parents_v[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
+						parents_e[src_data[src_pos]][lane] =
+						    -2; // Mark the source with -2, there is no incoming edge for the source.
+						lane_to_num[lane] = search_num; // active lane
+						active++;
+						break;
 				}
 			}
 		}
@@ -120,7 +126,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 		for (int64_t iter = 1; active; iter++) {
 			//! Perform one step of bfs exploration
 			if (!IterativeLength2(v_size, v, e, edge_ids, parents_v, parents_e, seen, (iter & 1) ? visit1 : visit2,
-			                     (iter & 1) ? visit2 : visit1)) {
+			                      (iter & 1) ? visit2 : visit1)) {
 				break;
 			}
 			int64_t finished_searches = 0;
@@ -131,75 +137,57 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 					//! Check if dst for a source has been seen
 					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
 					if (seen[dst_data[dst_pos]][lane]) {
-						finished_searches++;
-					}
+						// reconstruct the paths here and insert into final_path
+
+						std::vector<int64_t> output_vector;
+
+						int64_t src_pos = vdata_src.sel->get_index(search_num);
+					    auto source_v = src_data[src_pos]; // Take the source
+					    auto parent_vertex = parents_v[dst_data[dst_pos]][lane]; // Take the parent vertex of the destination vertex
+					    auto parent_edge = parents_e[dst_data[dst_pos]][lane]; // Take the parent edge of the destination vertex
+						output_vector.push_back(dst_data[dst_pos]); // Add destination vertex
+						output_vector.push_back(parent_edge);
+						while (parent_vertex != source_v) { // Continue adding vertices until we have reached the source vertex
+							output_vector.push_back(parent_vertex);
+							parent_edge = parents_e[parent_vertex][lane];
+							parent_vertex = parents_v[parent_vertex][lane];
+							output_vector.push_back(parent_edge);
+						}
+						output_vector.push_back(source_v);
+						std::reverse(output_vector.begin(), output_vector.end());
+						final_path[search_num] = output_vector;
+
+						lane_to_num[lane] = -1;
+						active--;
+				    }
 				}
 			}
-			if (finished_searches == LANE_LIMIT) {
-				break;
-			}
 		}
-		//! Reconstruct the paths
-		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
-			int64_t search_num = lane_to_num[lane];
-			if (search_num == -1) { // empty lanes
-				continue;
-			}
+	}
 
-			//! Searches that have stopped have found a path
-			int64_t src_pos = vdata_src.sel->get_index(search_num);
-			int64_t dst_pos = vdata_dst.sel->get_index(search_num);
-			if (src_data[src_pos] == dst_data[dst_pos]) { // Source == destination
-				unique_ptr<Vector> output = make_unique<Vector>(LogicalType::LIST(LogicalType::BIGINT));
-				ListVector::PushBack(*output, src_data[src_pos]);
-				ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
-				result_data[search_num].length = ListVector::GetListSize(*output);
-				result_data[search_num].offset = total_len;
-				total_len += result_data[search_num].length;
-				continue;
-			}
-			std::vector<int64_t> output_vector;
-			std::vector<int64_t> output_edge;
-			auto source_v = src_data[src_pos]; // Take the source
+	int64_t total_len = 0;
 
-			auto parent_vertex = parents_v[dst_data[dst_pos]][lane]; // Take the parent vertex of the destination vertex
-			auto parent_edge = parents_e[dst_data[dst_pos]][lane]; // Take the parent edge of the destination vertex
-
-			output_vector.push_back(dst_data[dst_pos]); // Add destination vertex
-			output_vector.push_back(parent_edge);
-			while (parent_vertex != source_v) { // Continue adding vertices until we have reached the source vertex
-				//! -1 is used to signify no parent
-				if (parent_vertex == -1 || parent_vertex == parents_v[parent_vertex][lane]) {
-					result_validity.SetInvalid(search_num);
-					break;
-				}
-				output_vector.push_back(parent_vertex);
-				parent_edge = parents_e[parent_vertex][lane];
-				parent_vertex = parents_v[parent_vertex][lane];
-				output_vector.push_back(parent_edge);
-			}
-
-			if (!result_validity.RowIsValid(search_num)) {
-				continue;
-			}
-			output_vector.push_back(source_v);
-			std::reverse(output_vector.begin(), output_vector.end());
-			auto output = make_unique<Vector>(LogicalType::LIST(LogicalType::BIGINT));
-			for (auto val : output_vector) {
-				Value value_to_insert = val;
-				ListVector::PushBack(*output, value_to_insert);
-			}
-
-			result_data[search_num].length = ListVector::GetListSize(*output);
-			result_data[search_num].offset = total_len;
-			ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
-			total_len += result_data[search_num].length;
+	for (int64_t idx = 0; idx < args.size(); idx++) {
+		if (final_path[idx].size() == 0) {
+			result_validity.SetInvalid(idx);
+			continue;
 		}
+
+		auto output = make_unique<Vector>(LogicalType::LIST(LogicalType::BIGINT));
+		for (auto val : final_path[idx]) {
+			Value value_to_insert = val;
+			ListVector::PushBack(*output, value_to_insert);
+		}
+
+		result_data[idx].length = ListVector::GetListSize(*output);
+		result_data[idx].offset = total_len;
+		ListVector::Append(result, ListVector::GetEntry(*output), ListVector::GetListSize(*output));
+		total_len += result_data[idx].length;
 	}
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetShortestPath2Function() {
-	auto fun = ScalarFunction("shortestpath",
+	auto fun = ScalarFunction("shortestpath2",
 	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
 	                          LogicalType::LIST(LogicalType::BIGINT), ShortestPathFunction,
 	                          IterativeLengthFunctionData::IterativeLengthBind);
