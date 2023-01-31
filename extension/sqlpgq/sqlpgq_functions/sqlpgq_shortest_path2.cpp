@@ -129,7 +129,6 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			                      (iter & 1) ? visit2 : visit1)) {
 				break;
 			}
-			int64_t finished_searches = 0;
 			// detect lanes that finished
 			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 				int64_t search_num = lane_to_num[lane];
