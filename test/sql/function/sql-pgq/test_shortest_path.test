@@ -196,6 +196,7 @@ insert into all_options VALUES (13194139540172,3760,17592186048824,4761),
 statement ok
 SELECT p.person1id, p.person1rowid, p.person2id, p.person2rowid,
     shortestpath(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path,
+    shortestpath2(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS path2,
     iterativelength(0, (select count(*) from person), p.person1rowid, p.person2rowid) AS length
     FROM all_options p
 

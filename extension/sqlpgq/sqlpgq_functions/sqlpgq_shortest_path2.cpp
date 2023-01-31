@@ -137,21 +137,24 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 					int64_t dst_pos = vdata_dst.sel->get_index(search_num);
 					if (seen[dst_data[dst_pos]][lane]) {
 						// reconstruct the paths here and insert into final_path
-
 						std::vector<int64_t> output_vector;
 
 						int64_t src_pos = vdata_src.sel->get_index(search_num);
+
 					    auto source_v = src_data[src_pos]; // Take the source
 					    auto parent_vertex = parents_v[dst_data[dst_pos]][lane]; // Take the parent vertex of the destination vertex
 					    auto parent_edge = parents_e[dst_data[dst_pos]][lane]; // Take the parent edge of the destination vertex
+
 						output_vector.push_back(dst_data[dst_pos]); // Add destination vertex
 						output_vector.push_back(parent_edge);
+
 						while (parent_vertex != source_v) { // Continue adding vertices until we have reached the source vertex
 							output_vector.push_back(parent_vertex);
 							parent_edge = parents_e[parent_vertex][lane];
 							parent_vertex = parents_v[parent_vertex][lane];
 							output_vector.push_back(parent_edge);
 						}
+
 						output_vector.push_back(source_v);
 						std::reverse(output_vector.begin(), output_vector.end());
 						final_path[search_num] = output_vector;
