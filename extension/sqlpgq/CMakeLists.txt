@@ -13,6 +13,7 @@ set(SQLPGQ_EXTENSION_FILES
         sqlpgq_functions/sqlpgq_reachability.cpp
         sqlpgq_functions/sqlpgq_iterativelength.cpp
         sqlpgq_functions/sqlpgq_shortest_path.cpp
+        sqlpgq_functions/sqlpgq_shortest_path2.cpp
         sqlpgq_functions/sqlpgq_iterativelength2.cpp
         sqlpgq_functions/sqlpgq_bidirectional_iterativelength.cpp
         sqlpgq_functions/sqlpgq_iterativelength_bidirectional.cpp
