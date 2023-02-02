@@ -28,4 +28,6 @@ enum class TableReferenceType : uint8_t {
 	MATCH = 10           // MATCH clause SQL/PGQ
 };
 
+const char *ToString(TableReferenceType value);
+
 } // namespace duckdb

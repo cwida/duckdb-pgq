@@ -23,6 +23,7 @@ enum QueryNodeType : uint8_t {
 	BOUND_SUBQUERY_NODE = 3,
 	RECURSIVE_CTE_NODE = 4
 };
+const char *ToString(QueryNodeType value);
 
 struct CommonTableExpressionInfo;
 
@@ -35,6 +36,8 @@ public:
 public:
 	string ToString() const;
 	CommonTableExpressionMap Copy() const;
+
+	void FormatSerialize(FormatSerializer &serializer) const;
 };
 
 class QueryNode {
@@ -72,6 +75,8 @@ public:
 
 	//! Adds a distinct modifier to the query node
 	void AddDistinct();
+
+	virtual void FormatSerialize(FormatSerializer &serializer) const;
 
 protected:
 	//! Copy base QueryNode properties from another expression to this one,
