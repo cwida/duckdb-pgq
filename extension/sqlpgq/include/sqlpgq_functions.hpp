@@ -31,6 +31,8 @@ public:
 		functions.push_back(GetIterativeLengthBidirectionalFunction());
 		functions.push_back(GetIterativeLength2Function());
 		functions.push_back(GetIterativeLengthLaneReuseFunction());
+		functions.push_back(GetIterativeLengthBidirectionalLaneReuseFunction());
+
 
 		//		AddAliases({"to_json", "json_quote"}, GetToJSONFunction(), functions);
 		//		functions.push_back(GetArrayToJSONFunction());
@@ -62,6 +64,8 @@ private:
 	static CreateScalarFunctionInfo GetIterativeLengthBidirectionalFunction();
 	static CreateScalarFunctionInfo GetIterativeLength2Function();
 	static CreateScalarFunctionInfo GetIterativeLengthLaneReuseFunction();
+	static CreateScalarFunctionInfo GetIterativeLengthBidirectionalLaneReuseFunction();
+
 	//	static CreateScalarFunctionInfo GetTransformStrictFunction();
 	//
 	//	static CreateScalarFunctionInfo GetArrayLengthFunction();

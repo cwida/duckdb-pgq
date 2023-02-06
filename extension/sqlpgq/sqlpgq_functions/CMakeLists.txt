@@ -9,6 +9,7 @@ add_library_unity(
         sqlpgq_iterativelength2.cpp
         sqlpgq_bidirectional_iterativelength.cpp
         sqlpgq_iterativelength_bidirectional.cpp
+        sqlpgq_iterativelength_bidirectional_lane_reuse.cpp
         sqlpgq_iterativelength_lane_reuse.cpp
 )
 
