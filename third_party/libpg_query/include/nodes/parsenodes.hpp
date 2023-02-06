@@ -2140,7 +2140,7 @@ typedef enum PGMatchType {
 	PG_MATCH_EDGE_LEFT, 		/*  -[spec]-> */
 	PG_MATCH_EDGE_RIGHT, 		/* <-[spec]-  */	
 	PG_MATCH_EDGE_LEFT_RIGHT, 	/* <-[spec]-> */
-} PGMatchDirection;
+} PGMatchType;
 
 typedef enum PGColumnSpec {
 	PG_COLUMNSPEC_EXPR, 
@@ -2203,16 +2203,6 @@ typedef struct PGLabelTest {
 	struct PGLabelTest *left, *right; 
 } PGLabelTest;
 
-typedef struct PGPathInfo {
-	PGNode *cost_expr; 
-	double default_value; 
-	const char* var_name;
-	PGPathMode mode; 
-	PGNode *where_clause;
-	PGLabelTest* label_expr;
-	PGList *path, *elements;
-} PGPathInfo;
-
 typedef struct PGSubPath {
 	PGNodeTag type;
 
@@ -2252,5 +2242,19 @@ typedef struct PGPathElement {
 	/* label test (or null if none) */
 	PGLabelTest *label_expr;
 } PGPathElement;
+
+/* temporary structto collect stuff 
+ * it is only used during parsing but is not emitted by parsing 
+ */
+typedef struct PGPathInfo {
+	PGNode *cost_expr; 
+	double default_value; 
+	const char* var_name;
+	PGPathMode mode; 
+	PGNode *where_clause;
+	PGLabelTest* label_expr;
+	PGList *path, *elements;
+} PGPathInfo;
+
 
 }
