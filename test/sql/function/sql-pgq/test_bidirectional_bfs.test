@@ -158,6 +158,11 @@ FROM all_options s
 order by s.person1id, s.person2id;
 
 query III nosort r43
+SELECT s.person1id, s.person2id, iterativelengthlanereuse(0, (select count(*) from person), s.person1rowid, s.person2rowid)
+FROM all_options s
+order by s.person1id, s.person2id;
+
+query III nosort r43
 SELECT s.person1id, s.person2id, iterativelengthbidirectional_lanereuse(0, (select count(*) from person), s.person1rowid, s.person2rowid)
 FROM all_options s
 order by s.person1id, s.person2id;

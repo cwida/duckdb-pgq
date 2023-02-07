@@ -82,6 +82,7 @@ static void IterativeLengthLaneReuseFunction(DataChunk &args, ExpressionState &s
 		uint64_t active = 0;
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 			lane_to_num[lane] = -1;
+			lane_to_iter[lane] = 0;
 			while (started_searches < args.size()) {
 				int64_t search_num = started_searches++;
 				int64_t src_pos = vdata_src.sel->get_index(search_num);
