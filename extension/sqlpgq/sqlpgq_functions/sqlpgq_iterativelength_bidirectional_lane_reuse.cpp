@@ -155,10 +155,11 @@ static void IterativeLengthBidirectionalLaneReuseFunction(DataChunk &args, Expre
 						auto src_value = src_data[src_pos];
 						auto dst_value = dst_data[dst_pos];
 
-						(iter&1)?src_seen[src_value][lane] = true : dst_seen[dst_value][lane] = true;
+						src_seen[src_value][lane] = true;
+						dst_seen[dst_value][lane] = true;
 
-						(iter&2)?(iter&1)?dst_visit2[src_value][lane] = src_visit1[dst_value][lane] = true : src_visit2[src_value][lane] = dst_visit2[dst_value][lane] = true
-								:(iter&1)?dst_visit1[src_value][lane] = src_visit2[dst_value][lane] = true : src_visit1[src_value][lane] = dst_visit1[dst_value][lane] = true;
+						(iter&2)?(iter&1)?dst_visit2[dst_value][lane] = src_visit1[src_value][lane] = true : src_visit2[src_value][lane] = dst_visit2[dst_value][lane] = true
+								:(iter&1)?dst_visit1[dst_value][lane] = src_visit2[src_value][lane] = true : src_visit1[src_value][lane] = dst_visit1[dst_value][lane] = true;
 
 						lane_to_num[lane] = search_num; // active lane
 						lane_to_iter[lane] = iter;

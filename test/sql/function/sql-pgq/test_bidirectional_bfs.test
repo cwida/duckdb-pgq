@@ -121,7 +121,7 @@ INSERT INTO all_options(
       FROM parameters
       JOIN Person s1 ON s1.id = parameters.src
       JOIN Person s2 ON s2.id = parameters.dst
-      LIMIT 40
+      limit 4000
 );
 
 statement ok
