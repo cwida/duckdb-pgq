@@ -182,7 +182,6 @@ static void IterativeLengthBidirectionalLaneReuseFunction(DataChunk &args, Expre
                 if (done[lane]) {
                     int64_t search_num = lane_to_num[lane];
                     if (search_num >= 0) {
-						std::cout << search_num << " " << iter << " " << lane_to_iter[lane] << " " << iter - lane_to_iter[lane] + 1 << std::endl;
                         result_data[search_num] = iter - lane_to_iter[lane] + 1; /* found at iter => iter = path length */
                         lane_to_num[lane] = -1;         // mark inactive
                         active--;
