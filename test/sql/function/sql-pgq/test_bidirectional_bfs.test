@@ -68,6 +68,17 @@ SELECT iterativelengthbidirectional(0, v_size, src, dst) FROM src_dst;
 NULL
 0
 
+query T nosort small_test
+SELECT iterativelengthbidirectional_lanereuse(0, v_size, src, dst) FROM src_dst;
+----
+3
+1
+2
+2
+NULL
+0
+
+
 statement ok
 pragma delete_csr=0;
 
@@ -110,7 +121,7 @@ INSERT INTO all_options(
       FROM parameters
       JOIN Person s1 ON s1.id = parameters.src
       JOIN Person s2 ON s2.id = parameters.dst
-      LIMIT 10
+      LIMIT 40
 );
 
 statement ok
@@ -143,6 +154,11 @@ order by s.person1id, s.person2id;
 
 query III nosort r43
 SELECT s.person1id, s.person2id, iterativelengthbidirectional(0, (select count(*) from person), s.person1rowid, s.person2rowid)
+FROM all_options s
+order by s.person1id, s.person2id;
+
+query III nosort r43
+SELECT s.person1id, s.person2id, iterativelengthbidirectional_lanereuse(0, (select count(*) from person), s.person1rowid, s.person2rowid)
 FROM all_options s
 order by s.person1id, s.person2id;
 

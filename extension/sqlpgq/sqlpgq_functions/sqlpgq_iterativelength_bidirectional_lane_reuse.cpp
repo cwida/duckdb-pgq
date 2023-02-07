@@ -6,6 +6,8 @@
 #include "sqlpgq_functions.hpp"
 #include "sqlpgq_common.hpp"
 
+#include <iostream>
+
 namespace duckdb {
 
 static bool IterativeLengthBidirectional2(int64_t v_size, int64_t *V, vector<int64_t> &E, vector<std::bitset<LANE_LIMIT>> &seen,
@@ -108,10 +110,14 @@ static void IterativeLengthBidirectionalLaneReuseFunction(DataChunk &args, Expre
                 } else if (src_data[src_pos] == dst_data[dst_pos]) {
                     result_data[search_num] = (uint64_t) 0; // path of length 0 does not require a search
 				} else {
-                    src_visit1[src_data[src_pos]][lane] = true;
-                    dst_visit1[dst_data[dst_pos]][lane] = true;
-                    src_seen[src_data[src_pos]][lane] = true;
-                    dst_seen[dst_data[dst_pos]][lane] = true;
+					auto src_value = src_data[src_pos];
+					auto dst_value = dst_data[dst_pos];
+
+                    src_visit1[src_value][lane] = true;
+                    dst_visit1[dst_value][lane] = true;
+                    src_seen[src_value][lane] = true;
+                    dst_seen[dst_value][lane] = true;
+
                     lane_to_num[lane] = search_num; // active lane
 					active++;
 					break;
@@ -121,25 +127,6 @@ static void IterativeLengthBidirectionalLaneReuseFunction(DataChunk &args, Expre
 
 		// make passes while a lane is still active
 		for (int64_t iter = 0; active; iter++) {
-            if (!IterativeLengthBidirectional2(v_size, v, e,
-                                              (iter&1)?dst_seen:src_seen,
-                                              (iter&2)?(iter&1)?dst_visit2:src_visit2:(iter&1)?dst_visit1:src_visit1,
-                                              (iter&2)?(iter&1)?dst_visit1:src_visit1:(iter&1)?dst_visit2:src_visit2)) {
-				break;
-			}
-            std::bitset<LANE_LIMIT> done = InterSectFronteers2(v_size, src_seen, dst_seen);
-            // detect lanes that finished
-			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
-                if (done[lane]) {
-                    int64_t search_num = lane_to_num[lane];
-                    if (search_num >= 0) {
-                        result_data[search_num] = lane_to_iter[lane]+1; /* found at iter => iter = path length */
-                        lane_to_num[lane] = -1;         // mark inactive
-                        active--;
-                    }
-				}
-			}
-
 			// refill empty lanes
 			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 				if (lane_to_num[lane] != -1) {
@@ -164,14 +151,40 @@ static void IterativeLengthBidirectionalLaneReuseFunction(DataChunk &args, Expre
 							dst_visit1[i][lane] = false;
 							dst_visit2[i][lane] = false;
 						}
-						(iter & 1) ? src_visit2[src_data[src_pos]][lane] = true, dst_visit2[dst_data[dst_pos]][lane] = true
-						           : src_visit1[src_data[src_pos]][lane] = true, dst_visit1[dst_data[dst_pos]][lane] = true;
+						auto src_value = src_data[src_pos];
+						auto dst_value = dst_data[dst_pos];
+
+						(iter&1)?src_seen[src_value][lane] = true : dst_seen[dst_value][lane] = true;
+
+						(iter&2)?(iter&1)?dst_visit2[src_value][lane] = src_visit1[dst_value][lane] = true : src_visit2[src_value][lane] = dst_visit2[dst_value][lane] = true
+								:(iter&1)?dst_visit1[src_value][lane] = src_visit2[dst_value][lane] = true : src_visit1[src_value][lane] = dst_visit1[dst_value][lane] = true;
+
 						lane_to_num[lane] = search_num; // active lane
 						lane_to_iter[lane] = iter;
 						active++;
 						break;
 					}
+				}
+			}
 
+			if (!IterativeLengthBidirectional2(v_size, v, e,
+                                              (iter&1)?dst_seen:src_seen,
+                                              (iter&2)?(iter&1)?dst_visit2:src_visit2:(iter&1)?dst_visit1:src_visit1,
+                                              (iter&2)?(iter&1)?dst_visit1:src_visit1:(iter&1)?dst_visit2:src_visit2)) {
+				break;
+			}
+
+            std::bitset<LANE_LIMIT> done = InterSectFronteers2(v_size, src_seen, dst_seen);
+            // detect lanes that finished
+			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
+                if (done[lane]) {
+                    int64_t search_num = lane_to_num[lane];
+                    if (search_num >= 0) {
+						std::cout << search_num << " " << iter << " " << iter - lane_to_iter[lane] + 1 << std::endl;
+                        result_data[search_num] = iter - lane_to_iter[lane] + 1; /* found at iter => iter = path length */
+                        lane_to_num[lane] = -1;         // mark inactive
+                        active--;
+                    }
 				}
 			}
 		}
