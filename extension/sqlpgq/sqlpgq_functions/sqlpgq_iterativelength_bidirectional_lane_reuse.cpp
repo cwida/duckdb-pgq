@@ -6,8 +6,6 @@
 #include "sqlpgq_functions.hpp"
 #include "sqlpgq_common.hpp"
 
-#include <iostream>
-
 namespace duckdb {
 
 static bool IterativeLengthBidirectional2(int64_t v_size, int64_t *V, vector<int64_t> &E, vector<std::bitset<LANE_LIMIT>> &seen,
