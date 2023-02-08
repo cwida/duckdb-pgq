@@ -229,7 +229,7 @@ PropertiesClause:
  */
 
 GraphTableStmt:
-		'(' IDENT ',' MATCH PathPatternList KeepOptional WHERE pgq_expr
+		'(' PGQ_IDENT ',' MATCH PathPatternList KeepOptional WHERE pgq_expr
 		COLUMNS '(' ColumnList ')' ')' qualified_name
 			{
 				PGMatchClause *n = makeNode(PGMatchClause);
