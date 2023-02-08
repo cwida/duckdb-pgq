@@ -156,7 +156,7 @@ for r in reserved_keywords:
         exit(1)
     reserved_dict[r] = True
 
-for ur in unreserved_keywords:
+for ur in unreserved_keywords + pgq_unreserved_keywords:
     if ur in unreserved_dict:
         print("Duplicate keyword " + ur + " in unreserved keywords")
         exit(1)
@@ -199,6 +199,7 @@ other_keyword = list(other_dict.keys())
 other_keyword.sort()
 
 kw_definitions = "unreserved_keyword: " + " | ".join(unreserved_keywords) + "\n"
+kw_definitions += "pgq_unreserved_keyword: " + " | ".join(pgq_unreserved_keywords) + "\n"
 kw_definitions += "col_name_keyword: " + " | ".join(colname_keywords) + "\n"
 kw_definitions += "func_name_keyword: " + " | ".join(func_name_keywords) + "\n"
 kw_definitions += "type_name_keyword: " + " | ".join(type_name_keywords) + "\n"
