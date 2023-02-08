@@ -35,12 +35,19 @@
  * in such cases is arranged in the semantic checks
  */
 
+ /* Column identifier for SQL/PGQ --- names that can be column, table, etc names.
+  */
+ pgq_ident:		IDENT									{ $$ = $1; }
+ 			| unreserved_keyword					{ $$ = pstrdup($1); }
+ 			| col_name_keyword						{ $$ = pstrdup($1); }
+ 		;
+
 /* -------------------------------
  * DROP PROPERTY GRAPH Statement
  * -------------------------------
  */
 DropPropertyGraphStmt:
-		DROP PROPERTY GRAPH IDENT opt_drop_behavior
+		DROP PROPERTY GRAPH qualified_name opt_drop_behavior
 			{
 				PGDropPropertyGraphStmt *n = makeNode(PGDropPropertyGraphStmt);
 				n->name = $4;
@@ -66,7 +73,7 @@ EdgeOrRelationship:
 		;
 
 CreatePropertyGraphStmt:
-		CREATE_P PROPERTY GRAPH IDENT
+		CREATE_P PROPERTY GRAPH qualified_name
 		VertexOrNode TABLES '(' VertexTableDefinition VertexTableDefinitionList ')'
 		EdgeOrRelationship TABLES '(' EdgeTableDefinition EdgeTableDefinitionList ')'
 			{
@@ -98,7 +105,7 @@ KeyReference:
 		;
 
 LabelList:
-		',' IDENT LabelList 		{ $$ = $3?lappend($3,$2):list_make1($2); }
+		',' pgq_ident LabelList 		{ $$ = $3?lappend($3,$2):list_make1($2); }
 	|
 		/* EMPTY */					{ $$ = NULL; }
         ;
@@ -116,14 +123,14 @@ Discriminator:
 			{ 
 				PGPropertyGraphTable *n = makeNode(PGPropertyGraphTable);
 				n->discriminator = NULL; /* no discriminator */
-				n->labels = NULL; /* no list, just the single staring IDENT */
+				n->labels = NULL; /* no list, just the single staring pgq_ident */
 				$$ = (PGNode*) n;
 			}
         ;
 
 VertexTableDefinition:
 		/* qualified name is an BIGINT column with 64 bits: a maximum of 64 labels can be set */
-		IdentOptionalAs PropertiesClause LABEL IDENT Discriminator
+		IdentOptionalAs PropertiesClause LABEL pgq_ident Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $5;
 				PGListCell *list = list_head($1);
@@ -132,7 +139,7 @@ VertexTableDefinition:
 				n->properties = $2;
 				/* Xth label in list is set iff discriminator Xth-bit==1 */
 				if (n->labels) n->labels = lappend(n->labels,$4);
-				else n->labels = list_make1($4); 
+				else n->labels = list_make1($4);
 				n->is_vertex_table = true;
 				$$ = (PGNode *) n;
 			}
@@ -149,7 +156,7 @@ EdgeTableDefinition:
 		IdentOptionalAs 
 		SOURCE KeyReference qualified_name KeySpecification
 		DESTINATION KeyReference qualified_name KeySpecification 
-		PropertiesClause LABEL IDENT Discriminator
+		PropertiesClause LABEL pgq_ident Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $13;
 				PGListCell *list = list_head($1);
@@ -177,9 +184,11 @@ AreOptional:
 		;
 
 IdentOptionalAs:
-		IDENT					{ $$ = list_make2($1, $1); }
+		pgq_ident					{ $$ = list_make2($1, $1); }
 	|
-		IDENT AS IDENT			{ $$ = list_make2($1, $3); }
+		pgq_ident AS pgq_ident			{ $$ = list_make2($1, $3); }
+
+        ;
 
 PropertiesList:
 		IdentOptionalAs			{ $$ = list_make1($1); }
@@ -274,7 +283,7 @@ GroupOrGroupsOptional:
 		;
 
 PathVariableOptional:
-		IDENT '='					{ $$ = $1; }
+		pgq_ident '='					{ $$ = $1; }
 	|
 		/* EMPTY */					{ $$ = NULL;}
 	    ;
@@ -615,7 +624,7 @@ ComposedLabelExpression:
 		;
 
 LabelExpression:
-		IDENT
+		pgq_ident
 			{
 				PGLabelTest *n = makeNode(PGLabelTest);
 				n->name = $1;
@@ -678,7 +687,7 @@ AbbreviatedEdge:
 		;
 
 VariableOptional:
-		IDENT 						{ $$ = $1; }
+		pgq_ident 						{ $$ = $1; }
 	|
 		/* EMPTY */					{ $$ = NULL;}
 	    ;
