@@ -41,6 +41,7 @@ def read_list_from_file(fname):
 
 kwdir = os.path.join(base_dir, 'keywords')
 unreserved_keywords = read_list_from_file(os.path.join(kwdir, 'unreserved_keywords.list'))
+pgq_unreserved_keywords = read_list_from_file(os.path.join(kwdir, 'pgq_unreserved_keywords.list'))
 colname_keywords = read_list_from_file(os.path.join(kwdir, 'column_name_keywords.list'))
 func_name_keywords = read_list_from_file(os.path.join(kwdir, 'func_name_keywords.list'))
 type_name_keywords = read_list_from_file(os.path.join(kwdir, 'type_name_keywords.list'))
@@ -53,6 +54,7 @@ def strip_p(x):
         return x
 
 unreserved_keywords.sort(key=lambda x: strip_p(x))
+pgq_unreserved_keywords.sort(key=lambda x: strip_p(x))
 colname_keywords.sort(key=lambda x: strip_p(x))
 func_name_keywords.sort(key=lambda x: strip_p(x))
 type_name_keywords.sort(key=lambda x: strip_p(x))
@@ -68,6 +70,9 @@ if len(statements) < 0:
 kwdict = {}
 for kw in unreserved_keywords:
     kwdict[kw] = 'UNRESERVED_KEYWORD'
+
+for kw in pgq_unreserved_keywords:
+    kwdict[kw] = 'PGQ_UNRESERVED_KEYWORD'
 
 for kw in colname_keywords:
     kwdict[kw] = 'COL_NAME_KEYWORD'
