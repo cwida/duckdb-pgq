@@ -2100,13 +2100,13 @@ typedef struct PGUseStmt {
 
 typedef struct PGDropPropertyGraphStmt {
 	PGNodeTag type;
-	char *name;
+	PGRangeVar *name;
 	PGDropBehavior behavior;
 } PGDropPropertyGraphStmt;
 
 typedef struct PGCreatePropertyGraphStmt {
 	PGNodeTag type;
-	char *name;
+	PGRangeVar *name;
 	PGList *vertex_tables;
 	PGList *edge_tables;
 } PGCreatePropertyGraphStmt;
