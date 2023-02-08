@@ -32,7 +32,7 @@
 %type <node> CostOptional
 %type <node> SubPath
 %type <node> EnclosedSubPath
-%type <list> PathEelement
+%type <list> PathElement
 %type <list> PathSequence
 %type <list> PathConcatenation
 %type <node> LabelExpression
