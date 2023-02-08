@@ -245,6 +245,7 @@ vector<ParserKeyword> Parser::KeywordList() {
 			break;
 		case duckdb_libpgquery::PGKeywordCategory::PG_KEYWORD_PGQ_UNRESERVED:
 			res.category = KeywordCategory::KEYWORD_PGQ_UNRESERVED;
+			break;
 		default:
 			throw InternalException("Unrecognized keyword category");
 		}
