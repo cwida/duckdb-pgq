@@ -62,7 +62,7 @@ VertexOrNode:
 EdgeOrRelationship:
 		EDGE
 	|
-		 RELATIONSHIP
+		RELATIONSHIP
 		;
 
 CreatePropertyGraphStmt:
@@ -117,7 +117,7 @@ Discriminator:
 			}
 
 VertexTableDefinition:
-		/* qualified name is an BIGINT column whith 64 bits: a maximum of 64 labels can be set */
+		/* qualified name is an BIGINT column with 64 bits: a maximum of 64 labels can be set */
 		IdentOptionalAs PropertiesClause LABEL IDENT Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $5;
