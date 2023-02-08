@@ -3708,6 +3708,7 @@ Sconst:		SCONST									{ $$ = $1; };
 /* Column identifier --- names that can be column, table, etc names.
  */
 ColId:		IDENT									{ $$ = $1; }
+            | pgq_unreserved_keyword                { $$ = pstrdup($1); }
 			| unreserved_keyword					{ $$ = pstrdup($1); }
 			| col_name_keyword						{ $$ = pstrdup($1); }
 		;
