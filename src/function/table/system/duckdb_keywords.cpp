@@ -60,6 +60,9 @@ void DuckDBKeywordsFunction(ClientContext &context, TableFunctionInput &data_p, 
 		case KeywordCategory::KEYWORD_COL_NAME:
 			category_name = "column_name";
 			break;
+		case KeywordCategory::KEYWORD_PGQ_UNRESERVED:
+			category_name = "pgq_unreserved";
+			break;
 		default:
 			throw InternalException("Unrecognized keyword category");
 		}
