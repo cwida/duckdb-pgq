@@ -518,7 +518,7 @@ EnclosedSubPath:
 			}
 		;
 
-PathEelement:
+PathElement:
 		VertexPattern 				{ $$ = $1; }
 	|
 		EdgePattern					{ $$ = $1; }
@@ -548,7 +548,7 @@ PathSequence:
 				}
 			}
 	|
-		PathEelement PathSequence	{ $$ = $1?list_concat($1,$2):$2; }
+		PathElement PathSequence	{ $$ = $1?list_concat($1,$2):$2; }
 	|
 		/* EMPTY*/					{ $$ = NULL; }
 		;
