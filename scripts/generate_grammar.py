@@ -149,6 +149,7 @@ text = text.replace("{{{ STATEMENTS }}}", stmt_list)
 # verify that this is the case
 reserved_dict = {}
 unreserved_dict = {}
+pgq_unreserved_dict = {}
 other_dict = {}
 for r in reserved_keywords:
     if r in reserved_dict:
@@ -156,7 +157,7 @@ for r in reserved_keywords:
         exit(1)
     reserved_dict[r] = True
 
-for ur in unreserved_keywords + pgq_unreserved_keywords:
+for ur in unreserved_keywords:
     if ur in unreserved_dict:
         print("Duplicate keyword " + ur + " in unreserved keywords")
         exit(1)
@@ -165,12 +166,29 @@ for ur in unreserved_keywords + pgq_unreserved_keywords:
         exit(1)
     unreserved_dict[ur] = True
 
+for pur in pgq_unreserved_keywords:
+    if pur in pgq_unreserved_dict:
+        print("Duplicate keyword " + pur + " in unreserved keywords")
+        exit(1)
+    if pur in unreserved_dict:
+        print("Duplicate keyword " + pur + " in unreserved keywords")
+        exit(1)
+    if pur in reserved_dict:
+        print("Keyword " + pur + " is marked as both unreserved and reserved")
+        exit(1)
+    pgq_unreserved_dict[pur] = True
+
+
 def add_to_other_keywords(kw, list_name):
     global unreserved_dict
+    global pgq_unreserved_dict
     global reserved_dict
     global other_dict
     if kw in unreserved_dict:
         print("Keyword " + kw + " is marked as both unreserved and " + list_name)
+        exit(1)
+    if kw in pgq_unreserved_dict:
+        print("Keyword " + kw + " is marked as both pgq_unreserved and " + list_name)
         exit(1)
     if kw in reserved_dict:
         print("Keyword " + kw + " is marked as both reserved and " + list_name)
@@ -192,7 +210,7 @@ for fr in func_name_keywords:
 type_func_name_keywords = list(type_func_name_dict.keys())
 type_func_name_keywords.sort()
 
-all_keywords = list(reserved_dict.keys()) + list(unreserved_dict.keys()) + list(other_dict.keys())
+all_keywords = list(reserved_dict.keys()) + list(unreserved_dict.keys()) + list(pgq_unreserved_dict.keys()) + list(other_dict.keys())
 all_keywords.sort()
 
 other_keyword = list(other_dict.keys())
