@@ -37,7 +37,7 @@
 
  /* Column identifier for SQL/PGQ --- names that can be column, table, etc names.
   */
- pgq_ident:		IDENT									{ $$ = $1; }
+ PGQ_IDENT:		IDENT									{ $$ = $1; }
  			| unreserved_keyword					{ $$ = pstrdup($1); }
  			| col_name_keyword						{ $$ = pstrdup($1); }
  		;
@@ -105,7 +105,7 @@ KeyReference:
 		;
 
 LabelList:
-		',' pgq_ident LabelList 		{ $$ = $3?lappend($3,$2):list_make1($2); }
+		',' PGQ_IDENT LabelList 		{ $$ = $3?lappend($3,$2):list_make1($2); }
 	|
 		/* EMPTY */					{ $$ = NULL; }
         ;
@@ -123,14 +123,14 @@ Discriminator:
 			{ 
 				PGPropertyGraphTable *n = makeNode(PGPropertyGraphTable);
 				n->discriminator = NULL; /* no discriminator */
-				n->labels = NULL; /* no list, just the single staring pgq_ident */
+				n->labels = NULL; /* no list, just the single staring PGQ_IDENT */
 				$$ = (PGNode*) n;
 			}
         ;
 
 VertexTableDefinition:
 		/* qualified name is an BIGINT column with 64 bits: a maximum of 64 labels can be set */
-		IdentOptionalAs PropertiesClause LABEL pgq_ident Discriminator
+		IdentOptionalAs PropertiesClause LABEL PGQ_IDENT Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $5;
 				PGListCell *list = list_head($1);
@@ -156,7 +156,7 @@ EdgeTableDefinition:
 		IdentOptionalAs 
 		SOURCE KeyReference qualified_name KeySpecification
 		DESTINATION KeyReference qualified_name KeySpecification 
-		PropertiesClause LABEL pgq_ident Discriminator
+		PropertiesClause LABEL PGQ_IDENT Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $13;
 				PGListCell *list = list_head($1);
@@ -184,9 +184,9 @@ AreOptional:
 		;
 
 IdentOptionalAs:
-		pgq_ident					{ $$ = list_make2($1, $1); }
+		PGQ_IDENT					{ $$ = list_make2($1, $1); }
 	|
-		pgq_ident AS pgq_ident			{ $$ = list_make2($1, $3); }
+		PGQ_IDENT AS PGQ_IDENT			{ $$ = list_make2($1, $3); }
 
         ;
 
@@ -283,7 +283,7 @@ GroupOrGroupsOptional:
 		;
 
 PathVariableOptional:
-		pgq_ident '='					{ $$ = $1; }
+		PGQ_IDENT '='					{ $$ = $1; }
 	|
 		/* EMPTY */					{ $$ = NULL;}
 	    ;
@@ -624,7 +624,7 @@ ComposedLabelExpression:
 		;
 
 LabelExpression:
-		pgq_ident
+		PGQ_IDENT
 			{
 				PGLabelTest *n = makeNode(PGLabelTest);
 				n->name = $1;
@@ -687,7 +687,7 @@ AbbreviatedEdge:
 		;
 
 VariableOptional:
-		pgq_ident 						{ $$ = $1; }
+		PGQ_IDENT 						{ $$ = $1; }
 	|
 		/* EMPTY */					{ $$ = NULL;}
 	    ;

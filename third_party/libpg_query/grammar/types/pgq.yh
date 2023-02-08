@@ -1,5 +1,6 @@
 %type <keyword> VertexOrNode 
-%type <keyword> EdgeOrRelationship 
+%type <keyword> EdgeOrRelationship
+%type <string PGQ_IDENT
 %type <list> VertexTableDefinitionList 
 %type <list> LabelList
 %type <list> KeySpecification
