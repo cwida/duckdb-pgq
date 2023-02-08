@@ -83,21 +83,25 @@ VertexTableDefinitionList:
 		VertexTableDefinitionList	{ $$ = $3?lappend($3,$2):list_make1($2); }
 	|
 		/* EMPTY */					{ $$ = NULL; }
+        ;
 
 KeySpecification:
-		'(' name_list ')'			{ $$ = $2; } 
+		'(' name_list ')'			{ $$ = $2; }
+		;
 
 KeyDefinition:
 		KEY KeySpecification		{ $$ = $2; }
+		;
 
 KeyReference:
 		KeyDefinition REFERENCES	{ $$ = $1; }
+		;
 
 LabelList:
 		',' IDENT LabelList 		{ $$ = $3?lappend($3,$2):list_make1($2); }
 	|
 		/* EMPTY */					{ $$ = NULL; }
-		;
+        ;
 
 Discriminator:
 		IN_P qualified_name '(' LabelList ')'			
@@ -115,6 +119,7 @@ Discriminator:
 				n->labels = NULL; /* no list, just the single staring IDENT */
 				$$ = (PGNode*) n;
 			}
+        ;
 
 VertexTableDefinition:
 		/* qualified name is an BIGINT column with 64 bits: a maximum of 64 labels can be set */
@@ -181,6 +186,7 @@ PropertiesList:
 	|
 		PropertiesList ','
 		IdentOptionalAs			{ $$ = lappend($1, $3); }
+	    ;
 
 ExceptOptional:
 		EXCEPT '(' PropertiesList ')'
@@ -197,7 +203,7 @@ PropertiesSpec:
 			}
 	|
 		'(' PropertiesList ')'	{ $$ = $2; }
-	;
+	    ;
 
 PropertiesClause:
 		NO PROPERTIES			{ $$ = NULL; }
@@ -206,6 +212,7 @@ PropertiesClause:
 								{ $$ = $2; }
 	|
 		/* EMPTY */				{ $$ = list_make1(list_make1(makeString("*"))); }
+        ;
 
 /* ------------------------------
  * GRAPH_TABLE clause (aka MATCH)
@@ -282,12 +289,13 @@ PathModeOptional:
 		ACYCLIC PathOrPathsOptional	{ $$ = PG_PATHMODE_ACYCLIC; }
 	|
 		PathOrPathsOptional			{ $$ = PG_PATHMODE_WALK; }
-	;
+	    ;
 
 TopKOptional:
 		ICONST						{ $$ = $1; }
 	|
 		/* EMPTY */					{ $$ = 0 }
+		;
 
 PathPrefix:
 		ANY SHORTEST PathModeOptional
