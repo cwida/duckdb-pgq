@@ -79,6 +79,8 @@ unique_ptr<ParsedExpression> Transformer::TransformExpression(duckdb_libpgquery:
 		return TransformGroupingFunction(reinterpret_cast<duckdb_libpgquery::PGGroupingFunc *>(node));
 	case duckdb_libpgquery::T_PGAStar:
 		return TransformStarExpression(node);
+	case duckdb_libpgquery::T_PGPropertyGraphTable:
+		return TransformCreatePropertyGraphTable(reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(node));
 	default:
 		throw NotImplementedException("Expr of type %d not implemented\n", (int)node->type);
 	}
