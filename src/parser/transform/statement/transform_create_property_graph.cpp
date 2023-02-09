@@ -20,7 +20,7 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 	if (stmt->vertex_tables) {
 		vector<unique_ptr<ParsedExpression>> vertex_tables;
 		TransformExpressionList(*stmt->vertex_tables, vertex_tables);
-		for (auto &vertex_table : vertex_tables) {
+		for (auto &vertex_table __attribute__((unused)) : vertex_tables) {
 			continue;
 		}
 	}
