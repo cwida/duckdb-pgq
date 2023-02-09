@@ -18,11 +18,11 @@ namespace duckdb {
 class PropertyGraphTableExpression : public ParsedExpression {
 public:
 	//! Specify both the column and table name
-	PropertyGraphTableExpression(string column_name, string table_name);
+	PropertyGraphTableExpression(string column_name, string label, string table_name);
 	//! Only specify the column name, the table name will be derived later
-	explicit PropertyGraphTableExpression(string column_name);
+	explicit PropertyGraphTableExpression(string column_name, string label);
 	//! Specify a set of names
-	explicit PropertyGraphTableExpression(vector<string> column_names);
+	explicit PropertyGraphTableExpression(vector<string> column_names, vector<string> labels);
 
 	//! The stack of names in order of which they appear (column_names[0].column_names[1].column_names[2]....)
 	vector<string> column_names;
@@ -46,6 +46,6 @@ public:
 	unique_ptr<ParsedExpression> Copy() const override;
 
 	void Serialize(FieldWriter &writer) const override;
-	static unique_ptr<ParsedExpression> Deserialize(ExpressionType type, FieldReader &source);
+//	static unique_ptr<ParsedExpression> Deserialize(ExpressionType type, FieldReader &source);
 };
 } // namespace duckdb

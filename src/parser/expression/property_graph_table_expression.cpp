@@ -7,21 +7,25 @@
 
 namespace duckdb {
 
-PropertyGraphTableExpression::PropertyGraphTableExpression(string column_name, string table_name)
-    : PropertyGraphTableExpression(table_name.empty() ? vector<string> {std::move(column_name)}
-                                             : vector<string> {std::move(table_name), std::move(column_name)}) {
+PropertyGraphTableExpression::PropertyGraphTableExpression(string column_name, string label, string table_name)
+    : PropertyGraphTableExpression(table_name.empty() ? vector<string> {std::move(column_name)}, vector<string> {std::move(label)}
+                                             : vector<string> {std::move(table_name), std::move(column_name)}, vector<string> {std::move(label)}) {
 }
 
-PropertyGraphTableExpression::PropertyGraphTableExpression(string column_name)
-    : PropertyGraphTableExpression(vector<string> {std::move(column_name)}) {
+PropertyGraphTableExpression::PropertyGraphTableExpression(string column_name, string label)
+    : PropertyGraphTableExpression(vector<string> {std::move(column_name)}, vector<string> {std::move(label)}) {
 }
 
-PropertyGraphTableExpression::PropertyGraphTableExpression(vector<string> column_names_p)
+PropertyGraphTableExpression::PropertyGraphTableExpression(vector<string> column_names_p, vector<string> labels_p)
     : ParsedExpression(ExpressionType::COLUMN_REF, ExpressionClass::COLUMN_REF),
-      column_names(std::move(column_names_p)) {
+      column_names(std::move(column_names_p)), labels(std::move(labels_p)) {
 #ifdef DEBUG
 	for (auto &col_name : column_names) {
 		D_ASSERT(!col_name.empty());
+	}
+
+	for (auto &label : labels) {
+		D_ASSERT(!label.empty());
 	}
 #endif
 }
@@ -86,19 +90,13 @@ hash_t PropertyGraphTableExpression::Hash() const {
 }
 
 unique_ptr<ParsedExpression> PropertyGraphTableExpression::Copy() const {
-	auto copy = make_unique<PropertyGraphTableExpression>(column_names);
+	auto copy = make_unique<PropertyGraphTableExpression>(column_names, labels);
 	copy->CopyProperties(*this);
 	return std::move(copy);
 }
 
 void PropertyGraphTableExpression::Serialize(FieldWriter &writer) const {
 	writer.WriteList<string>(column_names);
-}
-
-unique_ptr<ParsedExpression> PropertyGraphTableExpression::Deserialize(ExpressionType type, FieldReader &reader) {
-	auto column_names = reader.ReadRequiredList<string>();
-	auto expression = make_unique<PropertyGraphTableExpression>(std::move(column_names));
-	return std::move(expression);
 }
 
 } // namespace duckdb
