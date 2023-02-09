@@ -17,29 +17,40 @@
 #include "duckdb/parser/column_list.hpp"
 
 namespace duckdb {
+
 class SchemaCatalogEntry;
 
-struct CreatePropertyGraphInfo : public CreateInfo {
-	DUCKDB_API CreateTableInfo();
-	DUCKDB_API CreateTableInfo(string catalog, string schema, string name);
-	DUCKDB_API CreateTableInfo(SchemaCatalogEntry *schema, string name);
+struct CreatePropertyGraphInfo : public ParseInfo {
+	explicit CreatePropertyGraphInfo();
+//	DUCKDB_API CreatePropertyGraphInfo(string catalog, string schema, string name);
+	explicit CreatePropertyGraphInfo(string property_graph_name);
 
-	//! Table name to insert to
-	string table;
+//	explicit CreatePropertyGraphInfo(CatalogType type, string schema = DEFAULT_SCHEMA, string catalog_p = INVALID_CATALOG)
+//	    : type(type), catalog(std::move(catalog_p)), schema(schema), on_conflict(OnCreateConflict::ERROR_ON_CONFLICT),
+//	      temporary(false), internal(false) {
+//	}
+	~CreatePropertyGraphInfo() override {
+	}
+
+	//! Property graph name
+	string property_graph_name;
+	//!
+
+
+
 	//! List of columns of the table
 	ColumnList columns;
-	//! List of constraints on the table
-	vector<unique_ptr<Constraint>> constraints;
-	//! CREATE TABLE from QUERY
-	unique_ptr<SelectStatement> query;
+//	//! List of constraints on the table
+//	vector<unique_ptr<Constraint>> constraints;
+//	//! CREATE TABLE from QUERY
+//	unique_ptr<SelectStatement> query;
 
 protected:
-	void SerializeInternal(Serializer &serializer) const override;
+	void SerializeInternal(Serializer &serializer) const;
 
 public:
 	DUCKDB_API static unique_ptr<CreatePropertyGraphInfo> Deserialize(Deserializer &deserializer);
 
-	DUCKDB_API unique_ptr<CreateInfo> Copy() const override;
+	DUCKDB_API unique_ptr<CreatePropertyGraphInfo> Copy() const;
 };
-
 } // namespace duckdb
