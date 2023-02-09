@@ -1,5 +1,5 @@
 #include "duckdb/parser/statement/create_statement.hpp"
-#include "duckdb/parser/parsed_data/create_table_info.hpp"
+#include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/parser/transformer.hpp"
 #include "duckdb/parser/constraint.hpp"
 #include "duckdb/parser/expression/collate_expression.hpp"
@@ -8,25 +8,23 @@
 
 namespace duckdb {
 
-
-
-
 unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_libpgquery::PGNode *node) {
 	auto stmt = reinterpret_cast<duckdb_libpgquery::PGCreatePropertyGraphStmt *>(node);
 	D_ASSERT(stmt);
 	auto result = make_unique<CreateStatement>();
 	auto info = make_unique<CreatePropertyGraphInfo>();
 
-//	if (stmt->inhRelations) {
-//		throw NotImplementedException("inherited relations not implemented");
-//	}
-//	D_ASSERT(stmt->relation);
-//
-//	info->catalog = INVALID_CATALOG;
-//	auto qname = TransformQualifiedName(stmt->relation);
-//	info->catalog = qname.catalog;
-//	info->schema = qname.schema;
-//	info->table = qname.name;
+	auto qname = TransformQualifiedName(stmt->name);
+	info->property_graph_name = qname.name;
+
+	if (stmt->vertex_tables) {
+		vector<unique_ptr<ParsedExpression>> vertex_tables;
+		TransformExpressionList(*stmt->vertex_tables, vertex_tables);
+		for (auto &vertex_table : vertex_tables) {
+			continue;
+		}
+	}
+
 //	info->on_conflict = TransformOnCoflict(stmt->onconflict);
 //	info->temporary =
 //	    stmt->relation->relpersistence == duckdb_libpgquery::PGPostgresRelPersistence::PG_RELPERSISTENCE_TEMP;
