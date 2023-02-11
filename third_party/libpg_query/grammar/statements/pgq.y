@@ -130,12 +130,10 @@ Discriminator:
 
 VertexTableDefinition:
 		/* qualified name is an BIGINT column with 64 bits: a maximum of 64 labels can be set */
-		IdentOptionalAs PropertiesClause LABEL PGQ_IDENT Discriminator
+		qualified_name PropertiesClause LABEL PGQ_IDENT Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $5;
-				PGListCell *list = list_head($1);
-				n->table = (PGRangeVar*) lfirst(list);
-				n->name = (PGRangeVar*) lfirst(lnext(list));
+				n->table = $1
 				n->properties = $2;
 				/* Xth label in list is set iff discriminator Xth-bit==1 */
 				if (n->labels) n->labels = lappend(n->labels,$4);
