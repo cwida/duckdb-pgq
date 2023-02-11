@@ -2116,7 +2116,6 @@ typedef struct PGPropertyGraphTable {
 
 	/* Fields used for both edge and vertex table */
 	PGRangeVar *table; /* name of a SQL table */
-	PGRangeVar *name; /* name the element (default=table name)*/
 
 	PGList *properties; /* list of column names */
 	PGList *labels; /* last label is main label, other labels depend on bit in discriminator (if present) */
