@@ -133,7 +133,7 @@ VertexTableDefinition:
 		qualified_name PropertiesClause LABEL PGQ_IDENT Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $5;
-				n->table = $1
+				n->table = $1;
 				n->properties = $2;
 				/* Xth label in list is set iff discriminator Xth-bit==1 */
 				if (n->labels) n->labels = lappend(n->labels,$4);
@@ -151,15 +151,13 @@ EdgeTableDefinitionList:
 		;
 
 EdgeTableDefinition:
-		IdentOptionalAs 
+		qualified_name
 		SOURCE KeyReference qualified_name KeySpecification
 		DESTINATION KeyReference qualified_name KeySpecification 
 		PropertiesClause LABEL PGQ_IDENT Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $13;
-				PGListCell *list = list_head($1);
-				n->table = (PGRangeVar*) lfirst(list);
-				n->name = (PGRangeVar*) lfirst(lnext(list));
+				n->table = $1;
 				n->is_vertex_table = false;
 				n->src_fk = $3;
 				n->src_name = $4;
