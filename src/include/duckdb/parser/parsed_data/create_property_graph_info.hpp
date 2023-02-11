@@ -9,6 +9,7 @@
 #pragma once
 
 #include "duckdb/parser/parsed_data/create_info.hpp"
+#include "duckdb/parser/expression/property_graph_table_expression.hpp"
 #include "duckdb/common/unordered_set.hpp"
 #include "duckdb/parser/column_definition.hpp"
 #include "duckdb/parser/constraint.hpp"
@@ -34,16 +35,13 @@ struct CreatePropertyGraphInfo : public ParseInfo {
 
 	//! Property graph name
 	string property_graph_name;
-	//!
+	//! List of vector tables
+	vector<PropertyGraphTable> vector_tables;
+	//! List of edge tables
+	vector<PropertyGraphTable> edge_tables;
 
-
-
-	//! List of columns of the table
-	ColumnList columns;
-//	//! List of constraints on the table
-//	vector<unique_ptr<Constraint>> constraints;
-//	//! CREATE TABLE from QUERY
-//	unique_ptr<SelectStatement> query;
+	//! Dictionary to point label to vector or edge table
+	unordered_map<string, PropertyGraphTable*> label_map;
 
 protected:
 	void SerializeInternal(Serializer &serializer) const;
