@@ -8,19 +8,19 @@
 
 #pragma once
 
+#include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/common/constants.hpp"
 #include "duckdb/common/enums/expression_type.hpp"
 #include "duckdb/common/types.hpp"
 #include "duckdb/common/unordered_map.hpp"
-#include "duckdb/parser/qualified_name.hpp"
-#include "duckdb/parser/tokens.hpp"
-#include "duckdb/parser/parsed_data/create_info.hpp"
+#include "duckdb/parser/expression/property_graph_table_expression.hpp"
 #include "duckdb/parser/group_by_node.hpp"
+#include "duckdb/parser/parsed_data/create_info.hpp"
+#include "duckdb/parser/qualified_name.hpp"
 #include "duckdb/parser/query_node.hpp"
-#include "duckdb/common/case_insensitive_map.hpp"
-
-#include "pg_definitions.hpp"
+#include "duckdb/parser/tokens.hpp"
 #include "nodes/parsenodes.hpp"
+#include "pg_definitions.hpp"
 
 namespace duckdb {
 
@@ -213,7 +213,7 @@ private:
 	unique_ptr<ParsedExpression> TransformPositionalReference(duckdb_libpgquery::PGPositionalReference *node);
 	unique_ptr<ParsedExpression> TransformStarExpression(duckdb_libpgquery::PGNode *node);
 	//! Transform a node/edge table create (SQL/PGQ)
-	unique_ptr<ParsedExpression> TransformCreatePropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *node);
+	unique_ptr<PropertyGraphTable> TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *node);
 
 
 	//! Transform a Postgres constant value into an Expression

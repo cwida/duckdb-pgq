@@ -2,15 +2,19 @@
 #include "duckdb/parser/transformer.hpp"
 
 namespace duckdb {
-//
-//unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *graph_table) {
-//
-//
-//
-//}
 
-unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_libpgquery::PGNode *node) {
-	auto stmt = reinterpret_cast<duckdb_libpgquery::PGCreatePropertyGraphStmt *>(node);
+unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *graph_table) {
+	vector<string> column_names;
+	vector<string> label_names;
+
+	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(column_names, label_names);
+
+	return pg_table;
+
+}
+
+unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_libpgquery::PGNode *root) {
+	auto stmt = reinterpret_cast<duckdb_libpgquery::PGCreatePropertyGraphStmt *>(root);
 	D_ASSERT(stmt);
 	auto result = make_unique<CreateStatement>();
 	auto info = make_unique<CreatePropertyGraphInfo>();
@@ -21,11 +25,13 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 	if (stmt->vertex_tables) {
 		vector<unique_ptr<ParsedExpression>> vertex_tables;
 		for (auto &vertex_table = stmt->vertex_tables->head; vertex_table != nullptr; vertex_table = lnext(vertex_table)) {
+			auto node = reinterpret_cast<duckdb_libpgquery::PGNode *>(vertex_table->data.ptr_value);
+
 			switch (node->type) {
 			case duckdb_libpgquery::T_PGPropertyGraphTable: {
 				auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(vertex_table->data.ptr_value);
-				auto graph_table_name = TransformQualifiedName(graph_table->name);
-//				auto pg_table = TransformPropertyGraphTable(graph_table)
+				auto graph_table_name = TransformRangeVar(graph_table->name);
+				auto pg_table = TransformPropertyGraphTable(graph_table);
 
 
 			}
