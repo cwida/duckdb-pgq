@@ -1,12 +1,13 @@
-#include "duckdb/parser/statement/create_statement.hpp"
 #include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/parser/transformer.hpp"
-#include "duckdb/parser/constraint.hpp"
-#include "duckdb/parser/expression/collate_expression.hpp"
-#include "duckdb/catalog/catalog_entry/table_column_type.hpp"
-#include "duckdb/common/case_insensitive_map.hpp"
 
 namespace duckdb {
+//
+//unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *graph_table) {
+//
+//
+//
+//}
 
 unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_libpgquery::PGNode *node) {
 	auto stmt = reinterpret_cast<duckdb_libpgquery::PGCreatePropertyGraphStmt *>(node);
@@ -14,14 +15,25 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 	auto result = make_unique<CreateStatement>();
 	auto info = make_unique<CreatePropertyGraphInfo>();
 
-	auto qname = TransformQualifiedName(stmt->name);
-	info->property_graph_name = qname.name;
+	auto property_graph_name = TransformQualifiedName(stmt->name);
+	info->property_graph_name = property_graph_name.name;
 
 	if (stmt->vertex_tables) {
 		vector<unique_ptr<ParsedExpression>> vertex_tables;
-		TransformExpressionList(*stmt->vertex_tables, vertex_tables);
-		for (auto &vertex_table __attribute__((unused)) : vertex_tables) {
-			continue;
+		for (auto &vertex_table = stmt->vertex_tables->head; vertex_table != nullptr; vertex_table = lnext(vertex_table)) {
+			switch (node->type) {
+			case duckdb_libpgquery::T_PGPropertyGraphTable: {
+				auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(vertex_table->data.ptr_value);
+				auto graph_table_name = TransformQualifiedName(graph_table->name);
+//				auto pg_table = TransformPropertyGraphTable(graph_table)
+
+
+			}
+			default:
+				throw NotImplementedException("CreatePropertyGraphTable not implemented.");
+
+
+			}
 		}
 	}
 
