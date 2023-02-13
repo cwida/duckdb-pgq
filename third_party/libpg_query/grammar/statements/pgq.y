@@ -467,8 +467,7 @@ KleeneOptional:
 				n->upper = 1;
 				$$ = (PGNode*) n;
 			}
-		;
-	;
+    ;
 
 CostNum:
 		ICONST						{ $$ = $1; }
