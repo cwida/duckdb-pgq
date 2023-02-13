@@ -476,7 +476,7 @@ CostNum:
 		;
 
 CostDefault:
-		DEFAULT CostNum				{ $$ = $2 };
+		DEFAULT CostNum				{ $$ = $2; }
 	|
 		/* EMPTY */ 				{ $$ = NULL; }
 		;
