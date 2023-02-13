@@ -31,6 +31,7 @@ unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_l
 
 	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(column_names, label_names);
 
+
 	return pg_table;
 
 }
@@ -52,10 +53,7 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 			switch (node->type) {
 			case duckdb_libpgquery::T_PGPropertyGraphTable: {
 				auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(vertex_table->data.ptr_value);
-				auto graph_table_name = TransformQualifiedName(graph_table->table);
 				auto pg_table = TransformPropertyGraphTable(graph_table);
-
-
 			}
 			default:
 				throw NotImplementedException("CreatePropertyGraphTable not implemented.");
