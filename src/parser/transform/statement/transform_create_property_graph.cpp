@@ -7,6 +7,28 @@ unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_l
 	vector<string> column_names;
 	vector<string> label_names;
 
+	auto graph_table_name = TransformQualifiedName(graph_table->table);
+
+	// TODO
+	//  	- check if properties is null
+	// 		- check if properties has an except list
+	// 		- all columns
+
+	for (auto properties_list = graph_table->properties->head;
+	     properties_list != nullptr;
+	     properties_list = properties_list->next) {
+		auto column_optional_as = reinterpret_cast<duckdb_libpgquery::PGList *>(properties_list->data.ptr_value);
+		auto cdef = reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->data.ptr_value);
+		// TODO
+		//  	- 	Change this to support the optional as
+		// 		  	Looking at the next element of column_optional_as, which is a linked list
+		// 			If the string is equal to the first string then there is no alias
+		column_names.push_back(cdef->colname);
+	}
+
+
+
+
 	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(column_names, label_names);
 
 	return pg_table;
