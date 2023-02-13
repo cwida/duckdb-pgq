@@ -180,9 +180,9 @@ AreOptional:
 		;
 
 IdentOptionalAs:
-		PGQ_IDENT					{ $$ = list_make2($1, $1); }
+		PGQ_IDENT					{ $$ = list_make2(makeString($1), makeString($1)); }
 	|
-		PGQ_IDENT AS PGQ_IDENT			{ $$ = list_make2($1, $3); }
+		PGQ_IDENT AS PGQ_IDENT			{ $$ = list_make2(makeString($1), makeString($3)); }
 
         ;
 
