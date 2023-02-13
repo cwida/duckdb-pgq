@@ -21135,12 +21135,12 @@ yyreduce:
 
   case 260:
 #line 183 "third_party/libpg_query/grammar/statements/pgq.y"
-    { (yyval.list) = list_make2((yyvsp[(1) - (1)].str), (yyvsp[(1) - (1)].str)); ;}
+    { (yyval.list) = list_make2(makeString((yyvsp[(1) - (1)].str)), makeString((yyvsp[(1) - (1)].str))); ;}
     break;
 
   case 261:
 #line 185 "third_party/libpg_query/grammar/statements/pgq.y"
-    { (yyval.list) = list_make2((yyvsp[(1) - (3)].str), (yyvsp[(3) - (3)].str)); ;}
+    { (yyval.list) = list_make2(makeString((yyvsp[(1) - (3)].str)), makeString((yyvsp[(3) - (3)].str))); ;}
     break;
 
   case 262:
