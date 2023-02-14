@@ -39,7 +39,9 @@ EDGE TABLES (
             PROPERTIES ( createDate ) LABEL Knows
     )
 
-statement ok
+
+# Missing the keyword IN between Person and Person_alias
+statement error
 CREATE PROPERTY GRAPH pg
 VERTEX TABLES (
     Student PROPERTIES ( id as id, name ) LABEL Person Person_alias Person2_alias
