@@ -80,7 +80,7 @@ CreatePropertyGraphStmt:
 				PGCreatePropertyGraphStmt *n = makeNode(PGCreatePropertyGraphStmt);
 				n->name = $4;
 				n->vertex_tables = $9?lappend($9,$8):list_make1($8);
-				n->edge_tables = $15?lappend($15,$14):list_make1($15);
+				n->edge_tables = $15?lappend($15,$14):list_make1($14);
 				$$ = (PGNode *)n;
 			}
 		;
@@ -166,8 +166,8 @@ EdgeTableDefinition:
 				n->dst_pk = $9;
 				n->properties = $10;
 				/* Xth label in list is set iff discriminator Xth-bit==1 */
-				if (n->labels) n->labels = lappend(n->labels,$12);
-				else n->labels = list_make1($12); 
+				if (n->labels) n->labels = lappend(n->labels,makeString($12));
+				else n->labels = list_make1(makeString($12));
 				$$ = (PGNode *) n;
 			}
 		;
