@@ -1,8 +1,7 @@
-#include "duckdb/parser/expression/property_graph_table_expression.hpp"
-
 #include "duckdb/common/field_writer.hpp"
-#include "duckdb/common/types/hash.hpp"
 #include "duckdb/common/string_util.hpp"
+#include "duckdb/common/types/hash.hpp"
+#include "duckdb/parser/property_graph_table.hpp"
 #include "duckdb/parser/qualified_name.hpp"
 
 namespace duckdb {

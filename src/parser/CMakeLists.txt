@@ -21,6 +21,7 @@ add_library_unity(
   parsed_expression.cpp
   parsed_expression_iterator.cpp
   parser.cpp
+  property_graph_table.cpp
   query_error_context.cpp
   query_node.cpp
   result_modifier.cpp
