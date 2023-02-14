@@ -80,7 +80,7 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 	}
 
 	if (stmt->edge_tables) {
-		for (auto &edge_table = stmt->edge_tables->head; edge_table != nullptr; edge_table = edge_table->next) {
+		for (auto &edge_table = stmt->edge_tables->head; edge_table != nullptr; edge_table = lnext(edge_table)) {
 			auto node = reinterpret_cast<duckdb_libpgquery::PGNode *>(edge_table->data.ptr_value);
 
 			if (node->type != duckdb_libpgquery::T_PGPropertyGraphTable) {
