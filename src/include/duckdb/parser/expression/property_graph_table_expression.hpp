@@ -17,11 +17,9 @@ namespace duckdb {
 class PropertyGraphTable {
 public:
 	//! Specify both the column and table name
-	PropertyGraphTable(string column_name, string label, string table_name);
-	//! Only specify the column name, the table name will be derived later
-	explicit PropertyGraphTable(string column_name, string label);
-	//! Specify a set of names
-	explicit PropertyGraphTable(vector<string> column_names, vector<string> labels);
+	PropertyGraphTable(string table_name, vector<string> column_name, vector<string> label);
+
+	string table_name;
 
 	//! The stack of names in order of which they appear (column_names[0].column_names[1].column_names[2]....)
 	vector<string> column_names;
