@@ -10,27 +10,48 @@ unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_l
 	auto graph_table_name = TransformQualifiedName(graph_table->table);
 
 	// TODO
-	//  	- check if properties is null
+	//  	- check if properties is null, in that case all columns from the table are properties
 	// 		- check if properties has an except list
 	// 		- all columns
 
-	for (auto properties_list = graph_table->properties->head;
-	     properties_list != nullptr;
-	     properties_list = properties_list->next) {
-		auto column_optional_as = reinterpret_cast<duckdb_libpgquery::PGList *>(properties_list->data.ptr_value);
-		auto cdef = reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->data.ptr_value);
+	for (auto property_element = graph_table->properties->head; property_element != nullptr;
+	     property_element = property_element->next) {
+		auto column_optional_as = reinterpret_cast<duckdb_libpgquery::PGList *>(property_element->data.ptr_value);
+		auto column_name = reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->data.ptr_value);
+		auto column_alias = reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->next->data.ptr_value);
 		// TODO
 		//  	- 	Change this to support the optional as
 		// 		  	Looking at the next element of column_optional_as, which is a linked list
 		// 			If the string is equal to the first string then there is no alias
-		column_names.push_back(cdef->colname);
+		column_names.push_back(column_name->colname);
 	}
 
-
-
+	for (auto label_element = graph_table->labels->head; label_element != nullptr; label_element = label_element->next) {
+		auto label = reinterpret_cast<duckdb_libpgquery::PGValue *>(label_element->data.ptr_value);
+		D_ASSERT(label->type == duckdb_libpgquery::T_PGString);
+		label_names.push_back(label->val.str);
+	}
 
 	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(column_names, label_names);
 
+	pg_table->is_vertex_table = graph_table->is_vertex_table;
+
+
+
+
+	if (graph_table->discriminator) {
+		//! In this case there is a list with length > 1 of labels
+		//! of which the last element in the list is the main label
+		auto discriminator = TransformQualifiedName(graph_table->discriminator);
+		pg_table->discriminator = discriminator.name;
+	}
+
+	//! Everything from this point is only related to edge tables
+
+	if (!graph_table->is_vertex_table) {
+		// TODO
+		// 		- Parse the edge table with key, references (pk, fk)
+	}
 
 	return pg_table;
 
