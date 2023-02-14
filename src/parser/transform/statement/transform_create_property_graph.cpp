@@ -29,15 +29,16 @@ unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_l
 	for (auto label_element = graph_table->labels->head; label_element != nullptr; label_element = label_element->next) {
 		auto label = reinterpret_cast<duckdb_libpgquery::PGValue *>(label_element->data.ptr_value);
 		D_ASSERT(label->type == duckdb_libpgquery::T_PGString);
+		// TODO
+		//		- Make sure labels are unique within a LabelList
+		//			Probably easiest is to convert to a set and see if the length is not equal
+		//			Other option is having a map (set) and keeping track of the entries in that set
 		label_names.emplace_back(label->val.str);
 	}
 
 	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(graph_table_name.name, column_names, label_names);
 
 	pg_table->is_vertex_table = graph_table->is_vertex_table;
-
-
-
 
 	if (graph_table->discriminator) {
 		//! In this case there is a list with length > 1 of labels
@@ -49,8 +50,35 @@ unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_l
 	//! Everything from this point is only related to edge tables
 
 	if (!graph_table->is_vertex_table) {
-		// TODO
-		// 		- Parse the edge table with key, references (pk, fk)
+		D_ASSERT(graph_table->src_name);
+		auto src_name = TransformQualifiedName(graph_table->src_name);
+		pg_table->source_reference = src_name.name;
+
+		D_ASSERT(graph_table->dst_name);
+		auto dst_name = TransformQualifiedName(graph_table->dst_name);
+		pg_table->destination_reference = dst_name.name;
+
+		for (auto &src_key = graph_table->src_pk->head; src_key != nullptr; src_key = lnext(src_key)) {
+			auto key = reinterpret_cast<duckdb_libpgquery::PGValue *>(src_key->data.ptr_value);
+			pg_table->source_pk.emplace_back(key->val.str);
+		}
+
+		for (auto &dst_key = graph_table->dst_pk->head; dst_key != nullptr; dst_key = lnext(dst_key)) {
+			auto key = reinterpret_cast<duckdb_libpgquery::PGValue *>(dst_key->data.ptr_value);
+			pg_table->destination_pk.emplace_back(key->val.str);
+		}
+
+		for (auto &src_key = graph_table->src_fk->head; src_key != nullptr; src_key = lnext(src_key)) {
+			auto key = reinterpret_cast<duckdb_libpgquery::PGValue *>(src_key->data.ptr_value);
+			pg_table->source_fk.emplace_back(key->val.str);
+		}
+
+		for (auto &dst_key = graph_table->dst_fk->head; dst_key != nullptr; dst_key = lnext(dst_key)) {
+			auto key = reinterpret_cast<duckdb_libpgquery::PGValue *>(dst_key->data.ptr_value);
+			pg_table->destination_fk.emplace_back(key->val.str);
+		}
+
+
 	}
 
 	return pg_table;

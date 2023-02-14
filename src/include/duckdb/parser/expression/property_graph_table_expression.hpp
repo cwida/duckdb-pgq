@@ -28,5 +28,21 @@ public:
 	bool is_vertex_table;
 
 	string discriminator;
+
+	vector<string> source_fk;
+
+	vector<string> source_pk;
+
+	string source_reference;
+
+	vector<string> destination_fk;
+
+	vector<string> destination_pk;
+
+	string destination_reference;
+
+
+
+
 };
 } // namespace duckdb
