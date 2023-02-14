@@ -105,7 +105,7 @@ KeyReference:
 		;
 
 LabelList:
-		',' PGQ_IDENT LabelList 		{ $$ = $3?lappend($3,$2):list_make1($2); }
+		',' PGQ_IDENT LabelList 		{ $$ = $3?lappend($3,makeString($2)):list_make1(makeString($2)); }
 	|
 		/* EMPTY */					{ $$ = NULL; }
         ;
@@ -137,7 +137,7 @@ VertexTableDefinition:
 				n->properties = $2;
 				/* Xth label in list is set iff discriminator Xth-bit==1 */
 				if (n->labels) n->labels = lappend(n->labels,$4);
-				else n->labels = list_make1($4);
+				else n->labels = list_make1(makeString($4));
 				n->is_vertex_table = true;
 				$$ = (PGNode *) n;
 			}
