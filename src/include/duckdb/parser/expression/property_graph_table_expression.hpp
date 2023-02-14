@@ -29,5 +29,7 @@ public:
 	vector<string> labels;
 
 	bool is_vertex_table;
+
+	string discriminator;
 };
 } // namespace duckdb
