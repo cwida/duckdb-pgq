@@ -23,16 +23,16 @@ unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_l
 		//  	- 	Change this to support the optional as
 		// 		  	Looking at the next element of column_optional_as, which is a linked list
 		// 			If the string is equal to the first string then there is no alias
-		column_names.push_back(column_name->colname);
+		column_names.emplace_back(column_name->colname);
 	}
 
 	for (auto label_element = graph_table->labels->head; label_element != nullptr; label_element = label_element->next) {
 		auto label = reinterpret_cast<duckdb_libpgquery::PGValue *>(label_element->data.ptr_value);
 		D_ASSERT(label->type == duckdb_libpgquery::T_PGString);
-		label_names.push_back(label->val.str);
+		label_names.emplace_back(label->val.str);
 	}
 
-	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(column_names, label_names);
+	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(graph_table_name.name, column_names, label_names);
 
 	pg_table->is_vertex_table = graph_table->is_vertex_table;
 
