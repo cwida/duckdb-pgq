@@ -36,9 +36,7 @@ struct CreatePropertyGraphInfo : public ParseInfo {
 	//! Property graph name
 	string property_graph_name;
 	//! List of vector tables
-	vector<PropertyGraphTable> vector_tables;
-	//! List of edge tables
-	vector<PropertyGraphTable> edge_tables;
+	vector<unique_ptr<PropertyGraphTable>> graph_tables;
 
 	//! Dictionary to point label to vector or edge table
 	unordered_map<string, PropertyGraphTable*> label_map;

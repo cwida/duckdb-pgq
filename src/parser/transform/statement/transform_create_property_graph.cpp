@@ -66,21 +66,29 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 	auto property_graph_name = TransformQualifiedName(stmt->name);
 	info->property_graph_name = property_graph_name.name;
 
-	if (stmt->vertex_tables) {
-		vector<unique_ptr<ParsedExpression>> vertex_tables;
-		for (auto &vertex_table = stmt->vertex_tables->head; vertex_table != nullptr; vertex_table = lnext(vertex_table)) {
-			auto node = reinterpret_cast<duckdb_libpgquery::PGNode *>(vertex_table->data.ptr_value);
+	D_ASSERT(stmt->vertex_tables);
+	for (auto &vertex_table = stmt->vertex_tables->head; vertex_table != nullptr; vertex_table = lnext(vertex_table)) {
+		auto node = reinterpret_cast<duckdb_libpgquery::PGNode *>(vertex_table->data.ptr_value);
 
-			switch (node->type) {
-			case duckdb_libpgquery::T_PGPropertyGraphTable: {
-				auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(vertex_table->data.ptr_value);
-				auto pg_table = TransformPropertyGraphTable(graph_table);
-			}
-			default:
+		if (node->type != duckdb_libpgquery::T_PGPropertyGraphTable) {
+			throw NotImplementedException("CreatePropertyGraphTable not implemented.");
+		}
+		auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(vertex_table->data.ptr_value);
+		auto pg_table = TransformPropertyGraphTable(graph_table);
+		info->graph_tables.push_back(std::move(pg_table));
+
+	}
+
+	if (stmt->edge_tables) {
+		for (auto &edge_table = stmt->edge_tables->head; edge_table != nullptr; edge_table = edge_table->next) {
+			auto node = reinterpret_cast<duckdb_libpgquery::PGNode *>(edge_table->data.ptr_value);
+
+			if (node->type != duckdb_libpgquery::T_PGPropertyGraphTable) {
 				throw NotImplementedException("CreatePropertyGraphTable not implemented.");
-
-
 			}
+			auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(edge_table->data.ptr_value);
+			auto pg_table = TransformPropertyGraphTable(graph_table);
+			info->graph_tables.push_back(std::move(pg_table));
 		}
 	}
 
