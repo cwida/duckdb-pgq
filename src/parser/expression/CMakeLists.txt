@@ -15,7 +15,6 @@ add_library_unity(
   operator_expression.cpp
   parameter_expression.cpp
   positional_reference_expression.cpp
-  property_graph_table_expression.cpp
   star_expression.cpp
   subquery_expression.cpp
   window_expression.cpp)

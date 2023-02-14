@@ -41,8 +41,7 @@ public:
 
 	string destination_reference;
 
-
-
-
+public:
+	unique_ptr<PropertyGraphTable> Copy();
 };
 } // namespace duckdb
