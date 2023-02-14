@@ -5,28 +5,28 @@
 
 namespace duckdb {
 
-CreatePropertyGraphInfo::CreatePropertyGraphInfo() : property_graph_name("") {
+CreatePropertyGraphInfo::CreatePropertyGraphInfo() : CreateInfo(CatalogType::PROPERTY_GRAPH_ENTRY) {
 }
 
-CreatePropertyGraphInfo::CreatePropertyGraphInfo(string property_graph_name) : property_graph_name(std::move(property_graph_name)) {
-}
-//
-//CreatePropertyGraphInfo::CreatePropertyGraphInfo(string catalog_p, string schema_p, string name_p)
-//    : CreateInfo(CatalogType::TABLE_ENTRY, std::move(schema_p), std::move(catalog_p)), table(std::move(name_p)) {
+//CreatePropertyGraphInfo::CreatePropertyGraphInfo(string property_graph_name) : property_graph_name(std::move(property_graph_name)) {
 //}
+//
+CreatePropertyGraphInfo::CreatePropertyGraphInfo(string catalog_p, string schema_p, string name_p)
+    : CreateInfo(CatalogType::PROPERTY_GRAPH_ENTRY, std::move(schema_p), std::move(catalog_p)), property_graph_name(std::move(name_p)) {
+}
 //
 //CreatePropertyGraphInfo::CreatePropertyGraphInfo(SchemaCatalogEntry *schema, string name_p)
 //    : CreatePropertyGraphInfo(schema->catalog->GetName(), schema->name, std::move(name_p)) {
 //}
 //
-//void CreatePropertyGraphInfo::SerializeInternal(Serializer &serializer) const {
-//	FieldWriter writer(serializer);
-//	writer.WriteString(table);
-//	columns.Serialize(writer);
-//	writer.WriteSerializableList(constraints);
-//	writer.WriteOptional(query);
-//	writer.Finalize();
-//}
+void CreatePropertyGraphInfo::SerializeInternal(Serializer &serializer) const {
+	FieldWriter writer(serializer);
+	writer.WriteString(property_graph_name);
+	for (auto &graph_table : graph_tables) {
+		graph_table->Serialize(serializer);
+	}
+	writer.Finalize();
+}
 //
 //unique_ptr<CreatePropertyGraphInfo> CreatePropertyGraphInfo::Deserialize(Deserializer &deserializer) {
 //	auto result = make_unique<CreatePropertyGraphInfo>();
@@ -42,17 +42,15 @@ CreatePropertyGraphInfo::CreatePropertyGraphInfo(string property_graph_name) : p
 //	return result;
 //}
 //
-//unique_ptr<CreatePropertyGraphInfo> CreatePropertyGraphInfo::Copy() const {
-//	auto result = make_unique<CreatePropertyGraphInfo>(catalog, schema, table);
-//	CopyProperties(*result);
-//	result->columns = columns.Copy();
-//	for (auto &constraint : constraints) {
-//		result->constraints.push_back(constraint->Copy());
-//	}
-//	if (query) {
-//		result->query = unique_ptr_cast<SQLStatement, SelectStatement>(query->Copy());
-//	}
-//	return std::move(result);
-//}
-//
+unique_ptr<CreateInfo> CreatePropertyGraphInfo::Copy() const {
+	auto result = make_unique<CreatePropertyGraphInfo>(catalog, schema, property_graph_name);
+	CopyProperties(*result);
+
+	for (auto &graph_table : graph_tables) {
+		result->graph_tables.push_back(graph_table->Copy());
+	}
+
+	return std::move(result);
+}
+
 } // namespace duckdb

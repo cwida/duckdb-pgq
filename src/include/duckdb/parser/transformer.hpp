@@ -13,7 +13,6 @@
 #include "duckdb/common/enums/expression_type.hpp"
 #include "duckdb/common/types.hpp"
 #include "duckdb/common/unordered_map.hpp"
-#include "duckdb/parser/expression/property_graph_table_expression.hpp"
 #include "duckdb/parser/group_by_node.hpp"
 #include "duckdb/parser/parsed_data/create_info.hpp"
 #include "duckdb/parser/qualified_name.hpp"
@@ -21,6 +20,7 @@
 #include "duckdb/parser/tokens.hpp"
 #include "nodes/parsenodes.hpp"
 #include "pg_definitions.hpp"
+#include "property_graph_table.hpp"
 
 namespace duckdb {
 
