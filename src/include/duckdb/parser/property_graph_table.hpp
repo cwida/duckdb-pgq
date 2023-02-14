@@ -15,6 +15,8 @@ namespace duckdb {
 //! Represents a reference to a graph table from the CREATE PROPERTY GRAPH
 class PropertyGraphTable {
 public:
+	//! Used for Copy
+	PropertyGraphTable();
 	//! Specify both the column and table name
 	PropertyGraphTable(string table_name, vector<string> column_name, vector<string> label);
 
@@ -42,6 +44,10 @@ public:
 	string destination_reference;
 
 public:
+	void Serialize(Serializer &serializer) const;
+
 	unique_ptr<PropertyGraphTable> Copy();
+
+
 };
 } // namespace duckdb

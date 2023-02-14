@@ -120,6 +120,10 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 		}
 	}
 
+	result->info = std::move(info);
+
+	return result;
+
 //	info->on_conflict = TransformOnCoflict(stmt->onconflict);
 //	info->temporary =
 //	    stmt->relation->relpersistence == duckdb_libpgquery::PGPostgresRelPersistence::PG_RELPERSISTENCE_TEMP;
