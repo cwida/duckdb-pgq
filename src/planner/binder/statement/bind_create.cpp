@@ -16,6 +16,7 @@
 #include "duckdb/parser/tableref/table_function_ref.hpp"
 #include "duckdb/parser/parsed_expression_iterator.hpp"
 #include "duckdb/parser/statement/create_statement.hpp"
+#include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/planner/binder.hpp"
 #include "duckdb/planner/bound_query_node.hpp"
 #include "duckdb/planner/expression_binder/aggregate_binder.hpp"
@@ -649,6 +650,16 @@ BoundStatement Binder::Bind(CreateStatement &stmt) {
 		}
 		break;
 	}
+	case CatalogType::PROPERTY_GRAPH_ENTRY: {
+		auto &create_pg_info = (CreatePropertyGraphInfo &)*stmt.info;
+
+		auto schema = BindSchema(*stmt.info);
+
+		auto pg_table = Catalog::GetSystemCatalog(context).GetEntry<PropertyGraphCatalogEntry>(context, info.schema, info.name, true);
+
+		break;
+	}
+
 	default:
 		throw Exception("Unrecognized type!");
 	}
