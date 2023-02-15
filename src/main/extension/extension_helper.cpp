@@ -85,6 +85,11 @@
 #include "inet-extension.hpp"
 #endif
 
+// Load the generated header file containing our list of extension headers
+#if defined(OOTE_HEADERS_AVAILABLE) && OOTE_HEADERS_AVAILABLE
+#include "extension_oote_loader.hpp"
+#endif
+
 namespace duckdb {
 
 //===--------------------------------------------------------------------===//
@@ -100,6 +105,7 @@ static DefaultExtension internal_extensions[] = {
     {"json", "Adds support for JSON operations", JSON_STATICALLY_LOADED},
     {"sqlpgq", "Adds support for SQL/PGQ", SQLPGQ_STATICALLY_LOADED},
     {"jemalloc", "Overwrites system allocator with JEMalloc", JEMALLOC_STATICALLY_LOADED},
+    {"motherduck", "Enables motherduck integration with the system", false},
     {"sqlite_scanner", "Adds support for reading SQLite database files", false},
     {"postgres_scanner", "Adds support for reading from a Postgres database", false},
     {"inet", "Adds support for IP-related data types and functions", false},
@@ -126,6 +132,12 @@ void ExtensionHelper::LoadAllExtensions(DuckDB &db) {
 	for (auto &ext : extensions) {
 		LoadExtensionInternal(db, ext, true);
 	}
+
+#if defined(OOTE_HEADERS_AVAILABLE) && OOTE_HEADERS_AVAILABLE
+	for (auto &ext : OOT_EXTENSIONS) {
+		LoadExtensionInternal(db, ext, true);
+	}
+#endif
 }
 
 ExtensionLoadResult ExtensionHelper::LoadExtension(DuckDB &db, const std::string &extension) {
@@ -241,7 +253,12 @@ ExtensionLoadResult ExtensionHelper::LoadExtensionInternal(DuckDB &db, const std
 		return ExtensionLoadResult::NOT_LOADED;
 #endif
 	} else {
-		// unknown extension
+
+#if defined(OOTE_HEADERS_AVAILABLE) && OOTE_HEADERS_AVAILABLE
+		if (TryLoadLinkedExtension(db, extension)) {
+			return ExtensionLoadResult::LOADED_EXTENSION;
+		}
+#endif
 		return ExtensionLoadResult::EXTENSION_UNKNOWN;
 	}
 	return ExtensionLoadResult::LOADED_EXTENSION;
