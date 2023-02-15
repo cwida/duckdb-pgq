@@ -55,6 +55,8 @@ unique_ptr<CreatePropertyGraphInfo> PropertyGraphCatalogEntry::Deserialize(Deser
 }
 
 string PropertyGraphCatalogEntry::ToSQL() {
+	// TODO
+	//  - Implement this function for PropertyGraphCatalogEntry
 	return "";
 }
 
