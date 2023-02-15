@@ -41,6 +41,27 @@ void PropertyGraphTable::Serialize(Serializer &serializer) const {
 	}
 }
 
+unique_ptr<PropertyGraphTable> PropertyGraphTable::Deserialize(Deserializer &source) {
+	auto pg_table = make_unique<PropertyGraphTable>();
+
+	pg_table->table_name = source.Read<string>();
+	source.ReadStringVector(pg_table->column_names);
+	source.ReadStringVector(pg_table->labels);
+
+	pg_table->is_vertex_table = source.Read<bool>();
+	if (!pg_table->is_vertex_table) {
+		source.ReadStringVector(pg_table->source_pk);
+		source.ReadStringVector(pg_table->source_fk);
+		pg_table->source_reference = source.Read<string>();
+
+		source.ReadStringVector(pg_table->destination_pk);
+		source.ReadStringVector(pg_table->destination_fk);
+		pg_table->destination_reference = source.Read<string>();
+	}
+	return pg_table;
+}
+
+
 unique_ptr<PropertyGraphTable> PropertyGraphTable::Copy() {
 	auto result = make_unique<PropertyGraphTable>();
 	result->table_name = table_name;
