@@ -47,6 +47,7 @@ class SequenceCatalogEntry;
 class TableFunctionCatalogEntry;
 class CopyFunctionCatalogEntry;
 class PragmaFunctionCatalogEntry;
+class PropertyGraphCatalogEntry;
 class CatalogSet;
 class DatabaseInstance;
 class DependencyManager;

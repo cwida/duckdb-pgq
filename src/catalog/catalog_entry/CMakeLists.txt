@@ -9,6 +9,7 @@ add_library_unity(
   index_catalog_entry.cpp
   scalar_macro_catalog_entry.cpp
   pragma_function_catalog_entry.cpp
+  property_graph_catalog_entry.cpp
   schema_catalog_entry.cpp
   sequence_catalog_entry.cpp
   table_catalog_entry.cpp
