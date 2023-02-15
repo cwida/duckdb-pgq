@@ -288,6 +288,7 @@ CatalogSet &DuckSchemaEntry::GetCatalogSet(CatalogType type) {
 	switch (type) {
 	case CatalogType::VIEW_ENTRY:
 	case CatalogType::TABLE_ENTRY:
+	case CatalogType::PROPERTY_GRAPH_ENTRY:
 		return tables;
 	case CatalogType::INDEX_ENTRY:
 		return indexes;

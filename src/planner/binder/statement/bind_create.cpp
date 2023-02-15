@@ -136,11 +136,27 @@ void Binder::BindCreateViewInfo(CreateViewInfo &base) {
 }
 
 void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
-	auto &catalog = Catalog::GetSystemCatalog(context);
 	auto pg_table = (PropertyGraphCatalogEntry *)Catalog::GetEntry(context, CatalogType::PROPERTY_GRAPH_ENTRY, info.catalog, info.schema, info.property_graph_name, true);
 
 	if (pg_table) {
 		throw BinderException("Property graph table %s already exists", info.property_graph_name);
+	}
+
+	for (idx_t idx = 0; idx < info.vertex_tables.size(); idx++) {
+		auto &vertex_table = info.vertex_tables[idx];
+
+		auto table = Catalog::GetSystemCatalog(context).GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
+
+		// TODO
+		// 	- Create a test case that creates a property graph on non-existing tables
+
+		if (!table) {
+			throw BinderException("Table %s does not exist.", vertex_table->table_name);
+		}
+
+		for (idx_t key_index = 0; key_index < vertex_table->properties.size(); key_index++) {
+
+		}
 	}
 }
 
