@@ -19,8 +19,6 @@
 
 namespace duckdb {
 
-class SchemaCatalogEntry;
-
 struct CreatePropertyGraphInfo : public CreateInfo {
 	explicit CreatePropertyGraphInfo();
 	DUCKDB_API CreatePropertyGraphInfo(string catalog, string schema, string name);
@@ -36,7 +34,10 @@ struct CreatePropertyGraphInfo : public CreateInfo {
 	//! Property graph name
 	string property_graph_name;
 	//! List of vector tables
-	vector<unique_ptr<PropertyGraphTable>> graph_tables;
+	vector<unique_ptr<PropertyGraphTable>> vertex_tables;
+
+	vector<unique_ptr<PropertyGraphTable>> edge_tables;
+
 
 	//! Dictionary to point label to vector or edge table
 	unordered_map<string, PropertyGraphTable*> label_map;

@@ -44,6 +44,7 @@ struct BoundCreateTableInfo;
 struct BoundCreateFunctionInfo;
 struct CommonTableExpressionInfo;
 struct BoundParameterMap;
+struct CreatePropertyGraphInfo;
 
 enum class BindingMode : uint8_t { STANDARD_BINDING, EXTRACT_NAMES };
 
@@ -111,8 +112,9 @@ public:
 	void BindCreateViewInfo(CreateViewInfo &base);
 	SchemaCatalogEntry *BindSchema(CreateInfo &info);
 	SchemaCatalogEntry *BindCreateFunctionInfo(CreateInfo &info);
+	void BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info);
 
-	//! Check usage, and cast named parameters to their types
+	    //! Check usage, and cast named parameters to their types
 	static void BindNamedParameters(named_parameter_type_map_t &types, named_parameter_map_t &values,
 	                                QueryErrorContext &error_context, string &func_name);
 

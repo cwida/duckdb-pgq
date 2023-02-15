@@ -11,12 +11,12 @@
 #include "duckdb/parser/parsed_data/create_index_info.hpp"
 #include "duckdb/parser/parsed_data/create_macro_info.hpp"
 #include "duckdb/parser/parsed_data/create_view_info.hpp"
+#include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/parser/parsed_data/create_database_info.hpp"
 #include "duckdb/function/create_database_extension.hpp"
 #include "duckdb/parser/tableref/table_function_ref.hpp"
 #include "duckdb/parser/parsed_expression_iterator.hpp"
 #include "duckdb/parser/statement/create_statement.hpp"
-#include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/planner/binder.hpp"
 #include "duckdb/planner/bound_query_node.hpp"
 #include "duckdb/planner/expression_binder/aggregate_binder.hpp"
@@ -133,6 +133,15 @@ void Binder::BindCreateViewInfo(CreateViewInfo &base) {
 		base.aliases.push_back(query_node.names[i]);
 	}
 	base.types = query_node.types;
+}
+
+void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
+	auto &catalog = Catalog::GetSystemCatalog(context);
+	auto pg_table = (PropertyGraphCatalogEntry *)Catalog::GetEntry(context, CatalogType::PROPERTY_GRAPH_ENTRY, info.catalog, info.schema, info.property_graph_name, true);
+
+	if (pg_table) {
+		throw BinderException("Property graph table %s already exists", info.property_graph_name);
+	}
 }
 
 static void QualifyFunctionNames(ClientContext &context, unique_ptr<ParsedExpression> &expr) {
@@ -676,7 +685,9 @@ BoundStatement Binder::Bind(CreateStatement &stmt) {
 
 		auto schema = BindSchema(*stmt.info);
 
-		auto pg_table = Catalog::GetSystemCatalog(context).GetEntry<PropertyGraphCatalogEntry>(context, info.schema, info.name, true);
+
+		BindCreatePropertyGraphInfo(create_pg_info);
+
 
 		break;
 	}

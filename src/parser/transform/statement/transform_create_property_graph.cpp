@@ -103,7 +103,7 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 		}
 		auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(vertex_table->data.ptr_value);
 		auto pg_table = TransformPropertyGraphTable(graph_table);
-		info->graph_tables.push_back(std::move(pg_table));
+		info->vertex_tables.push_back(std::move(pg_table));
 
 	}
 
@@ -116,7 +116,7 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 			}
 			auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(edge_table->data.ptr_value);
 			auto pg_table = TransformPropertyGraphTable(graph_table);
-			info->graph_tables.push_back(std::move(pg_table));
+			info->edge_tables.push_back(std::move(pg_table));
 		}
 	}
 

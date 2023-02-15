@@ -22,9 +22,13 @@ CreatePropertyGraphInfo::CreatePropertyGraphInfo(string catalog_p, string schema
 void CreatePropertyGraphInfo::SerializeInternal(Serializer &serializer) const {
 	FieldWriter writer(serializer);
 	writer.WriteString(property_graph_name);
-	for (auto &graph_table : graph_tables) {
-		graph_table->Serialize(serializer);
+	for (auto &vertex_table : vertex_tables) {
+		vertex_table->Serialize(serializer);
 	}
+	for (auto &edge_table : edge_tables) {
+		edge_table->Serialize(serializer);
+	}
+
 	writer.Finalize();
 }
 //
@@ -46,8 +50,11 @@ unique_ptr<CreateInfo> CreatePropertyGraphInfo::Copy() const {
 	auto result = make_unique<CreatePropertyGraphInfo>(catalog, schema, property_graph_name);
 	CopyProperties(*result);
 
-	for (auto &graph_table : graph_tables) {
-		result->graph_tables.push_back(graph_table->Copy());
+	for (auto &vertex_table : vertex_tables) {
+		result->vertex_tables.push_back(vertex_table->Copy());
+	}
+	for (auto &edge_table : edge_tables) {
+		result->edge_tables.push_back(edge_table->Copy());
 	}
 
 	return std::move(result);
