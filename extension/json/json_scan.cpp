@@ -81,6 +81,24 @@ void JSONScanData::InitializeFilePaths(ClientContext &context, const vector<stri
 	}
 }
 
+void JSONScanData::InitializeFormats() {
+	// Set defaults for date/timestamp formats if we need to
+	if (!auto_detect && date_format.empty()) {
+		date_format = "%Y-%m-%d";
+	}
+	if (!auto_detect && timestamp_format.empty()) {
+		timestamp_format = "%Y-%m-%dT%H:%M:%S.%fZ";
+	}
+
+	// Initialize date_format_map if anything was specified
+	if (!date_format.empty()) {
+		date_format_map.AddFormat(LogicalTypeId::DATE, date_format);
+	}
+	if (!timestamp_format.empty()) {
+		date_format_map.AddFormat(LogicalTypeId::TIMESTAMP, timestamp_format);
+	}
+}
+
 void JSONScanData::Serialize(FieldWriter &writer) {
 	writer.WriteField<JSONScanType>(type);
 	options.Serialize(writer);
@@ -91,7 +109,11 @@ void JSONScanData::Serialize(FieldWriter &writer) {
 	writer.WriteField<bool>(auto_detect);
 	writer.WriteField<idx_t>(sample_size);
 	writer.WriteList<string>(names);
+	writer.WriteList<idx_t>(valid_cols);
 	writer.WriteField<idx_t>(max_depth);
+	writer.WriteField<bool>(objects);
+	writer.WriteString(date_format);
+	writer.WriteString(timestamp_format);
 }
 
 void JSONScanData::Deserialize(FieldReader &reader) {
@@ -104,7 +126,11 @@ void JSONScanData::Deserialize(FieldReader &reader) {
 	auto_detect = reader.ReadRequired<bool>();
 	sample_size = reader.ReadRequired<idx_t>();
 	names = reader.ReadRequiredList<string>();
+	valid_cols = reader.ReadRequiredList<idx_t>();
 	max_depth = reader.ReadRequired<idx_t>();
+	objects = reader.ReadRequired<bool>();
+	date_format = reader.ReadRequired<string>();
+	timestamp_format = reader.ReadRequired<string>();
 }
 
 JSONScanGlobalState::JSONScanGlobalState(ClientContext &context, JSONScanData &bind_data_p)
@@ -144,16 +170,25 @@ unique_ptr<GlobalTableFunctionState> JSONGlobalTableFunctionState::Init(ClientCo
 	auto &bind_data = (JSONScanData &)*input.bind_data;
 	auto result = make_unique<JSONGlobalTableFunctionState>(context, input);
 
-	// Check if we need to do projection pushdown
-	if (bind_data.type == JSONScanType::READ_JSON && input.column_ids.size() != bind_data.names.size()) {
-		D_ASSERT(input.column_ids.size() < bind_data.names.size()); // Can't project to have more columns
+	// Perform projection pushdown
+	if (bind_data.type == JSONScanType::READ_JSON) {
+		D_ASSERT(input.column_ids.size() <= bind_data.names.size()); // Can't project to have more columns
+		if (bind_data.auto_detect && input.column_ids.size() < bind_data.names.size()) {
+			// If we are auto-detecting, but don't need all columns present in the file,
+			// then we don't need to throw an error if we encounter an unseen column
+			bind_data.transform_options.error_unknown_key = false;
+		}
 		vector<string> names;
 		names.reserve(input.column_ids.size());
-		for (const auto &id : input.column_ids) {
+		for (idx_t i = 0; i < input.column_ids.size(); i++) {
+			const auto &id = input.column_ids[i];
+			if (IsRowIdColumnId(id)) {
+				continue;
+			}
 			names.push_back(std::move(bind_data.names[id]));
+			bind_data.valid_cols.push_back(i);
 		}
 		bind_data.names = std::move(names);
-		bind_data.transform_options.error_unknown_key = false;
 	}
 	return result;
 }
@@ -170,7 +205,14 @@ unique_ptr<LocalTableFunctionState> JSONLocalTableFunctionState::Init(ExecutionC
                                                                       TableFunctionInitInput &input,
                                                                       GlobalTableFunctionState *global_state) {
 	auto &gstate = (JSONGlobalTableFunctionState &)*global_state;
-	return make_unique<JSONLocalTableFunctionState>(context.client, gstate.state);
+	auto result = make_unique<JSONLocalTableFunctionState>(context.client, gstate.state);
+
+	// Copy the transform options / date format map because we need to do thread-local stuff
+	result->state.date_format_map = gstate.state.bind_data.date_format_map;
+	result->state.transform_options = gstate.state.bind_data.transform_options;
+	result->state.transform_options.date_format_map = &result->state.date_format_map;
+
+	return result;
 }
 
 idx_t JSONLocalTableFunctionState::GetBatchIndex() const {
@@ -338,8 +380,11 @@ bool JSONScanLocalState::ReadNextBuffer(JSONScanGlobalState &gstate) {
 
 		// Try the next reader
 		current_reader = gstate.json_readers[gstate.file_index].get();
+		auto &options = current_reader->GetOptions();
 		if (current_reader->IsOpen()) {
-			if (current_reader->GetOptions().format == JSONFormat::UNSTRUCTURED) {
+			if (options.format == JSONFormat::UNSTRUCTURED ||
+			    (options.compression != FileCompressionType::UNCOMPRESSED &&
+			     gstate.file_index < gstate.json_readers.size())) {
 				// Can only be open from schema detection
 				batch_index = gstate.batch_index++;
 				gstate.file_index++;
@@ -348,7 +393,6 @@ bool JSONScanLocalState::ReadNextBuffer(JSONScanGlobalState &gstate) {
 		}
 
 		// Unopened file
-		auto &options = current_reader->GetOptions();
 		current_reader->OpenJSONFile();
 		batch_index = gstate.batch_index++;
 		if (options.format == JSONFormat::UNSTRUCTURED) {
@@ -383,6 +427,13 @@ bool JSONScanLocalState::ReadNextBuffer(JSONScanGlobalState &gstate) {
 			options.format = JSONFormat::UNSTRUCTURED;
 			gstate.file_index++; // UNSTRUCTURED necessitates single-threaded read
 		}
+
+		// Optimization: decompression limits parallelism quite a bit
+		if (options.compression != FileCompressionType::UNCOMPRESSED &&
+		    gstate.file_index < gstate.json_readers.size()) {
+			gstate.file_index++;
+		}
+
 		break;
 	}
 	D_ASSERT(buffer_size != 0); // We should have read something if we got here
@@ -602,6 +653,14 @@ void JSONScanLocalState::ReadNewlineDelimited(idx_t &count) {
 
 yyjson_alc *JSONScanLocalState::GetAllocator() {
 	return json_allocator.GetYYJSONAllocator();
+}
+
+void JSONScanLocalState::ThrowTransformError(idx_t count, idx_t object_index, const string &error_message) {
+	D_ASSERT(current_reader);
+	D_ASSERT(current_buffer_handle);
+	D_ASSERT(object_index != DConstants::INVALID_INDEX);
+	auto line_or_object_in_buffer = lines_or_objects_in_buffer - count + object_index;
+	current_reader->ThrowTransformError(current_buffer_handle->buffer_index, line_or_object_in_buffer, error_message);
 }
 
 } // namespace duckdb
