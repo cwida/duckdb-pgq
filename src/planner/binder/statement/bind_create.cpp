@@ -143,7 +143,8 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 	}
 
 	for (auto &vertex_table : info.vertex_tables) {
-		auto table = Catalog::GetSystemCatalog(context).GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
+		auto &catalog = Catalog::GetCatalog(context, info.catalog);
+		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
 
 		// TODO
 		// 	- Create a test case that creates a property graph on non-existing tables
@@ -161,6 +162,10 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 		if (!vertex_table->discriminator.empty()) {
 			if (!table->ColumnExists(vertex_table->discriminator)) {
 				throw BinderException("Column %s not found in table %s", vertex_table->discriminator, vertex_table->table_name);
+			}
+			auto &column = table->GetColumn(vertex_table->discriminator);
+			if (!(column.GetType() == LogicalType::BIGINT || column.GetType() == LogicalType::INTEGER)) {
+				throw BinderException("The discriminator column %s for table %s should be of type BIGINT or INTEGER", vertex_table->discriminator, vertex_table->table_name);
 			}
 		}
 	}

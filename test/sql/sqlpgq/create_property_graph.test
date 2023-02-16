@@ -11,6 +11,9 @@ statement ok
 CREATE TABLE know(src BIGINT, dst BIGINT, createDate BIGINT);
 
 statement ok
+CREATE TABLE School(school_name VARCHAR, school_id BIGINT, school_kind BIGINT);
+
+statement ok
 INSERT INTO Student VALUES (0, 'Daniel'), (1, 'Tavneet'), (2, 'Gabor'), (3, 'Peter');
 
 statement ok
