@@ -29,6 +29,7 @@ struct CreateIndexInfo;
 struct CreateFunctionInfo;
 struct CreateCollationInfo;
 struct CreateViewInfo;
+struct CreatePropertyGraphInfo;
 struct BoundCreateTableInfo;
 struct CreatePragmaFunctionInfo;
 struct CreateSequenceInfo;
@@ -70,6 +71,8 @@ public:
 	virtual CatalogEntry *CreateTable(CatalogTransaction transaction, BoundCreateTableInfo *info) = 0;
 	//! Creates a view with the given name in the schema
 	virtual CatalogEntry *CreateView(CatalogTransaction transaction, CreateViewInfo *info) = 0;
+	//! Creates a property graph with the given name in the schema
+	virtual CatalogEntry *CreatePropertyGraph(CatalogTransaction transaction, CreatePropertyGraphInfo *info) = 0;
 	//! Creates a sequence with the given name in the schema
 	virtual CatalogEntry *CreateSequence(CatalogTransaction transaction, CreateSequenceInfo *info) = 0;
 	//! Create a table function within the given schema

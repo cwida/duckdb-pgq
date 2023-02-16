@@ -22,6 +22,7 @@
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_type_info.hpp"
 #include "duckdb/parser/parsed_data/create_view_info.hpp"
+#include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/parser/parsed_data/drop_info.hpp"
 #include "duckdb/planner/parsed_data/bound_create_table_info.hpp"
 #include "duckdb/planner/binder.hpp"
@@ -127,6 +128,25 @@ CatalogEntry *Catalog::CreateView(ClientContext &context, CreateViewInfo *info) 
 CatalogEntry *Catalog::CreateView(CatalogTransaction transaction, SchemaCatalogEntry *schema, CreateViewInfo *info) {
 	return schema->CreateView(transaction, info);
 }
+
+//===--------------------------------------------------------------------===//
+// Property graph
+//===--------------------------------------------------------------------===//
+CatalogEntry *Catalog::CreatePropertyGraph(CatalogTransaction transaction, CreatePropertyGraphInfo *info) {
+	auto schema = GetSchema(transaction, info->schema);
+	return CreatePropertyGraph(transaction, schema, info);
+}
+
+CatalogEntry *Catalog::CreatePropertyGraph(ClientContext &context, CreatePropertyGraphInfo *info) {
+	return CreatePropertyGraph(GetCatalogTransaction(context), info);
+}
+
+CatalogEntry *Catalog::CreatePropertyGraph(CatalogTransaction transaction, SchemaCatalogEntry *schema,
+                                           CreatePropertyGraphInfo *info) {
+	ModifyCatalog();
+	return schema->CreatePropertyGraph(transaction, info);
+}
+
 
 //===--------------------------------------------------------------------===//
 // Sequence
