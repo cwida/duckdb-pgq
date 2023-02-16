@@ -18,16 +18,15 @@
 #include "duckdb/parser/statement/select_statement.hpp"
 
 namespace duckdb {
+class SchemaCatalogEntry;
+
 
 struct CreatePropertyGraphInfo : public CreateInfo {
 	CreatePropertyGraphInfo();
 	CreatePropertyGraphInfo(string catalog, string schema, string name);
 //	explicit CreatePropertyGraphInfo(string property_graph_name);
 
-//	explicit CreatePropertyGraphInfo(CatalogType type, string schema = DEFAULT_SCHEMA, string catalog_p = INVALID_CATALOG)
-//	    : type(type), catalog(std::move(catalog_p)), schema(schema), on_conflict(OnCreateConflict::ERROR_ON_CONFLICT),
-//	      temporary(false), internal(false) {
-//	}
+	CreatePropertyGraphInfo(SchemaCatalogEntry *schema, string pg_name);
 	~CreatePropertyGraphInfo() override {
 	}
 

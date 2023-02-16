@@ -5,11 +5,20 @@
 
 namespace duckdb {
 
-CreatePropertyGraphInfo::CreatePropertyGraphInfo() : CreateInfo(CatalogType::PROPERTY_GRAPH_ENTRY) {
+CreatePropertyGraphInfo::CreatePropertyGraphInfo()
+    : CreateInfo(CatalogType::PROPERTY_GRAPH_ENTRY) {
 }
 
 CreatePropertyGraphInfo::CreatePropertyGraphInfo(string catalog_p, string schema_p, string name_p)
-    : CreateInfo(CatalogType::PROPERTY_GRAPH_ENTRY, std::move(schema_p), std::move(catalog_p)), property_graph_name(std::move(name_p)) {
+    : CreateInfo(CatalogType::PROPERTY_GRAPH_ENTRY,
+					std::move(schema_p),
+					std::move(catalog_p)),
+					property_graph_name(std::move(name_p)) {
+}
+
+CreatePropertyGraphInfo::CreatePropertyGraphInfo(SchemaCatalogEntry *schema, string pg_name)
+    : CreatePropertyGraphInfo(schema->catalog->GetName(), schema->name, std::move(pg_name)) {
+
 }
 
 void CreatePropertyGraphInfo::SerializeInternal(Serializer &serializer) const {

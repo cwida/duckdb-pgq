@@ -82,6 +82,7 @@ enum class PhysicalOperatorType : uint8_t {
 	CREATE_VIEW,
 	CREATE_SCHEMA,
 	CREATE_MACRO,
+	CREATE_PROPERTY_GRAPH,
 	DROP,
 	PRAGMA,
 	TRANSACTION,

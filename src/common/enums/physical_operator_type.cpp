@@ -111,6 +111,8 @@ string PhysicalOperatorToString(PhysicalOperatorType type) {
 		return "CREATE_SCHEMA";
 	case PhysicalOperatorType::CREATE_MACRO:
 		return "CREATE_MACRO";
+	case PhysicalOperatorType::CREATE_PROPERTY_GRAPH:
+		return "CREATE_PROPERTY_GRAPH";
 	case PhysicalOperatorType::DROP:
 		return "DROP";
 	case PhysicalOperatorType::PRAGMA:

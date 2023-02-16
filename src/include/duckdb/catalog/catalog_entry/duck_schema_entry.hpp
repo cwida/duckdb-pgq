@@ -47,6 +47,7 @@ public:
 	CatalogEntry *CreateFunction(CatalogTransaction transaction, CreateFunctionInfo *info) override;
 	CatalogEntry *CreateIndex(ClientContext &context, CreateIndexInfo *info, TableCatalogEntry *table) override;
 	CatalogEntry *CreateView(CatalogTransaction transaction, CreateViewInfo *info) override;
+	CatalogEntry *CreatePropertyGraph(CatalogTransaction transaction, CreatePropertyGraphInfo *info) override;
 	CatalogEntry *CreateSequence(CatalogTransaction transaction, CreateSequenceInfo *info) override;
 	CatalogEntry *CreateTableFunction(CatalogTransaction transaction, CreateTableFunctionInfo *info) override;
 	CatalogEntry *CreateCopyFunction(CatalogTransaction transaction, CreateCopyFunctionInfo *info) override;
