@@ -142,9 +142,7 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 		throw BinderException("Property graph table %s already exists", info.property_graph_name);
 	}
 
-	for (idx_t idx = 0; idx < info.vertex_tables.size(); idx++) {
-		auto &vertex_table = info.vertex_tables[idx];
-
+	for (auto &vertex_table : info.vertex_tables) {
 		auto table = Catalog::GetSystemCatalog(context).GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
 
 		// TODO
@@ -154,8 +152,16 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 			throw BinderException("Table %s does not exist.", vertex_table->table_name);
 		}
 
-		for (idx_t key_index = 0; key_index < vertex_table->properties.size(); key_index++) {
+		for (auto &column : vertex_table->column_names) {
+			if (!table->ColumnExists(column)) {
+				throw BinderException("Column %s not found in table %s", column, vertex_table->table_name);
+			}
+		}
 
+		if (!vertex_table->discriminator.empty()) {
+			if (!table->ColumnExists(vertex_table->discriminator)) {
+				throw BinderException("Column %s not found in table %s", vertex_table->discriminator, vertex_table->table_name);
+			}
 		}
 	}
 }
