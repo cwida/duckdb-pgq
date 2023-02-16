@@ -135,6 +135,35 @@ void Binder::BindCreateViewInfo(CreateViewInfo &base) {
 	base.types = query_node.types;
 }
 
+static void CheckPropertyGraphTable(unique_ptr<PropertyGraphTable> &pg_table, CreatePropertyGraphInfo &info, ClientContext &context) {
+	auto &catalog = Catalog::GetCatalog(context, info.catalog);
+
+	auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, pg_table->table_name);
+
+	// TODO
+	// 	- Create a test case that creates a property graph on non-existing tables
+
+	if (!table) {
+		throw BinderException("Table %s does not exist.", pg_table->table_name);
+	}
+
+	for (auto &column : pg_table->column_names) {
+		if (!table->ColumnExists(column)) {
+			throw BinderException("Column %s not found in table %s", column, pg_table->table_name);
+		}
+	}
+
+	if (!pg_table->discriminator.empty()) {
+		if (!table->ColumnExists(pg_table->discriminator)) {
+			throw BinderException("Column %s not found in table %s", pg_table->discriminator, pg_table->table_name);
+		}
+		auto &column = table->GetColumn(pg_table->discriminator);
+		if (!(column.GetType() == LogicalType::BIGINT || column.GetType() == LogicalType::INTEGER)) {
+			throw BinderException("The discriminator column %s for table %s should be of type BIGINT or INTEGER", pg_table->discriminator, pg_table->table_name);
+		}
+	}
+}
+
 void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 	auto pg_table = (PropertyGraphCatalogEntry *)Catalog::GetEntry(context, CatalogType::PROPERTY_GRAPH_ENTRY, info.catalog, info.schema, info.property_graph_name, true);
 
@@ -143,32 +172,16 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 	}
 
 	for (auto &vertex_table : info.vertex_tables) {
-		auto &catalog = Catalog::GetCatalog(context, info.catalog);
-		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
-
-		// TODO
-		// 	- Create a test case that creates a property graph on non-existing tables
-
-		if (!table) {
-			throw BinderException("Table %s does not exist.", vertex_table->table_name);
-		}
-
-		for (auto &column : vertex_table->column_names) {
-			if (!table->ColumnExists(column)) {
-				throw BinderException("Column %s not found in table %s", column, vertex_table->table_name);
-			}
-		}
-
-		if (!vertex_table->discriminator.empty()) {
-			if (!table->ColumnExists(vertex_table->discriminator)) {
-				throw BinderException("Column %s not found in table %s", vertex_table->discriminator, vertex_table->table_name);
-			}
-			auto &column = table->GetColumn(vertex_table->discriminator);
-			if (!(column.GetType() == LogicalType::BIGINT || column.GetType() == LogicalType::INTEGER)) {
-				throw BinderException("The discriminator column %s for table %s should be of type BIGINT or INTEGER", vertex_table->discriminator, vertex_table->table_name);
-			}
-		}
+		CheckPropertyGraphTable(vertex_table, info, context);
 	}
+
+	for (auto &edge_table : info.edge_tables) {
+		CheckPropertyGraphTable(edge_table, info, context);
+
+
+
+	}
+
 }
 
 static void QualifyFunctionNames(ClientContext &context, unique_ptr<ParsedExpression> &expr) {
@@ -711,11 +724,11 @@ BoundStatement Binder::Bind(CreateStatement &stmt) {
 		auto &create_pg_info = (CreatePropertyGraphInfo &)*stmt.info;
 
 		auto schema = BindSchema(*stmt.info);
-
-
 		BindCreatePropertyGraphInfo(create_pg_info);
 
-
+		result.plan = make_unique<LogicalCreate>(LogicalOperatorType::LOGICAL_CREATE_PROPERTY_GRAPH,
+		                                         std::move(stmt.info),
+		                                         schema);
 		break;
 	}
 
