@@ -135,29 +135,18 @@ void Binder::BindCreateViewInfo(CreateViewInfo &base) {
 	base.types = query_node.types;
 }
 
-static void CheckPropertyGraphTable(unique_ptr<PropertyGraphTable> &pg_table, CreatePropertyGraphInfo &info, ClientContext &context) {
-	auto &catalog = Catalog::GetCatalog(context, info.catalog);
-
-	auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, pg_table->table_name);
-
-	// TODO
-	// 	- Create a test case that creates a property graph on non-existing tables
-
-	if (!table) {
-		throw BinderException("Table %s does not exist.", pg_table->table_name);
-	}
-
+static void CheckPropertyGraphTable(unique_ptr<PropertyGraphTable> &pg_table, TableCatalogEntry &table) {
 	for (auto &column : pg_table->column_names) {
-		if (!table->ColumnExists(column)) {
+		if (!table.ColumnExists(column)) {
 			throw BinderException("Column %s not found in table %s", column, pg_table->table_name);
 		}
 	}
 
 	if (!pg_table->discriminator.empty()) {
-		if (!table->ColumnExists(pg_table->discriminator)) {
+		if (!table.ColumnExists(pg_table->discriminator)) {
 			throw BinderException("Column %s not found in table %s", pg_table->discriminator, pg_table->table_name);
 		}
-		auto &column = table->GetColumn(pg_table->discriminator);
+		auto &column = table.GetColumn(pg_table->discriminator);
 		if (!(column.GetType() == LogicalType::BIGINT || column.GetType() == LogicalType::INTEGER)) {
 			throw BinderException("The discriminator column %s for table %s should be of type BIGINT or INTEGER", pg_table->discriminator, pg_table->table_name);
 		}
@@ -171,15 +160,56 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 		throw BinderException("Property graph table %s already exists", info.property_graph_name);
 	}
 
+	auto &catalog = Catalog::GetCatalog(context, info.catalog);
+
 	for (auto &vertex_table : info.vertex_tables) {
-		CheckPropertyGraphTable(vertex_table, info, context);
+		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
+
+		// TODO
+		// 	- Create a test case that creates a property graph on non-existing tables
+
+		if (!table) {
+			throw BinderException("Table %s does not exist.", vertex_table->table_name);
+		}
+		CheckPropertyGraphTable(vertex_table, *table);
 	}
 
 	for (auto &edge_table : info.edge_tables) {
-		CheckPropertyGraphTable(edge_table, info, context);
+		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->table_name);
 
+		CheckPropertyGraphTable(edge_table, *table);
 
+		auto pk_source_table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->source_reference);
+		if (!pk_source_table) {
+			throw BinderException("Source reference table %s does not exist", edge_table->source_reference);
+		}
+		for (auto &pk : edge_table->source_pk) {
+			if (!pk_source_table->ColumnExists(pk)) {
+				throw BinderException("Primary key %s does not exist in table %s", pk, edge_table->source_reference);
+			}
+		}
 
+		auto pk_destination_table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->destination_reference);
+		if (!pk_destination_table) {
+			throw BinderException("Destination reference table %s does not exist", edge_table->destination_reference);
+		}
+		for (auto &pk : edge_table->destination_pk) {
+			if (!pk_destination_table->ColumnExists(pk)) {
+				throw BinderException("Primary key %s does not exist in table %s", pk, edge_table->destination_reference);
+			}
+		}
+
+		for (auto &fk : edge_table->source_fk) {
+			if (!table->ColumnExists(fk)) {
+				throw BinderException("Foreign key %s does not exist in table %s", fk, edge_table->table_name);
+			}
+		}
+
+		for (auto &fk : edge_table->destination_fk) {
+			if (!table->ColumnExists(fk)) {
+				throw BinderException("Foreign key %s does not exist in table %s", fk, edge_table->table_name);
+			}
+		}
 	}
 
 }
