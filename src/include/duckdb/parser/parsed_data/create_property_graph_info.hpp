@@ -20,8 +20,8 @@
 namespace duckdb {
 
 struct CreatePropertyGraphInfo : public CreateInfo {
-	explicit CreatePropertyGraphInfo();
-	DUCKDB_API CreatePropertyGraphInfo(string catalog, string schema, string name);
+	CreatePropertyGraphInfo();
+	CreatePropertyGraphInfo(string catalog, string schema, string name);
 //	explicit CreatePropertyGraphInfo(string property_graph_name);
 
 //	explicit CreatePropertyGraphInfo(CatalogType type, string schema = DEFAULT_SCHEMA, string catalog_p = INVALID_CATALOG)

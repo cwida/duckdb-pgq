@@ -309,6 +309,9 @@ unique_ptr<LogicalOperator> LogicalOperator::Deserialize(Deserializer &deseriali
 	case LogicalOperatorType::LOGICAL_CREATE_TYPE:
 		result = LogicalCreate::Deserialize(state, reader);
 		break;
+	case LogicalOperatorType::LOGICAL_CREATE_PROPERTY_GRAPH:
+		result = LogicalCreate::Deserialize(state, reader);
+		break;
 	case LogicalOperatorType::LOGICAL_EXPLAIN:
 		result = LogicalExplain::Deserialize(state, reader);
 		break;
