@@ -35,6 +35,7 @@ struct CommonTableExpressionInfo;
 struct GroupingExpressionMap;
 class OnConflictInfo;
 class UpdateSetInfo;
+struct PivotColumn;
 
 //! The transformer class is responsible for transforming the internal Postgres
 //! parser representation into the DuckDB representation
@@ -183,6 +184,8 @@ private:
 	unique_ptr<DropStatement> TransformDeallocate(duckdb_libpgquery::PGNode *node);
 	unique_ptr<QueryNode> TransformPivotStatement(duckdb_libpgquery::PGPivotStmt *stmt);
 	unique_ptr<SQLStatement> CreatePivotStatement(unique_ptr<SQLStatement> statement);
+	PivotColumn TransformPivotColumn(duckdb_libpgquery::PGPivot *pivot);
+	vector<PivotColumn> TransformPivotList(duckdb_libpgquery::PGList *list);
 
 	//===--------------------------------------------------------------------===//
 	// SetStatement Transform
