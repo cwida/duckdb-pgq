@@ -27,7 +27,8 @@ void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &
 		return;
 	}
 
-//	Catalog::GetCatalog(context.client).CreatePropertyGraph(context.client, info.get());
+	auto &catalog = Catalog::GetCatalog(context.client, info->catalog);
+	catalog.CreatePropertyGraph(context.client, info.get());
 	state.finished = true;
 }
 
