@@ -11,7 +11,20 @@ PropertyGraphTable::PropertyGraphTable() {
 }
 
 PropertyGraphTable::PropertyGraphTable(string table_name_p, vector<string> column_names_p, vector<string> labels_p)
-    : table_name(std::move(table_name_p)), column_names(std::move(column_names_p)), labels(std::move(labels_p)) {
+    : table_name(std::move(table_name_p)), table_name_alias(""), column_names(std::move(column_names_p)), labels(std::move(labels_p)) {
+#ifdef DEBUG
+	for (auto &col_name : column_names) {
+		D_ASSERT(!col_name.empty());
+	}
+
+	for (auto &label : labels) {
+		D_ASSERT(!label.empty());
+	}
+#endif
+}
+
+PropertyGraphTable::PropertyGraphTable(string table_name_p, string table_name_alias_p, vector<string> column_names_p, vector<string> labels_p)
+    : table_name(std::move(table_name_p)), table_name_alias(std::move(table_name_alias_p)), column_names(std::move(column_names_p)), labels(std::move(labels_p)) {
 #ifdef DEBUG
 	for (auto &col_name : column_names) {
 		D_ASSERT(!col_name.empty());
