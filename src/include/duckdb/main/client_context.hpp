@@ -12,6 +12,7 @@
 #include "duckdb/catalog/catalog_set.hpp"
 #include "duckdb/common/enums/pending_execution_result.hpp"
 #include "duckdb/common/deque.hpp"
+#include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/common/pair.hpp"
 #include "duckdb/common/unordered_set.hpp"
 #include "duckdb/common/winapi.hpp"
@@ -84,6 +85,7 @@ public:
 	unique_ptr<ClientData> client_data;
 	//! Data for the currently running transaction
 	TransactionContext transaction;
+
 
 public:
 	DUCKDB_API MetaTransaction &ActiveTransaction() {
