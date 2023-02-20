@@ -27,8 +27,6 @@ struct CreatePropertyGraphInfo : public CreateInfo {
 //	explicit CreatePropertyGraphInfo(string property_graph_name);
 
 	CreatePropertyGraphInfo(SchemaCatalogEntry *schema, string pg_name);
-	~CreatePropertyGraphInfo() override {
-	}
 
 	//! Property graph name
 	string property_graph_name;

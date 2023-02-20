@@ -58,6 +58,9 @@ struct ClientData {
 	//! The file search path
 	string file_search_path;
 
+	//! Property graphs that are registered
+	unordered_map<string, CreatePropertyGraphInfo*> registered_property_graphs;
+
 public:
 	DUCKDB_API static ClientData &Get(ClientContext &context);
 };

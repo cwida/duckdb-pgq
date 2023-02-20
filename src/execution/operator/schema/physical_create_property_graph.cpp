@@ -1,5 +1,6 @@
 #include "duckdb/execution/operator/schema/physical_create_property_graph.hpp"
 #include "duckdb/catalog/catalog.hpp"
+#include "duckdb/main/client_data.hpp"
 
 namespace duckdb {
 
@@ -27,8 +28,15 @@ void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &
 		return;
 	}
 
-	auto &catalog = Catalog::GetCatalog(context.client, info->catalog);
-	catalog.CreatePropertyGraph(context.client, info.get());
+	auto &client_data = ClientData::Get(context.client);
+
+	auto find_pg = client_data.registered_property_graphs.find(info->property_graph_name);
+	if (find_pg != client_data.registered_property_graphs.end()) {
+		throw ConstraintException("A property graph with the name %s already exists", info->property_graph_name);
+	}
+
+	client_data.registered_property_graphs[info->property_graph_name] = info.get();
+
 	state.finished = true;
 }
 
