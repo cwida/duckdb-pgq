@@ -19,8 +19,11 @@ public:
 	PropertyGraphTable();
 	//! Specify both the column and table name
 	PropertyGraphTable(string table_name, vector<string> column_name, vector<string> label);
+	//! Specify both the column and table name with alias
+	PropertyGraphTable(string table_name, string table_alias, vector<string> column_name, vector<string> label);
 
 	string table_name;
+	string table_name_alias;
 
 	//! The stack of names in order of which they appear (column_names[0].column_names[1].column_names[2]....)
 	vector<string> column_names;

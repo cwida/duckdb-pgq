@@ -7,7 +7,11 @@ unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_l
 	vector<string> column_names;
 	vector<string> label_names;
 
-	auto graph_table_name = TransformQualifiedName(graph_table->table);
+
+
+	auto table_name = reinterpret_cast<duckdb_libpgquery::PGRangeVar *>(graph_table->table->head->data.ptr_value);
+	auto table_name_alias = reinterpret_cast<duckdb_libpgquery::PGValue *>(graph_table->table->head->next->data.ptr_value)->val.str;
+	auto graph_table_name = TransformQualifiedName(table_name);
 
 	// TODO
 	//  	- check if properties is null, in that case all columns from the table are properties
@@ -36,7 +40,7 @@ unique_ptr<PropertyGraphTable> Transformer::TransformPropertyGraphTable(duckdb_l
 		label_names.emplace_back(label->val.str);
 	}
 
-	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(graph_table_name.name, column_names, label_names);
+	unique_ptr<PropertyGraphTable> pg_table = make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias, column_names, label_names);
 
 	pg_table->is_vertex_table = graph_table->is_vertex_table;
 

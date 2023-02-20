@@ -7,13 +7,14 @@
 %type <list> KeySpecification
 %type <list> KeyDefinition
 %type <list> KeyReference
-%type <node> Discriminator 
+%type <node> Discriminator
 %type <node> VertexTableDefinition 
 %type <list> EdgeTableDefinitionList 
 %type <node> EdgeTableDefinition
 %type <list> IdentOptionalAs
 %type <list> PropertiesList
 %type <list> ExceptOptional
+%type <list> QualifiednameOptionalAs
 %type <list> PropertiesSpec
 %type <list> PropertiesClause
 %type <list> ColumnSpec

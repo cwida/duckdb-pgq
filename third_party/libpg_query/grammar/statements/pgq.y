@@ -129,7 +129,7 @@ Discriminator:
 
 VertexTableDefinition:
 		/* qualified name is an BIGINT column with 64 bits: a maximum of 64 labels can be set */
-		qualified_name PropertiesClause LABEL PGQ_IDENT Discriminator
+		QualifiednameOptionalAs PropertiesClause LABEL PGQ_IDENT Discriminator
 			{
 				PGPropertyGraphTable *n = (PGPropertyGraphTable*) $5;
 				n->table = $1;
@@ -150,7 +150,7 @@ EdgeTableDefinitionList:
 		;
 
 EdgeTableDefinition:
-		qualified_name
+		QualifiednameOptionalAs
 		SOURCE KeyReference qualified_name KeySpecification
 		DESTINATION KeyReference qualified_name KeySpecification 
 		PropertiesClause LABEL PGQ_IDENT Discriminator
@@ -179,10 +179,15 @@ AreOptional:
 		;
 
 IdentOptionalAs:
-		PGQ_IDENT					{ $$ = list_make2(makeString($1), makeString($1)); }
+		PGQ_IDENT					    { $$ = list_make2(makeString($1), makeString($1)); }
 	|
 		PGQ_IDENT AS PGQ_IDENT			{ $$ = list_make2(makeString($1), makeString($3)); }
+        ;
 
+QualifiednameOptionalAs:
+        qualified_name                  { $$ = list_make2($1, makeString("")); }
+        |
+        qualified_name AS PGQ_IDENT     { $$ = list_make2($1, makeString($3)); }
         ;
 
 PropertiesList:
