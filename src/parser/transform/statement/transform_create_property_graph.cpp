@@ -6,7 +6,7 @@ namespace duckdb {
 unique_ptr<PropertyGraphTable>
 Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *graph_table) {
 	vector<string> column_names;
-	vector<string> label_names;
+	unordered_set<string> label_set;
 
 	auto table_name = reinterpret_cast<duckdb_libpgquery::PGRangeVar *>(graph_table->table->head->data.ptr_value);
 	auto table_name_alias =
@@ -35,12 +35,14 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	     label_element = label_element->next) {
 		auto label = reinterpret_cast<duckdb_libpgquery::PGValue *>(label_element->data.ptr_value);
 		D_ASSERT(label->type == duckdb_libpgquery::T_PGString);
-		// TODO
-		//		- Make sure labels are unique within a LabelList
-		//			Probably easiest is to convert to a set and see if the length is not equal
-		//			Other option is having a map (set) and keeping track of the entries in that set
-		label_names.emplace_back(label->val.str);
+		if (label_set.find(label->val.str) != label_set.end()) {
+			throw ConstraintException("Label %s is not unique, make sure all labels are unique", label->val.str);
+		}
+		label_set.insert(label->val.str);
 	}
+
+	vector<string> label_names;
+	label_names.insert(label_names.end(), label_set.begin(), label_set.end());
 
 	unique_ptr<PropertyGraphTable> pg_table =
 	    make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias, column_names, label_names);
