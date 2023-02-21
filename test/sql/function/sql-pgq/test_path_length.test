@@ -1,0 +1,119 @@
+# name: test/sql/function/sql-pgq/test_path_length.test
+# group: [sql-pgq]
+
+require sqlpgq
+
+statement ok
+CREATE TABLE Customer(cid bigint not null, name string);
+
+statement ok
+CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount bigint);
+
+statement ok
+INSERT INTO Customer VALUES (173, 'A'), (478, 'B'), (297, 'C'), (869, 'D');
+
+statement ok
+INSERT INTO Transfers VALUES
+  (955, 173, 478, 150),
+  (769, 173, 297, 50),
+  (607, 478, 297, 250),
+  (184, 297, 869, 350);
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id , sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid, t.rowid))
+FROM
+  Transfers t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
+
+statement ok
+CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
+
+statement ok
+INSERT INTO src_dest VALUES(0, 4, 0, 3), (0, 4, 1, 2), (0, 4, 1, 0), (0, 4, 0, 2);
+
+query T
+SELECT iterativelength(0, v_size, src, dst) FROM src_dest;
+----
+2
+1
+NULL
+1
+
+statement ok
+pragma delete_csr=0;
+
+statement ok
+drop table src_dest
+
+statement ok
+drop table Customer
+
+statement ok
+drop table Transfers
+
+statement ok
+CREATE TABLE Customer(cid bigint not null, name string);
+
+statement ok
+CREATE TABLE Transfers(tid bigint, from_id bigint, to_id bigint, amount bigint);
+
+statement ok
+INSERT INTO Customer VALUES (197, 'A'), (201, 'B'), (343, 'C'), (406, 'D'), (101, 'E'), (807, 'F');
+
+statement ok
+INSERT INTO Transfers VALUES
+  (955, 197, 201, 100),
+  (323, 197, 343, 300),
+  (124, 197, 807, 200),
+  (203, 201, 343, 50),
+  (123, 343, 406, 10),
+  (122, 343, 807, 50),
+  (321, 406, 343, 200),
+  (125, 406, 807, 20),
+  (127, 101, 406, 150),
+  (126, 807, 101, 100);
+
+statement ok
+CREATE TABLE src_dest(id int, v_size bigint, src bigint, dst bigint);
+
+statement ok
+INSERT INTO src_dest VALUES(0, 6, 0, 5), (0, 6, 0, 4), (0, 6, 5, 3), (0, 6, 0, 2), (0, 6, 2, 3), (0, 6, 1, 5), (0, 6, 3, 2), (0, 6, 0, 1) ;
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
+sub.dense_id , sub.cnt )) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.from_id) as cnt
+    FROM Customer c
+    LEFT JOIN  Transfers t ON t.from_id = c.cid
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid, t.rowid))
+FROM
+  Transfers t
+  JOIN Customer src ON t.from_id = src.cid
+  JOIN Customer dst ON t.to_id = dst.cid
+
+
+query I
+SELECT iterativelength(0, v_size, src, dst) FROM src_dest;
+----
+1
+2
+2
+1
+1
+2
+1
+1

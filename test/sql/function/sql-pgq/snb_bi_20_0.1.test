@@ -1,0 +1,77 @@
+# name: test/sql/function/sql-pgq/snb_bi_20_1.test
+# group: [sql-pgq]
+
+require sqlpgq
+
+statement ok
+create table person as (select * from read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/dynamic/person_0_0.csv'));
+
+statement ok
+create table person_knows_person as (select * from read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/dynamic/person_knows_person_0_0.csv', delim='|', columns={'person1id':'bigint', 'person2id':'bigint', 'creationdate': 'bigint'}));
+
+statement ok
+insert into person_knows_person (select person2id, person1id, creationdate from person_knows_person);
+
+statement ok
+create table person_studyat_organisation as (
+    select * from
+    read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/dynamic/person_studyAt_organisation_0_0.csv', columns={'personid':'bigint', 'organisationid':'bigint', 'classyear': 'bigint'}));
+
+statement ok
+create table person_workat_organisation as (select * from read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/dynamic/person_workAt_organisation_0_0.csv', columns={'personid':'bigint', 'organisationid':'bigint', 'workfrom': 'bigint'}, SAMPLE_SIZE=-1));
+
+statement ok
+create table organisation as (select * from read_csv_auto('data/sqlpgq-testing/snb/social_network-csv_composite-sf0.1/static/organisation_0_0.csv', SAMPLE_SIZE=-1));
+
+statement ok
+create view company as (select * from organisation where type = 'Company');
+
+statement ok
+CREATE TABLE Person_UniversityKnows_Person AS (SELECT p.id                                     as Person1id,
+                                                      p2.id                                    as Person2id,
+                                                      min(abs(u.classYear - u2.classYear) + 1) as weight
+                                               FROM Person p
+                                                        JOIN Person_knows_Person k on p.id = k.Person1id
+                                                        JOIN Person p2 on p2.id = k.Person2id
+                                                        JOIN Person_studyAt_organisation u on p.id = u.PersonId
+                                                        JOIN Person_studyAt_organisation u2 on p2.id = u2.PersonId
+                                               WHERE u.organisationid = u2.organisationid
+                                               GROUP BY p.id, p2.id
+                                               ORDER BY p.id, p2.id);
+
+statement ok
+CREATE TABLE PersonUniversity AS (SELECT DISTINCT Person1id as id
+                                 FROM ((SELECT Person1id
+                                        FROM Person_UniversityKnows_Person)
+                                       UNION ALL
+                                       (SELECT Person2id AS Person1id
+                                        FROM Person_UniversityKnows_Person))
+                                 ORDER BY id);
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM PersonUniversity c),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.id) as vcount FROM PersonUniversity c),
+sub.dense_id, sub.cnt)) AS numEdges
+FROM (
+    SELECT c.rowid as dense_id, count(t.person1id) as cnt
+    FROM PersonUniversity c
+    LEFT JOIN  Person_UniversityKnows_Person t ON t.person1id = c.id
+    GROUP BY c.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid, t.rowid, t.weight))
+FROM
+  Person_UniversityKnows_Person t
+  JOIN PersonUniversity src ON t.person1id = src.id
+  JOIN PersonUniversity dst ON t.person2id = dst.id;
+
+query IIII
+SELECT  p.id                                                                           as Person1id,
+        p2.id                                                                          as Person2id,
+        c.name                                                                         as Company,
+        cheapest_path_length(0, (select count(*) from PersonUniversity p), p.rowid, p2.rowid) as weight
+FROM    PersonUniversity p
+JOIN    person_workat_organisation pwc on p.id = pwc.PersonId
+JOIN    Company c on (pwc.organisationid = c.id AND c.name = 'Macedonian_Airlines')
+JOIN    PersonUniversity p2 on p2.id = 28587302322576
+order by weight, p.id;
+----
