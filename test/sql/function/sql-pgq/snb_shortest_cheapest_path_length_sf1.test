@@ -1,0 +1,103 @@
+# name: test/sql/function/sql-pgq/test_cheapest_path_sf1.test
+# group: [sql-pgq]
+require sqlpgq
+
+statement ok
+CREATE TABLE person_knows_person AS FROM read_csv('data/sqlpgq-testing/snb/sf1/person_knows_person.csv', delim=',', header=True, columns={'person1id':'BIGINT','person2id':'BIGINT','weight':'BIGINT'});
+
+statement ok
+insert into person_knows_person select person2id, person1id, weight from person_knows_person
+
+statement ok
+CREATE TABLE person AS FROM read_csv('data/sqlpgq-testing/snb/sf1/person.csv', delim=',', header=True, columns={'id':'BIGINT'});
+
+statement ok
+create table parameters AS FROM read_csv('data/sqlpgq-testing/snb/parameters/q13a-sample.csv', delim='|', header=True, columns={'person1id':'BIGINT', 'person2id':'BIGINT'});
+
+statement ok
+create temp table all_options
+(
+    Person1id bigint,
+    Person1rowid bigint,
+    Person2id bigint,
+    Person2rowid bigint
+);
+
+statement ok
+SELECT min(CREATE_CSR_EDGE(0, (SELECT count(p.id) as vcount FROM person p),
+CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(p.id) as vcount FROM person p),
+sub.dense_id, sub.cnt)) AS numEdges
+FROM (
+    SELECT p.rowid as dense_id, count(k.person1id) as cnt
+    FROM person p
+    LEFT JOIN  person_knows_person k ON k.person1id = p.id
+    GROUP BY p.rowid
+) sub) AS BIGINT),
+src.rowid, dst.rowid, k.rowid, k.weight))
+FROM
+  person_knows_person k
+  JOIN person src ON k.person1id = src.id
+  JOIN person dst ON k.person2id = dst.id;
+
+statement ok
+INSERT INTO all_options(
+      SELECT
+        s1.id AS person1id, s1.rowid as person1rowid,
+        s2.id AS person2id, s2.rowid as person2rowid
+      FROM parameters
+      JOIN Person s1 ON s1.id = parameters.person1id
+      JOIN Person s2 ON s2.id = parameters.person2id
+);
+
+
+query III nosort shortest_path_length
+SELECT s.person1id, s.person2id, iterativelength(0, (select count(*) from person), s.person1rowid, s.person2rowid)
+FROM all_options s
+order by s.person1id, s.person2id;
+
+query III nosort shortest_path_length
+SELECT s.person1id, s.person2id, iterativelengthbidirectional(0, (select count(*) from person), s.person1rowid, s.person2rowid)
+FROM all_options s
+order by s.person1id, s.person2id;
+
+query III nosort shortest_path_length
+SELECT s.person1id, s.person2id, iterativelength2(0, (select count(*) from person), s.person1rowid, s.person2rowid)
+FROM all_options s
+order by s.person1id, s.person2id;
+
+
+query III nosort cheapest_path_length
+SELECT s.person1id, s.person2id, cheapest_path_length(0, (select count(*) from person), s.person1rowid, s.person2rowid)
+FROM all_options s
+order by s.person1id, s.person2id;
+
+query III nosort cheapest_path_length
+SELECT c1id, c2id, weight
+FROM (
+    WITH cte1 AS (
+    SELECT sum( CREATE_CSR_EDGE(0, (SELECT count(c.id) as vcount FROM person c),
+        CAST ((
+          SELECT sum(CREATE_CSR_VERTEX(0,
+            (SELECT count(c.id) as vcount FROM person c),
+            sub.dense_id,
+            sub.cnt
+           )) as numEdges
+          FROM (
+            SELECT c.rowid as dense_id, count(t.person1id) as cnt
+            FROM person c
+            LEFT JOIN Person_knows_Person t ON t.person1id = c.id
+            GROUP BY c.rowid
+          ) sub) AS BIGINT
+        ), src.rowid, dst.rowid, t.weight
+    ) ) as temp,
+    (SELECT count(c.id) FROM person c) as vcount
+    FROM
+      Person_knows_Person t
+      JOIN person src ON t.person1id = src.id
+      JOIN person dst ON t.person2id = dst.id
+    )
+    SELECT s.person1id AS c1id, s.person2id AS c2id, cheapest_path_length(0, cte1.vcount, s.person1rowid, s.person2rowid) as weight
+    FROM cte1, all_options s
+    WHERE ( cheapest_path_length(0, cte1.vcount, s.person1rowid, s.person2rowid))
+    order by person1id, person2id
+    );
