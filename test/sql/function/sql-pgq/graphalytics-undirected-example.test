@@ -1,3 +1,6 @@
+# name: test/sql/function/sql-pgq/graphalytics-undirected-example.test
+# group: [sql-pgq]
+
 require sqlpgq
 
 require parquet

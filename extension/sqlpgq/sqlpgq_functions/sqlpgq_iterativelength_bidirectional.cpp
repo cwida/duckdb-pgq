@@ -8,8 +8,9 @@
 
 namespace duckdb {
 
-static bool IterativeLengthBidirectional(int64_t v_size, int64_t *V, vector<int64_t> &E, vector<std::bitset<LANE_LIMIT>> &seen,
-                            vector<std::bitset<LANE_LIMIT>> &visit, vector<std::bitset<LANE_LIMIT>> &next) {
+static bool IterativeLengthBidirectional(int64_t v_size, int64_t *V, vector<int64_t> &E,
+                                         vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
+                                         vector<std::bitset<LANE_LIMIT>> &next) {
 	bool change = false;
 	for (auto v = 0; v < v_size; v++) {
 		next[v] = 0;
@@ -29,13 +30,13 @@ static bool IterativeLengthBidirectional(int64_t v_size, int64_t *V, vector<int6
 	}
 	return change;
 }
-static std::bitset<LANE_LIMIT>
-InterSectFronteers(int64_t v_size, vector<std::bitset<LANE_LIMIT>> &src_seen, vector<std::bitset<LANE_LIMIT>> &dst_seen) {
-    std::bitset<LANE_LIMIT> result;
-    for (auto v = 0; v < v_size; v++) {
-        result |= src_seen[v] & dst_seen[v];
-    }
-    return result;
+static std::bitset<LANE_LIMIT> InterSectFronteers(int64_t v_size, vector<std::bitset<LANE_LIMIT>> &src_seen,
+                                                  vector<std::bitset<LANE_LIMIT>> &dst_seen) {
+	std::bitset<LANE_LIMIT> result;
+	for (auto v = 0; v < v_size; v++) {
+		result |= src_seen[v] & dst_seen[v];
+	}
+	return result;
 }
 
 static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -60,16 +61,16 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 
 	// create result vector
 	result.SetVectorType(VectorType::FLAT_VECTOR);
-    ValidityMask &result_validity = FlatVector::Validity(result);
-    auto result_data = FlatVector::GetData<int64_t>(result);
+	ValidityMask &result_validity = FlatVector::Validity(result);
+	auto result_data = FlatVector::GetData<int64_t>(result);
 
 	// create temp SIMD arrays
 	vector<std::bitset<LANE_LIMIT>> src_seen(v_size);
 	vector<std::bitset<LANE_LIMIT>> src_visit1(v_size);
 	vector<std::bitset<LANE_LIMIT>> src_visit2(v_size);
 	vector<std::bitset<LANE_LIMIT>> dst_seen(v_size);
-    vector<std::bitset<LANE_LIMIT>> dst_visit1(v_size);
-    vector<std::bitset<LANE_LIMIT>> dst_visit2(v_size);
+	vector<std::bitset<LANE_LIMIT>> dst_visit1(v_size);
+	vector<std::bitset<LANE_LIMIT>> dst_visit2(v_size);
 
 	// maps lane to search number
 	short lane_to_num[LANE_LIMIT];
@@ -83,30 +84,30 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 		// empty visit vectors
 		for (auto i = 0; i < v_size; i++) {
 			src_seen[i] = 0;
-            dst_seen[i] = 0;
+			dst_seen[i] = 0;
 			src_visit1[i] = 0;
-            dst_visit1[i] = 0;
+			dst_visit1[i] = 0;
 		}
 
 		// add search jobs to free lanes
 		uint64_t active = 0;
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
-            lane_to_num[lane] = -1;
+			lane_to_num[lane] = -1;
 			while (started_searches < args.size()) {
 				int64_t search_num = started_searches++;
 				int64_t src_pos = vdata_src.sel->get_index(search_num);
-                int64_t dst_pos = vdata_dst.sel->get_index(search_num);
-                if (!vdata_src.validity.RowIsValid(src_pos)) {
-                    result_validity.SetInvalid(search_num);
-                    result_data[search_num] = (uint64_t) - 1; // no path
-                } else if (src_data[src_pos] == dst_data[dst_pos]) {
-                    result_data[search_num] = (uint64_t) 0; // path of length 0 does not require a search
+				int64_t dst_pos = vdata_dst.sel->get_index(search_num);
+				if (!vdata_src.validity.RowIsValid(src_pos)) {
+					result_validity.SetInvalid(search_num);
+					result_data[search_num] = (uint64_t)-1; // no path
+				} else if (src_data[src_pos] == dst_data[dst_pos]) {
+					result_data[search_num] = (uint64_t)0; // path of length 0 does not require a search
 				} else {
-                    src_visit1[src_data[src_pos]][lane] = true;
-                    dst_visit1[dst_data[dst_pos]][lane] = true;
-                    src_seen[src_data[src_pos]][lane] = true;
-                    dst_seen[dst_data[dst_pos]][lane] = true;
-                    lane_to_num[lane] = search_num; // active lane
+					src_visit1[src_data[src_pos]][lane] = true;
+					dst_visit1[dst_data[dst_pos]][lane] = true;
+					src_seen[src_data[src_pos]][lane] = true;
+					dst_seen[dst_data[dst_pos]][lane] = true;
+					lane_to_num[lane] = search_num; // active lane
 					active++;
 					break;
 				}
@@ -115,22 +116,25 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 
 		// make passes while a lane is still active
 		for (int64_t iter = 0; active; iter++) {
-            if (!IterativeLengthBidirectional(v_size, v, e,
-                                              (iter&1)?dst_seen:src_seen,
-                                              (iter&2)?(iter&1)?dst_visit2:src_visit2:(iter&1)?dst_visit1:src_visit1,
-                                              (iter&2)?(iter&1)?dst_visit1:src_visit1:(iter&1)?dst_visit2:src_visit2)) {
+			if (!IterativeLengthBidirectional(v_size, v, e, (iter & 1) ? dst_seen : src_seen,
+			                                  (iter & 2)   ? (iter & 1) ? dst_visit2 : src_visit2
+			                                  : (iter & 1) ? dst_visit1
+			                                               : src_visit1,
+			                                  (iter & 2)   ? (iter & 1) ? dst_visit1 : src_visit1
+			                                  : (iter & 1) ? dst_visit2
+			                                               : src_visit2)) {
 				break;
 			}
-            std::bitset<LANE_LIMIT> done = InterSectFronteers(v_size, src_seen, dst_seen);
-            // detect lanes that finished
+			std::bitset<LANE_LIMIT> done = InterSectFronteers(v_size, src_seen, dst_seen);
+			// detect lanes that finished
 			for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
-                if (done[lane]) {
-                    int64_t search_num = lane_to_num[lane];
-                    if (search_num >= 0) {
-                        result_data[search_num] = iter+1; /* found at iter => iter = path length */
-                        lane_to_num[lane] = -1;         // mark inactive
-                        active--;
-                    }
+				if (done[lane]) {
+					int64_t search_num = lane_to_num[lane];
+					if (search_num >= 0) {
+						result_data[search_num] = iter + 1; /* found at iter => iter = path length */
+						lane_to_num[lane] = -1;             // mark inactive
+						active--;
+					}
 				}
 			}
 		}
@@ -138,7 +142,7 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 			int64_t search_num = lane_to_num[lane];
 			if (search_num >= 0) {
-                result_validity.SetInvalid(search_num);
+				result_validity.SetInvalid(search_num);
 				result_data[search_num] = (int64_t)-1; /* no path */
 				lane_to_num[lane] = -1;                // mark inactive
 			}
@@ -149,7 +153,8 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLengthBidirectionalFunction() {
 	auto fun = ScalarFunction("iterativelengthbidirectional",
 	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	                          LogicalType::BIGINT, IterativeLengthBidirectionalFunction, IterativeLengthFunctionData::IterativeLengthBind);
+	                          LogicalType::BIGINT, IterativeLengthBidirectionalFunction,
+	                          IterativeLengthFunctionData::IterativeLengthBind);
 	return CreateScalarFunctionInfo(fun);
 }
 

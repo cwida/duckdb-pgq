@@ -11,8 +11,6 @@ using namespace std::chrono;
 
 namespace duckdb {
 
-
-
 template <typename T, int16_t lane_limit>
 static int16_t InitialiseBellmanFord(ClientContext &context, const DataChunk &args, int64_t input_size,
                                      const UnifiedVectorFormat &vdata_src, const int64_t *src_data, idx_t result_size,
@@ -55,10 +53,11 @@ bool UpdateLanes(vector<vector<T>> &dists, T v, T n, T weight) {
 }
 
 template <typename T, int16_t lane_limit>
-int16_t TemplatedBatchBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args, int64_t input_size, Vector &result,
-                                  UnifiedVectorFormat vdata_src, int64_t *src_data, const UnifiedVectorFormat &vdata_target,
-                                  int64_t *target_data, int32_t id, std::vector<T> weight_array, int16_t result_size,
-                                  T *result_data, ValidityMask &result_validity) {
+int16_t TemplatedBatchBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args, int64_t input_size,
+                                  Vector &result, UnifiedVectorFormat vdata_src, int64_t *src_data,
+                                  const UnifiedVectorFormat &vdata_target, int64_t *target_data, int32_t id,
+                                  std::vector<T> weight_array, int16_t result_size, T *result_data,
+                                  ValidityMask &result_validity) {
 	vector<vector<T>> dists;
 	int16_t curr_batch_size =
 	    InitialiseBellmanFord<T, lane_limit>(info.context, args, input_size, vdata_src, src_data, result_size, dists);
@@ -71,7 +70,9 @@ int16_t TemplatedBatchBellmanFord(CheapestPathLengthFunctionData &info, DataChun
 			for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[v];
 			     index < (int64_t)info.context.client_data->csr_list[id]->v[v + 1]; index++) {
 				//! Get weight of (v,n)
-				changed = UpdateLanes<T>(dists, v, info.context.client_data->csr_list[id]->e[index], weight_array[index]) | changed;
+				changed =
+				    UpdateLanes<T>(dists, v, info.context.client_data->csr_list[id]->e[index], weight_array[index]) |
+				    changed;
 			}
 		}
 	}
@@ -96,8 +97,8 @@ int16_t TemplatedBatchBellmanFord(CheapestPathLengthFunctionData &info, DataChun
 
 template <typename T>
 void TemplatedBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args, int64_t input_size, Vector &result,
-                          UnifiedVectorFormat vdata_src, int64_t *src_data, const UnifiedVectorFormat &vdata_target, int64_t *target_data,
-                          int32_t id, std::vector<T> weight_array) {
+                          UnifiedVectorFormat vdata_src, int64_t *src_data, const UnifiedVectorFormat &vdata_target,
+                          int64_t *target_data, int32_t id, std::vector<T> weight_array) {
 	idx_t result_size = 0;
 	result.SetVectorType(VectorType::FLAT_VECTOR);
 	auto result_data = FlatVector::GetData<T>(result);
@@ -173,13 +174,12 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 	}
 }
 
-
 CreateScalarFunctionInfo SQLPGQFunctions::GetCheapestPathLengthFunction() {
 	ScalarFunctionSet set("cheapest_path_length");
 
-	set.AddFunction(
-	    ScalarFunction({LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	                   LogicalType::ANY, CheapestPathLengthFunction, CheapestPathLengthFunctionData::CheapestPathLengthBind));
+	set.AddFunction(ScalarFunction(
+	    {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT}, LogicalType::ANY,
+	    CheapestPathLengthFunction, CheapestPathLengthFunctionData::CheapestPathLengthBind));
 
 	return CreateScalarFunctionInfo(set);
 }

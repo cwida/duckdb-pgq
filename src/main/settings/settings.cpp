@@ -991,7 +991,7 @@ void DeleteCSRSetting::SetLocal(ClientContext &context, const Value &input) {
 Value DeleteCSRSetting::GetSetting(ClientContext &context) {
 	auto &client_data = ClientData::Get(context);
 	vector<string> keys;
-	for (auto &key: client_data.csr_list) {
+	for (auto &key : client_data.csr_list) {
 		keys.push_back(to_string(key.first));
 	}
 	return Value(StringUtil::Join(keys, ","));

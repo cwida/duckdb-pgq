@@ -1,5 +1,6 @@
 # name: test/sql/function/sql-pgq/test_graphblas_graph.test
 # group: [sql-pgq]
+
 require sqlpgq
 
 statement ok

@@ -29,8 +29,6 @@ class SchemaCatalogEntry;
 class CSR;
 struct RandomEngine;
 
-
-
 struct ClientData {
 	ClientData(ClientContext &context);
 	~ClientData();
@@ -63,7 +61,7 @@ struct ClientData {
 	string file_search_path;
 
 	//! Property graphs that are registered
-	unordered_map<string, CreatePropertyGraphInfo*> registered_property_graphs;
+	unordered_map<string, CreatePropertyGraphInfo *> registered_property_graphs;
 
 	//! Used to build the CSR data structures required for path-finding queries
 	std::unordered_map<int32_t, unique_ptr<CSR>> csr_list;

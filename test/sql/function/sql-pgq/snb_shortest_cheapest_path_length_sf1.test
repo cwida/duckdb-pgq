@@ -1,5 +1,6 @@
-# name: test/sql/function/sql-pgq/test_cheapest_path_sf1.test
+# name: test/sql/function/sql-pgq/snb_shortest_cheapest_path_length_sf1.test
 # group: [sql-pgq]
+
 require sqlpgq
 
 statement ok

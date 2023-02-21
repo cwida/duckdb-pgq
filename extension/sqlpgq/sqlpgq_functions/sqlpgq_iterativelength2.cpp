@@ -119,7 +119,7 @@ static void IterativeLength2Function(DataChunk &args, ExpressionState &state, Ve
 		// no changes anymore: any still active searches have no path
 		for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 			int64_t search_num = lane_to_num[lane];
-			if (search_num >= 0) {                     // active lane
+			if (search_num >= 0) { // active lane
 				result_validity.SetInvalid(search_num);
 				result_data[search_num] = (int64_t)-1; /* no path */
 				lane_to_num[lane] = -1;                // mark inactive
@@ -129,9 +129,9 @@ static void IterativeLength2Function(DataChunk &args, ExpressionState &state, Ve
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLength2Function() {
-	auto fun = ScalarFunction("iterativelength2",
-	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	                          LogicalType::BIGINT, IterativeLength2Function, IterativeLengthFunctionData::IterativeLengthBind);
+	auto fun = ScalarFunction(
+	    "iterativelength2", {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
+	    LogicalType::BIGINT, IterativeLength2Function, IterativeLengthFunctionData::IterativeLengthBind);
 	return CreateScalarFunctionInfo(fun);
 }
 

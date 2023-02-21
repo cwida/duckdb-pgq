@@ -108,8 +108,9 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 				} else {
 					visit1[src_data[src_pos]][lane] = true;
 					parents_v[src_data[src_pos]][lane] = src_data[src_pos]; // Mark source with source id
-					parents_e[src_data[src_pos]][lane] = -2; // Mark the source with -2, there is no incoming edge for the source.
-					lane_to_num[lane] = search_num;                       // active lane
+					parents_e[src_data[src_pos]][lane] =
+					    -2; // Mark the source with -2, there is no incoming edge for the source.
+					lane_to_num[lane] = search_num; // active lane
 					active++;
 					break;
 				}
@@ -163,7 +164,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			auto source_v = src_data[src_pos]; // Take the source
 
 			auto parent_vertex = parents_v[dst_data[dst_pos]][lane]; // Take the parent vertex of the destination vertex
-			auto parent_edge = parents_e[dst_data[dst_pos]][lane]; // Take the parent edge of the destination vertex
+			auto parent_edge = parents_e[dst_data[dst_pos]][lane];   // Take the parent edge of the destination vertex
 
 			output_vector.push_back(dst_data[dst_pos]); // Add destination vertex
 			output_vector.push_back(parent_edge);
@@ -199,10 +200,9 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetShortestPathFunction() {
-	auto fun = ScalarFunction("shortestpath",
-	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
-	                          LogicalType::LIST(LogicalType::BIGINT), ShortestPathFunction,
-	                          IterativeLengthFunctionData::IterativeLengthBind);
+	auto fun = ScalarFunction(
+	    "shortestpath", {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
+	    LogicalType::LIST(LogicalType::BIGINT), ShortestPathFunction, IterativeLengthFunctionData::IterativeLengthBind);
 	return CreateScalarFunctionInfo(fun);
 }
 

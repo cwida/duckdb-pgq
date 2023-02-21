@@ -37,8 +37,8 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlan(LogicalCreate &op
 		return create;
 	}
 	case LogicalOperatorType::LOGICAL_CREATE_PROPERTY_GRAPH: {
-		return make_unique<PhysicalCreatePropertyGraph>(unique_ptr_cast<CreateInfo, CreatePropertyGraphInfo>(std::move(op.info)),
-													op.estimated_cardinality);
+		return make_unique<PhysicalCreatePropertyGraph>(
+		    unique_ptr_cast<CreateInfo, CreatePropertyGraphInfo>(std::move(op.info)), op.estimated_cardinality);
 	}
 	default:
 		throw NotImplementedException("Unimplemented type for logical simple create");

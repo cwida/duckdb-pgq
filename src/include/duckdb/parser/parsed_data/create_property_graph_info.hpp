@@ -19,11 +19,10 @@
 
 namespace duckdb {
 
-
 struct CreatePropertyGraphInfo : public CreateInfo {
 	CreatePropertyGraphInfo();
 	CreatePropertyGraphInfo(string catalog, string schema, string name);
-//	explicit CreatePropertyGraphInfo(string property_graph_name);
+	//	explicit CreatePropertyGraphInfo(string property_graph_name);
 
 	CreatePropertyGraphInfo(SchemaCatalogEntry *schema, string pg_name);
 
@@ -34,15 +33,14 @@ struct CreatePropertyGraphInfo : public CreateInfo {
 
 	vector<unique_ptr<PropertyGraphTable>> edge_tables;
 
-
 	//! Dictionary to point label to vector or edge table
-	unordered_map<string, PropertyGraphTable*> label_map;
+	unordered_map<string, PropertyGraphTable *> label_map;
 
 protected:
 	void SerializeInternal(Serializer &serializer) const override;
 
 public:
-//	DUCKDB_API static unique_ptr<CreatePropertyGraphInfo> Deserialize(Deserializer &deserializer);
+	//	DUCKDB_API static unique_ptr<CreatePropertyGraphInfo> Deserialize(Deserializer &deserializer);
 
 	DUCKDB_API unique_ptr<CreateInfo> Copy() const override;
 };

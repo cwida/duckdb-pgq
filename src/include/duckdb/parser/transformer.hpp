@@ -215,7 +215,6 @@ private:
 	//! Transform a node/edge table create (SQL/PGQ)
 	unique_ptr<PropertyGraphTable> TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *node);
 
-
 	//! Transform a Postgres constant value into an Expression
 	unique_ptr<ParsedExpression> TransformConstant(duckdb_libpgquery::PGAConst *c);
 	unique_ptr<ParsedExpression> TransformGroupingFunction(duckdb_libpgquery::PGGroupingFunc *n);

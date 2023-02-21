@@ -148,14 +148,15 @@ static void CheckPropertyGraphTable(unique_ptr<PropertyGraphTable> &pg_table, Ta
 		}
 		auto &column = table.GetColumn(pg_table->discriminator);
 		if (!(column.GetType() == LogicalType::BIGINT || column.GetType() == LogicalType::INTEGER)) {
-			throw BinderException("The discriminator column %s for table %s should be of type BIGINT or INTEGER", pg_table->discriminator, pg_table->table_name);
+			throw BinderException("The discriminator column %s for table %s should be of type BIGINT or INTEGER",
+			                      pg_table->discriminator, pg_table->table_name);
 		}
 	}
 }
 
 void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 	auto &client_data = context.client_data;
-    auto pg_table = client_data->registered_property_graphs.find(info.property_graph_name);
+	auto pg_table = client_data->registered_property_graphs.find(info.property_graph_name);
 	if (pg_table != client_data->registered_property_graphs.end()) {
 		throw BinderException("Property graph table %s already exists", info.property_graph_name);
 	}
@@ -189,13 +190,15 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 			}
 		}
 
-		auto pk_destination_table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->destination_reference);
+		auto pk_destination_table =
+		    catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->destination_reference);
 		if (!pk_destination_table) {
 			throw BinderException("Destination reference table %s does not exist", edge_table->destination_reference);
 		}
 		for (auto &pk : edge_table->destination_pk) {
 			if (!pk_destination_table->ColumnExists(pk)) {
-				throw BinderException("Primary key %s does not exist in table %s", pk, edge_table->destination_reference);
+				throw BinderException("Primary key %s does not exist in table %s", pk,
+				                      edge_table->destination_reference);
 			}
 		}
 
@@ -211,7 +214,6 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 			}
 		}
 	}
-
 }
 
 static void QualifyFunctionNames(ClientContext &context, unique_ptr<ParsedExpression> &expr) {
@@ -757,8 +759,7 @@ BoundStatement Binder::Bind(CreateStatement &stmt) {
 		BindCreatePropertyGraphInfo(create_pg_info);
 
 		result.plan = make_unique<LogicalCreate>(LogicalOperatorType::LOGICAL_CREATE_PROPERTY_GRAPH,
-		                                         std::move(stmt.info),
-		                                         schema);
+		                                         std::move(stmt.info), schema);
 		break;
 	}
 

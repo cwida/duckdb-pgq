@@ -5,7 +5,6 @@
 
 namespace duckdb {
 
-
 class PhysicalCreatePropertyGraph : public PhysicalOperator {
 public:
 	PhysicalCreatePropertyGraph(unique_ptr<CreatePropertyGraphInfo> info, idx_t estimated_cardinality);
@@ -18,4 +17,4 @@ public:
 	void GetData(ExecutionContext &context, DataChunk &chunk, GlobalSourceState &gstate,
 	             LocalSourceState &lstate) const override;
 };
-}
+} // namespace duckdb
