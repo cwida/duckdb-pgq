@@ -18,7 +18,6 @@
 #include "duckdb/parser/statement/select_statement.hpp"
 
 namespace duckdb {
-class SchemaCatalogEntry;
 
 
 struct CreatePropertyGraphInfo : public CreateInfo {

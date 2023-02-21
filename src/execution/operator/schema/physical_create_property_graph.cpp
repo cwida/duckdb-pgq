@@ -30,11 +30,7 @@ void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &
 
 	auto &client_data = ClientData::Get(context.client);
 
-	auto find_pg = client_data.registered_property_graphs.find(info->property_graph_name);
-	if (find_pg != client_data.registered_property_graphs.end()) {
-		throw ConstraintException("A property graph with the name %s already exists", info->property_graph_name);
-	}
-
+	//! During the binder we already check if the property graph exists
 	client_data.registered_property_graphs[info->property_graph_name] = info.get();
 
 	state.finished = true;
