@@ -27,6 +27,7 @@ class QueryProfilerHistory;
 class PreparedStatementData;
 class SchemaCatalogEntry;
 class CSR;
+struct CreatePropertyGraphInfo;
 struct RandomEngine;
 
 struct ClientData {
