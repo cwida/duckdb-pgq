@@ -90,7 +90,11 @@ std::vector<PGKeyword> keyword_list() {
 		case COL_NAME_KEYWORD:
 			keyword.category = PGKeywordCategory::PG_KEYWORD_COL_NAME;
 			break;
+		case PGQ_UNRESERVED_KEYWORD:
+			keyword.category = PGKeywordCategory::PG_KEYWORD_PGQ_UNRESERVED;
+			break;
 		}
+
 		result.push_back(keyword);
 	}
 	return result;

@@ -818,6 +818,8 @@ std::string Transformer::NodetypeToString(duckdb_libpgquery::PGNodeTag type) { /
 		return "T_PGUseStmt";
 	case duckdb_libpgquery::T_PGCreateDatabaseStmt:
 		return "T_PGCreateDatabaseStmt";
+	case duckdb_libpgquery::T_PGCreatePropertyGraphStmt:
+		return "T_PGCreatePropertyGraphStmt";
 	default:
 		return "(UNKNOWN)";
 	}

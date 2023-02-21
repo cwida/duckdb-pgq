@@ -1,6 +1,5 @@
-# name: test/sql/function/sql-pgq/debug_generating_path.test
+# name: test/sql/function/sql-pgq/generating_path.test
 # group: [sql-pgq]
-
 
 require parquet
 

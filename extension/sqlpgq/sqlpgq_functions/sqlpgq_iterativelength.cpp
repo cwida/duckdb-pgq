@@ -50,7 +50,7 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 	auto dst_data = (int64_t *)vdata_dst.data;
 
 	ValidityMask &result_validity = FlatVector::Validity(result);
-  
+
 	// create result vector
 	result.SetVectorType(VectorType::FLAT_VECTOR);
 	auto result_data = FlatVector::GetData<int64_t>(result);

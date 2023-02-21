@@ -173,6 +173,7 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlan(LogicalOperator &
 	case LogicalOperatorType::LOGICAL_CREATE_SCHEMA:
 	case LogicalOperatorType::LOGICAL_CREATE_MACRO:
 	case LogicalOperatorType::LOGICAL_CREATE_TYPE:
+	case LogicalOperatorType::LOGICAL_CREATE_PROPERTY_GRAPH:
 		plan = CreatePlan((LogicalCreate &)op);
 		break;
 	case LogicalOperatorType::LOGICAL_PRAGMA:

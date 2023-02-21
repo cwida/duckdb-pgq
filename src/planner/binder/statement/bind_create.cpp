@@ -11,6 +11,7 @@
 #include "duckdb/parser/parsed_data/create_index_info.hpp"
 #include "duckdb/parser/parsed_data/create_macro_info.hpp"
 #include "duckdb/parser/parsed_data/create_view_info.hpp"
+#include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/parser/parsed_data/create_database_info.hpp"
 #include "duckdb/function/create_database_extension.hpp"
 #include "duckdb/parser/tableref/table_function_ref.hpp"
@@ -132,6 +133,87 @@ void Binder::BindCreateViewInfo(CreateViewInfo &base) {
 		base.aliases.push_back(query_node.names[i]);
 	}
 	base.types = query_node.types;
+}
+
+static void CheckPropertyGraphTable(unique_ptr<PropertyGraphTable> &pg_table, TableCatalogEntry &table) {
+	for (auto &column : pg_table->column_names) {
+		if (!table.ColumnExists(column)) {
+			throw BinderException("Column %s not found in table %s", column, pg_table->table_name);
+		}
+	}
+
+	if (!pg_table->discriminator.empty()) {
+		if (!table.ColumnExists(pg_table->discriminator)) {
+			throw BinderException("Column %s not found in table %s", pg_table->discriminator, pg_table->table_name);
+		}
+		auto &column = table.GetColumn(pg_table->discriminator);
+		if (!(column.GetType() == LogicalType::BIGINT || column.GetType() == LogicalType::INTEGER)) {
+			throw BinderException("The discriminator column %s for table %s should be of type BIGINT or INTEGER",
+			                      pg_table->discriminator, pg_table->table_name);
+		}
+	}
+}
+
+void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
+	auto &client_data = context.client_data;
+	auto pg_table = client_data->registered_property_graphs.find(info.property_graph_name);
+	if (pg_table != client_data->registered_property_graphs.end()) {
+		throw BinderException("Property graph table %s already exists", info.property_graph_name);
+	}
+
+	auto &catalog = Catalog::GetCatalog(context, info.catalog);
+
+	for (auto &vertex_table : info.vertex_tables) {
+		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
+
+		// TODO
+		// 	- Create a test case that creates a property graph on non-existing tables
+
+		if (!table) {
+			throw BinderException("Table %s does not exist.", vertex_table->table_name);
+		}
+		CheckPropertyGraphTable(vertex_table, *table);
+	}
+
+	for (auto &edge_table : info.edge_tables) {
+		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->table_name);
+
+		CheckPropertyGraphTable(edge_table, *table);
+
+		auto pk_source_table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->source_reference);
+		if (!pk_source_table) {
+			throw BinderException("Source reference table %s does not exist", edge_table->source_reference);
+		}
+		for (auto &pk : edge_table->source_pk) {
+			if (!pk_source_table->ColumnExists(pk)) {
+				throw BinderException("Primary key %s does not exist in table %s", pk, edge_table->source_reference);
+			}
+		}
+
+		auto pk_destination_table =
+		    catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->destination_reference);
+		if (!pk_destination_table) {
+			throw BinderException("Destination reference table %s does not exist", edge_table->destination_reference);
+		}
+		for (auto &pk : edge_table->destination_pk) {
+			if (!pk_destination_table->ColumnExists(pk)) {
+				throw BinderException("Primary key %s does not exist in table %s", pk,
+				                      edge_table->destination_reference);
+			}
+		}
+
+		for (auto &fk : edge_table->source_fk) {
+			if (!table->ColumnExists(fk)) {
+				throw BinderException("Foreign key %s does not exist in table %s", fk, edge_table->table_name);
+			}
+		}
+
+		for (auto &fk : edge_table->destination_fk) {
+			if (!table->ColumnExists(fk)) {
+				throw BinderException("Foreign key %s does not exist in table %s", fk, edge_table->table_name);
+			}
+		}
+	}
 }
 
 static void QualifyFunctionNames(ClientContext &context, unique_ptr<ParsedExpression> &expr) {
@@ -670,6 +752,17 @@ BoundStatement Binder::Bind(CreateStatement &stmt) {
 		}
 		break;
 	}
+	case CatalogType::PROPERTY_GRAPH_ENTRY: {
+		auto &create_pg_info = (CreatePropertyGraphInfo &)*stmt.info;
+
+		auto schema = BindSchema(*stmt.info);
+		BindCreatePropertyGraphInfo(create_pg_info);
+
+		result.plan = make_unique<LogicalCreate>(LogicalOperatorType::LOGICAL_CREATE_PROPERTY_GRAPH,
+		                                         std::move(stmt.info), schema);
+		break;
+	}
+
 	default:
 		throw Exception("Unrecognized type!");
 	}

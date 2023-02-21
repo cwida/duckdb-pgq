@@ -12,6 +12,7 @@ add_library_unity(
   create_pragma_function_info.cpp
   create_scalar_function_info.cpp
   create_table_function_info.cpp
+  create_property_graph_info.cpp
   create_table_info.cpp
   create_view_info.cpp
   sample_options.cpp)

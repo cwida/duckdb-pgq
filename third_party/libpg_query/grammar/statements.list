@@ -9,6 +9,7 @@ CopyStmt
 CreateAsStmt
 CreateTypeStmt
 CreateFunctionStmt
+CreatePropertyGraphStmt
 CreateDatabaseStmt
 CreateSchemaStmt
 CreateSeqStmt
@@ -17,9 +18,11 @@ DeallocateStmt
 DeleteStmt
 DetachStmt
 DropStmt
+DropPropertyGraphStmt
 ExecuteStmt
 ExplainStmt
 ExportStmt
+GraphTableStmt
 ImportStmt
 IndexStmt
 InsertStmt

@@ -8,19 +8,19 @@
 
 #pragma once
 
+#include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/common/constants.hpp"
 #include "duckdb/common/enums/expression_type.hpp"
 #include "duckdb/common/types.hpp"
 #include "duckdb/common/unordered_map.hpp"
-#include "duckdb/parser/qualified_name.hpp"
-#include "duckdb/parser/tokens.hpp"
-#include "duckdb/parser/parsed_data/create_info.hpp"
 #include "duckdb/parser/group_by_node.hpp"
+#include "duckdb/parser/parsed_data/create_info.hpp"
+#include "duckdb/parser/qualified_name.hpp"
 #include "duckdb/parser/query_node.hpp"
-#include "duckdb/common/case_insensitive_map.hpp"
-
-#include "pg_definitions.hpp"
+#include "duckdb/parser/tokens.hpp"
 #include "nodes/parsenodes.hpp"
+#include "pg_definitions.hpp"
+#include "property_graph_table.hpp"
 
 namespace duckdb {
 
@@ -107,6 +107,8 @@ private:
 	unique_ptr<AlterStatement> TransformRename(duckdb_libpgquery::PGNode *node);
 	//! Transform a Postgres duckdb_libpgquery::T_PGCreateStmt node into a CreateStatement
 	unique_ptr<CreateStatement> TransformCreateTable(duckdb_libpgquery::PGNode *node);
+	//! Transform a SQL/PGQ duckdb_libpgquery::T_PGCreatePropertyGraphStmt node into a CreatePropertyGraphStatement
+	unique_ptr<CreateStatement> TransformCreatePropertyGraph(duckdb_libpgquery::PGNode *node);
 	//! Transform a Postgres duckdb_libpgquery::T_PGCreateStmt node into a CreateStatement
 	unique_ptr<CreateStatement> TransformCreateTableAs(duckdb_libpgquery::PGNode *node);
 	//! Transform a Postgres node into a CreateStatement
@@ -210,6 +212,8 @@ private:
 	//! Transform a positional reference (e.g. #1)
 	unique_ptr<ParsedExpression> TransformPositionalReference(duckdb_libpgquery::PGPositionalReference *node);
 	unique_ptr<ParsedExpression> TransformStarExpression(duckdb_libpgquery::PGNode *node);
+	//! Transform a node/edge table create (SQL/PGQ)
+	unique_ptr<PropertyGraphTable> TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *node);
 
 	//! Transform a Postgres constant value into an Expression
 	unique_ptr<ParsedExpression> TransformConstant(duckdb_libpgquery::PGAConst *c);
