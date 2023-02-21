@@ -40,6 +40,7 @@ class ExternalDependency;
 class TableFunction;
 
 struct CreateInfo;
+struct CreatePropertyGraphInfo;
 struct BoundCreateTableInfo;
 struct BoundCreateFunctionInfo;
 struct CommonTableExpressionInfo;

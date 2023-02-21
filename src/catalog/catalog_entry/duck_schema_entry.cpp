@@ -16,7 +16,6 @@
 #include "duckdb/catalog/catalog_entry/table_macro_catalog_entry.hpp"
 #include "duckdb/catalog/catalog_entry/duck_table_entry.hpp"
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
-#include "duckdb/catalog/catalog_entry/property_graph_catalog_entry.hpp"
 #include "duckdb/catalog/dependency_list.hpp"
 #include "duckdb/planner/constraints/bound_foreign_key_constraint.hpp"
 #include "duckdb/parser/constraints/foreign_key_constraint.hpp"
@@ -28,7 +27,6 @@
 #include "duckdb/parser/parsed_data/create_copy_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_index_info.hpp"
 #include "duckdb/parser/parsed_data/create_pragma_function_info.hpp"
-#include "duckdb/parser/parsed_data/create_property_graph_info.hpp"
 #include "duckdb/parser/parsed_data/create_schema_info.hpp"
 #include "duckdb/parser/parsed_data/create_sequence_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
@@ -190,11 +188,6 @@ CatalogEntry *DuckSchemaEntry::CreateView(CatalogTransaction transaction, Create
 	return AddEntry(transaction, std::move(view), info->on_conflict);
 }
 
-CatalogEntry *DuckSchemaEntry::CreatePropertyGraph(CatalogTransaction transaction, CreatePropertyGraphInfo *info) {
-	auto property_graph = make_unique<PropertyGraphCatalogEntry>(catalog, this, info);
-	return AddEntry(transaction, std::move(property_graph), info->on_conflict);
-}
-
 CatalogEntry *DuckSchemaEntry::CreateIndex(ClientContext &context, CreateIndexInfo *info, TableCatalogEntry *table) {
 	DependencyList dependencies;
 	dependencies.AddDependency(table);
@@ -295,7 +288,6 @@ CatalogSet &DuckSchemaEntry::GetCatalogSet(CatalogType type) {
 	switch (type) {
 	case CatalogType::VIEW_ENTRY:
 	case CatalogType::TABLE_ENTRY:
-	case CatalogType::PROPERTY_GRAPH_ENTRY:
 		return tables;
 	case CatalogType::INDEX_ENTRY:
 		return indexes;

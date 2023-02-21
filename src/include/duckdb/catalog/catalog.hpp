@@ -27,7 +27,6 @@ struct CreateCopyFunctionInfo;
 struct CreatePragmaFunctionInfo;
 struct CreateFunctionInfo;
 struct CreateViewInfo;
-struct CreatePropertyGraphInfo;
 struct CreateSequenceInfo;
 struct CreateCollationInfo;
 struct CreateTypeInfo;
@@ -47,7 +46,6 @@ class SequenceCatalogEntry;
 class TableFunctionCatalogEntry;
 class CopyFunctionCatalogEntry;
 class PragmaFunctionCatalogEntry;
-class PropertyGraphCatalogEntry;
 class CatalogSet;
 class DatabaseInstance;
 class DependencyManager;
@@ -130,9 +128,6 @@ public:
 	//! Creates a table in the catalog.
 	DUCKDB_API CatalogEntry *CreateView(CatalogTransaction transaction, CreateViewInfo *info);
 	DUCKDB_API CatalogEntry *CreateView(ClientContext &context, CreateViewInfo *info);
-	//! Creates a property graph in the catalog
-	DUCKDB_API CatalogEntry *CreatePropertyGraph(CatalogTransaction transaction, CreatePropertyGraphInfo *info);
-	DUCKDB_API CatalogEntry *CreatePropertyGraph(ClientContext &context, CreatePropertyGraphInfo *info);
 	//! Creates a sequence in the catalog.
 	DUCKDB_API CatalogEntry *CreateSequence(CatalogTransaction transaction, CreateSequenceInfo *info);
 	DUCKDB_API CatalogEntry *CreateSequence(ClientContext &context, CreateSequenceInfo *info);
@@ -161,9 +156,6 @@ public:
 	//! Creates a table in the catalog.
 	DUCKDB_API CatalogEntry *CreateView(CatalogTransaction transaction, SchemaCatalogEntry *schema,
 	                                    CreateViewInfo *info);
-	//! Creates a table in the catalog.
-	DUCKDB_API CatalogEntry *CreatePropertyGraph(CatalogTransaction transaction, SchemaCatalogEntry *schema,
-	                                    CreatePropertyGraphInfo *info);
 	//! Creates a table in the catalog.
 	DUCKDB_API CatalogEntry *CreateSequence(CatalogTransaction transaction, SchemaCatalogEntry *schema,
 	                                        CreateSequenceInfo *info);

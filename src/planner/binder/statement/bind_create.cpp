@@ -154,9 +154,9 @@ static void CheckPropertyGraphTable(unique_ptr<PropertyGraphTable> &pg_table, Ta
 }
 
 void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
-	auto pg_table = (PropertyGraphCatalogEntry *)Catalog::GetEntry(context, CatalogType::PROPERTY_GRAPH_ENTRY, info.catalog, info.schema, info.property_graph_name, true);
-
-	if (pg_table) {
+	auto &client_data = context.client_data;
+    auto pg_table = client_data->registered_property_graphs.find(info.property_graph_name);
+	if (pg_table != client_data->registered_property_graphs.end()) {
 		throw BinderException("Property graph table %s already exists", info.property_graph_name);
 	}
 

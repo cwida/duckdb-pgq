@@ -130,25 +130,6 @@ CatalogEntry *Catalog::CreateView(CatalogTransaction transaction, SchemaCatalogE
 }
 
 //===--------------------------------------------------------------------===//
-// Property graph
-//===--------------------------------------------------------------------===//
-CatalogEntry *Catalog::CreatePropertyGraph(CatalogTransaction transaction, CreatePropertyGraphInfo *info) {
-	auto schema = GetSchema(transaction, info->schema);
-	return CreatePropertyGraph(transaction, schema, info);
-}
-
-CatalogEntry *Catalog::CreatePropertyGraph(ClientContext &context, CreatePropertyGraphInfo *info) {
-	return CreatePropertyGraph(GetCatalogTransaction(context), info);
-}
-
-CatalogEntry *Catalog::CreatePropertyGraph(CatalogTransaction transaction, SchemaCatalogEntry *schema,
-                                           CreatePropertyGraphInfo *info) {
-	ModifyCatalog();
-	return schema->CreatePropertyGraph(transaction, info);
-}
-
-
-//===--------------------------------------------------------------------===//
 // Sequence
 //===--------------------------------------------------------------------===//
 CatalogEntry *Catalog::CreateSequence(CatalogTransaction transaction, CreateSequenceInfo *info) {
