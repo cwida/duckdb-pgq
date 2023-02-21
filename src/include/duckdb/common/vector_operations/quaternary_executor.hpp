@@ -178,15 +178,15 @@ private:
 	template <class A_TYPE, class B_TYPE, class C_TYPE, class D_TYPE, class OP>
 	static inline idx_t SelectLoopSwitch(UnifiedVectorFormat &adata, UnifiedVectorFormat &bdata,
 	                                     UnifiedVectorFormat &cdata, UnifiedVectorFormat &ddata,
-	                                     const SelectionVector *sel, idx_t count,
-	                                     SelectionVector *true_sel, SelectionVector *false_sel) {
-		if (!adata.validity.AllValid() || !bdata.validity.AllValid() ||
-		    !cdata.validity.AllValid() || !ddata.validity.AllValid()) {
-			return SelectLoopSelSwitch<A_TYPE, B_TYPE, C_TYPE, D_TYPE, OP, false>(adata, bdata, cdata, ddata,
-			                                                                      sel, count, true_sel, false_sel);
+	                                     const SelectionVector *sel, idx_t count, SelectionVector *true_sel,
+	                                     SelectionVector *false_sel) {
+		if (!adata.validity.AllValid() || !bdata.validity.AllValid() || !cdata.validity.AllValid() ||
+		    !ddata.validity.AllValid()) {
+			return SelectLoopSelSwitch<A_TYPE, B_TYPE, C_TYPE, D_TYPE, OP, false>(adata, bdata, cdata, ddata, sel,
+			                                                                      count, true_sel, false_sel);
 		} else {
-			return SelectLoopSelSwitch<A_TYPE, B_TYPE, C_TYPE, D_TYPE, OP, true>(adata, bdata, cdata, ddata,
-			                                                                     sel, count, true_sel, false_sel);
+			return SelectLoopSelSwitch<A_TYPE, B_TYPE, C_TYPE, D_TYPE, OP, true>(adata, bdata, cdata, ddata, sel, count,
+			                                                                     true_sel, false_sel);
 		}
 	}
 
@@ -203,7 +203,8 @@ public:
 		c.ToUnifiedFormat(count, cdata);
 		d.ToUnifiedFormat(count, ddata);
 
-		return SelectLoopSwitch<A_TYPE, B_TYPE, C_TYPE, D_TYPE, OP>(adata, bdata, cdata, ddata, sel, count, true_sel, false_sel);
+		return SelectLoopSwitch<A_TYPE, B_TYPE, C_TYPE, D_TYPE, OP>(adata, bdata, cdata, ddata, sel, count, true_sel,
+		                                                            false_sel);
 	}
 };
 

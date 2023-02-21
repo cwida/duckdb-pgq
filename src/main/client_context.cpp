@@ -1024,7 +1024,6 @@ void ClientContext::TryBindRelation(Relation &relation, vector<ColumnDefinition>
 	});
 }
 
-
 unordered_set<string> ClientContext::GetTableNames(const string &query) {
 	auto lock = LockContext();
 

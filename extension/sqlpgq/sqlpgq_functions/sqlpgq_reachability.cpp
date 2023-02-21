@@ -43,8 +43,8 @@ static bool BfsWithoutArrayVariant(bool exit_early, int32_t id, int64_t input_si
 		}
 
 		D_ASSERT(info.context.client_data->csr_list[id]);
-		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i]; index < info.context.client_data->csr_list[id]->v[i + 1];
-		     index++) {
+		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i];
+		     index < info.context.client_data->csr_list[id]->v[i + 1]; index++) {
 			auto n = info.context.client_data->csr_list[id]->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
@@ -75,8 +75,8 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Cli
 		}
 
 		D_ASSERT(context.client_data->csr_list[id]);
-		for (auto index = (int64_t)context.client_data->csr_list[id]->v[i]; index < (int64_t)context.client_data->csr_list[id]->v[i + 1];
-		     index++) {
+		for (auto index = (int64_t)context.client_data->csr_list[id]->v[i];
+		     index < (int64_t)context.client_data->csr_list[id]->v[i + 1]; index++) {
 			auto n = context.client_data->csr_list[id]->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
@@ -211,14 +211,16 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 				mode = FindMode(mode, visit_list.size(), visit_limit, num_nodes_to_visit);
 				switch (mode) {
 				case 1:
-					exit_early = BfsWithArrayVariant(exit_early, info.csr_id, info, seen, visit, visit_next, visit_list);
+					exit_early =
+					    BfsWithArrayVariant(exit_early, info.csr_id, info, seen, visit, visit_next, visit_list);
 					break;
 				case 0:
-					exit_early =
-					    BfsWithoutArrayVariant(exit_early, info.csr_id, input_size, info, seen, visit, visit_next, visit_list);
+					exit_early = BfsWithoutArrayVariant(exit_early, info.csr_id, input_size, info, seen, visit,
+					                                    visit_next, visit_list);
 					break;
 				case 2: {
-					auto return_pair = BfsTempStateVariant(exit_early, info.csr_id, input_size, info, seen, visit, visit_next);
+					auto return_pair =
+					    BfsTempStateVariant(exit_early, info.csr_id, input_size, info, seen, visit, visit_next);
 					exit_early = return_pair.first;
 					num_nodes_to_visit = return_pair.second;
 					break;
@@ -227,7 +229,8 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 					throw Exception("Unknown mode encountered");
 				}
 			} else {
-				exit_early = BfsWithoutArray(exit_early, info.csr_id, input_size, info.context, seen, visit, visit_next);
+				exit_early =
+				    BfsWithoutArray(exit_early, info.csr_id, input_size, info.context, seen, visit, visit_next);
 			}
 
 			visit = visit_next;
@@ -253,7 +256,6 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 		result_size = result_size + curr_batch_size;
 	}
 }
-
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetReachabilityFunction() {
 	auto fun = ScalarFunction(

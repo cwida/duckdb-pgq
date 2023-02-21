@@ -55,8 +55,6 @@ struct CheapestPathLengthFunctionData : public FunctionData {
 
 	unique_ptr<FunctionData> Copy() const override;
 	bool Equals(const FunctionData &other_p) const override;
-
-
 };
 
 } // namespace duckdb

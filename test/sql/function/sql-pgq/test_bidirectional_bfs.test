@@ -1,3 +1,6 @@
+# name: test/sql/function/sql-pgq/test_bidirectional_bfs.test
+# group: [sql-pgq]
+
 require sqlpgq
 
 statement ok

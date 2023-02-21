@@ -1,4 +1,4 @@
-# name: test/sql/function/sql-pgq/snb_bi_20_1.test
+# name: test/sql/function/sql-pgq/snb_bi_20_0.1.test
 # group: [sql-pgq]
 
 require sqlpgq

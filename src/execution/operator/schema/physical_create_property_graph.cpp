@@ -7,14 +7,15 @@ namespace duckdb {
 class CreatePropertyGraphSourceState : public GlobalSourceState {
 public:
 	CreatePropertyGraphSourceState() : finished(false) {
-
 	}
 
 	bool finished;
 };
 
-PhysicalCreatePropertyGraph::PhysicalCreatePropertyGraph(unique_ptr<CreatePropertyGraphInfo> info, idx_t estimated_cardinality)
-	: PhysicalOperator(PhysicalOperatorType::CREATE_PROPERTY_GRAPH, {LogicalType::BIGINT}, estimated_cardinality), info(std::move(info)) {
+PhysicalCreatePropertyGraph::PhysicalCreatePropertyGraph(unique_ptr<CreatePropertyGraphInfo> info,
+                                                         idx_t estimated_cardinality)
+    : PhysicalOperator(PhysicalOperatorType::CREATE_PROPERTY_GRAPH, {LogicalType::BIGINT}, estimated_cardinality),
+      info(std::move(info)) {
 }
 
 unique_ptr<GlobalSourceState> PhysicalCreatePropertyGraph::GetGlobalSourceState(ClientContext &context) const {
@@ -36,4 +37,4 @@ void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &
 	state.finished = true;
 }
 
-}
+} // namespace duckdb

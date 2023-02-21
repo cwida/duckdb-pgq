@@ -7,11 +7,11 @@
 namespace duckdb {
 
 PropertyGraphTable::PropertyGraphTable() {
-
 }
 
 PropertyGraphTable::PropertyGraphTable(string table_name_p, vector<string> column_names_p, vector<string> labels_p)
-    : table_name(std::move(table_name_p)), table_name_alias(""), column_names(std::move(column_names_p)), labels(std::move(labels_p)) {
+    : table_name(std::move(table_name_p)), table_name_alias(""), column_names(std::move(column_names_p)),
+      labels(std::move(labels_p)) {
 #ifdef DEBUG
 	for (auto &col_name : column_names) {
 		D_ASSERT(!col_name.empty());
@@ -23,8 +23,10 @@ PropertyGraphTable::PropertyGraphTable(string table_name_p, vector<string> colum
 #endif
 }
 
-PropertyGraphTable::PropertyGraphTable(string table_name_p, string table_name_alias_p, vector<string> column_names_p, vector<string> labels_p)
-    : table_name(std::move(table_name_p)), table_name_alias(std::move(table_name_alias_p)), column_names(std::move(column_names_p)), labels(std::move(labels_p)) {
+PropertyGraphTable::PropertyGraphTable(string table_name_p, string table_name_alias_p, vector<string> column_names_p,
+                                       vector<string> labels_p)
+    : table_name(std::move(table_name_p)), table_name_alias(std::move(table_name_alias_p)),
+      column_names(std::move(column_names_p)), labels(std::move(labels_p)) {
 #ifdef DEBUG
 	for (auto &col_name : column_names) {
 		D_ASSERT(!col_name.empty());
@@ -73,7 +75,6 @@ unique_ptr<PropertyGraphTable> PropertyGraphTable::Deserialize(Deserializer &sou
 	}
 	return pg_table;
 }
-
 
 unique_ptr<PropertyGraphTable> PropertyGraphTable::Copy() {
 	auto result = make_unique<PropertyGraphTable>();
