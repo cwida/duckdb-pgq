@@ -88,6 +88,7 @@ enum class PhysicalOperatorType : uint8_t {
 	TRANSACTION,
 	CREATE_TYPE,
 	ATTACH,
+	DETACH,
 
 	// -----------------------------
 	// Helpers

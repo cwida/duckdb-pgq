@@ -79,7 +79,8 @@ enum class LogicalOperatorType : uint8_t {
 	LOGICAL_TRANSACTION = 134,
 	LOGICAL_CREATE_TYPE = 135,
 	LOGICAL_ATTACH = 136,
-	LOGICAL_CREATE_PROPERTY_GRAPH = 137,
+	LOGICAL_DETACH = 137,
+	LOGICAL_CREATE_PROPERTY_GRAPH = 138,
 
 	// -----------------------------
 	// Explain

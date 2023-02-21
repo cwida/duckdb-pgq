@@ -102,6 +102,8 @@ string LogicalOperatorToString(LogicalOperatorType type) {
 		return "CREATE_PROPERTY_GRAPH";
 	case LogicalOperatorType::LOGICAL_ATTACH:
 		return "ATTACH";
+	case LogicalOperatorType::LOGICAL_DETACH:
+		return "ATTACH";
 	case LogicalOperatorType::LOGICAL_DROP:
 		return "DROP";
 	case LogicalOperatorType::LOGICAL_PRAGMA:
