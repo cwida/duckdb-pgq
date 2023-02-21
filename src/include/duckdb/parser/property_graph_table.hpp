@@ -30,6 +30,8 @@ public:
 
 	vector<string> labels;
 
+	bool all_columns;
+
 	bool is_vertex_table;
 
 	string discriminator;
