@@ -16,25 +16,34 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	// TODO
 	//  	- check if properties is null, in that case all columns from the table are properties
 	// 		- check if properties has an except list
-	// 		- all columns
 
 	bool all_columns = false;
-	for (auto property_element = graph_table->properties->head; property_element != nullptr;
-	     property_element = property_element->next) {
-		auto column_optional_as = reinterpret_cast<duckdb_libpgquery::PGList *>(property_element->data.ptr_value);
-		auto column_name = reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->data.ptr_value);
-		if (strcmp(column_name->colname, "*") == 0) {
-			all_columns = true;
-			break;
+	bool no_columns = graph_table->properties == nullptr;
+
+	// check for an except list
+	if (no_columns) {
+
+	} else {
+		for (auto property_element = graph_table->properties->head; property_element != nullptr;
+		     property_element = property_element->next) {
+			auto column_optional_as = reinterpret_cast<duckdb_libpgquery::PGList *>(property_element->data.ptr_value);
+			auto column_name = reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->data.ptr_value);
+			if (strcmp(column_name->colname, "*") == 0) {
+				all_columns = true;
+				break;
+			}
+			auto column_alias =
+			    reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->next->data.ptr_value);
+			// TODO
+			//  	- 	Change this to support the optional as
+			// 		  	Looking at the next element of column_optional_as, which is a linked list
+			// 			If the string is equal to the first string then there is no alias
+			column_names.emplace_back(column_name->colname);
 		}
-		auto column_alias =
-		    reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->next->data.ptr_value);
-		// TODO
-		//  	- 	Change this to support the optional as
-		// 		  	Looking at the next element of column_optional_as, which is a linked list
-		// 			If the string is equal to the first string then there is no alias
-		column_names.emplace_back(column_name->colname);
 	}
+
+
+
 
 	for (auto label_element = graph_table->labels->head; label_element != nullptr;
 	     label_element = label_element->next) {
@@ -54,6 +63,7 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 
 	pg_table->is_vertex_table = graph_table->is_vertex_table;
 	pg_table->all_columns = all_columns;
+	pg_table->no_columns = no_columns;
 
 	if (graph_table->discriminator) {
 		//! In this case there is a list with length > 1 of labels
