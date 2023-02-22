@@ -57,11 +57,14 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	label_names.insert(label_names.end(), label_set.begin(), label_set.end());
 
 	unique_ptr<PropertyGraphTable> pg_table =
-	    make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias, column_names, label_names);
+	    make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias,
+	                                    column_names, label_names);
 
 	pg_table->is_vertex_table = graph_table->is_vertex_table;
+	pg_table->except_columns = std::move(except_list);
 	pg_table->all_columns = all_columns;
 	pg_table->no_columns = no_columns;
+
 
 	if (graph_table->discriminator) {
 		//! In this case there is a list with length > 1 of labels
