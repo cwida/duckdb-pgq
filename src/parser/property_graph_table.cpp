@@ -31,6 +31,9 @@ PropertyGraphTable::PropertyGraphTable(string table_name_p, string table_name_al
 	for (auto &col_name : column_names) {
 		D_ASSERT(!col_name.empty());
 	}
+	for (auto &except_column : except_columns) {
+		D_ASSERT(!except_column.empty());
+	}
 
 	for (auto &label : labels) {
 		D_ASSERT(!label.empty());
@@ -42,9 +45,13 @@ void PropertyGraphTable::Serialize(Serializer &serializer) const {
 	serializer.WriteString(table_name);
 
 	serializer.WriteStringVector(column_names);
+	serializer.WriteStringVector(column_aliases);
+	serializer.WriteStringVector(except_columns);
 	serializer.WriteStringVector(labels);
 
 	serializer.Write<bool>(is_vertex_table);
+	serializer.Write<bool>(all_columns);
+	serializer.Write<bool>(no_columns);
 	if (!is_vertex_table) {
 		serializer.WriteStringVector(source_pk);
 		serializer.WriteStringVector(source_fk);
@@ -61,9 +68,13 @@ unique_ptr<PropertyGraphTable> PropertyGraphTable::Deserialize(Deserializer &sou
 
 	pg_table->table_name = source.Read<string>();
 	source.ReadStringVector(pg_table->column_names);
+	source.ReadStringVector(pg_table->column_aliases);
+	source.ReadStringVector(pg_table->except_columns);
 	source.ReadStringVector(pg_table->labels);
 
 	pg_table->is_vertex_table = source.Read<bool>();
+	pg_table->all_columns = source.Read<bool>();
+	pg_table->no_columns = source.Read<bool>();
 	if (!pg_table->is_vertex_table) {
 		source.ReadStringVector(pg_table->source_pk);
 		source.ReadStringVector(pg_table->source_fk);
@@ -82,10 +93,15 @@ unique_ptr<PropertyGraphTable> PropertyGraphTable::Copy() {
 	for (auto &column_name : column_names) {
 		result->column_names.push_back(column_name);
 	}
+	for (auto &except_column : except_columns) {
+		result->except_columns.push_back(except_column);
+	}
 	for (auto &label : labels) {
 		result->labels.push_back(label);
 	}
 	result->is_vertex_table = is_vertex_table;
+	result->all_columns = all_columns;
+	result->no_columns = no_columns;
 	result->discriminator = discriminator;
 
 	result->source_reference = source_reference;

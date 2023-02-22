@@ -27,16 +27,17 @@ public:
 
 	//! The stack of names in order of which they appear (column_names[0].column_names[1].column_names[2]....)
 	vector<string> column_names;
+	vector<string> column_aliases;
 
 	vector<string> except_columns;
 
 	vector<string> labels;
 
 	//! Associated with the PROPERTIES keyword not mentioned in the creation of table, equalling SELECT * in some sense
-	bool all_columns;
+	bool all_columns = false;
 
 	//! Associated with the NO PROPERTIES functionality
-	bool no_columns;
+	bool no_columns = false;
 
 	bool is_vertex_table;
 
