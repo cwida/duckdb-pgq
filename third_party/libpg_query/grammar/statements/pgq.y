@@ -207,7 +207,7 @@ ExceptOptional:
 PropertiesSpec:
 		AreOptional ALL COLUMNS ExceptOptional
 			{ 
-				$$ = list_make2(list_make1(makeString("*")),list_make1(makeString("*"))); 
+				$$ = list_make1(list_make2(makeString("*"), makeString("*")));
 				if ($4) $$ = list_concat($$,$4); 
 			}
 	|
@@ -220,7 +220,7 @@ PropertiesClause:
 		PROPERTIES PropertiesSpec
 								{ $$ = $2; }
 	|
-		/* EMPTY */				{ $$ = list_make1(list_make1(makeString("*"))); }
+		/* EMPTY */				{ $$ = list_make1(list_make2(makeString("*"), makeString("*"))); }
         ;
 
 /* ------------------------------

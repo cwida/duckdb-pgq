@@ -6,6 +6,7 @@ namespace duckdb {
 unique_ptr<PropertyGraphTable>
 Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *graph_table) {
 	vector<string> column_names;
+	vector<string> except_list;
 	unordered_set<string> label_set;
 
 	auto table_name = reinterpret_cast<duckdb_libpgquery::PGRangeVar *>(graph_table->table->head->data.ptr_value);
@@ -20,17 +21,14 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	bool all_columns = false;
 	bool no_columns = graph_table->properties == nullptr;
 
-	// check for an except list
-	if (no_columns) {
-
-	} else {
+	if (!no_columns) {
 		for (auto property_element = graph_table->properties->head; property_element != nullptr;
 		     property_element = property_element->next) {
 			auto column_optional_as = reinterpret_cast<duckdb_libpgquery::PGList *>(property_element->data.ptr_value);
 			auto column_name = reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->data.ptr_value);
 			if (strcmp(column_name->colname, "*") == 0) {
 				all_columns = true;
-				break;
+				continue;
 			}
 			auto column_alias =
 			    reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->next->data.ptr_value);
@@ -38,7 +36,7 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 			//  	- 	Change this to support the optional as
 			// 		  	Looking at the next element of column_optional_as, which is a linked list
 			// 			If the string is equal to the first string then there is no alias
-			column_names.emplace_back(column_name->colname);
+			all_columns ? except_list.emplace_back(column_name->colname) : column_names.emplace_back(column_name->colname);
 		}
 	}
 
