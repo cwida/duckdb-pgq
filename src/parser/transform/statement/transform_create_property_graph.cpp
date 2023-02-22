@@ -14,10 +14,6 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	    reinterpret_cast<duckdb_libpgquery::PGValue *>(graph_table->table->head->next->data.ptr_value)->val.str;
 	auto graph_table_name = TransformQualifiedName(table_name);
 
-	// TODO
-	//  	- check if properties is null, in that case all columns from the table are properties
-	// 		- check if properties has an except list
-
 	bool all_columns = false;
 	bool no_columns = graph_table->properties == nullptr;
 
