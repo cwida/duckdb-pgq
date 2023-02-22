@@ -157,7 +157,12 @@ static void CheckPropertyGraphTableColumns(unique_ptr<PropertyGraphTable> &pg_ta
 				throw BinderException("Except column %s not found in table %s", except_column, pg_table->table_name);
 			}
 		}
-		std::set_difference(table.GetColumns().GetColumnNames().begin(), table.GetColumns().GetColumnNames().end(),
+
+		auto columns_of_table = table.GetColumns().GetColumnNames();
+
+		std::sort(std::begin(columns_of_table), std::end(columns_of_table));
+        std::sort(std::begin(pg_table->except_columns), std::end(pg_table->except_columns));
+		std::set_difference(columns_of_table.begin(), columns_of_table.end(),
 		                    pg_table->except_columns.begin(), pg_table->except_columns.end(),
             std::inserter(pg_table->column_names, pg_table->column_names.begin()));
 		pg_table->column_aliases = pg_table->column_names;
