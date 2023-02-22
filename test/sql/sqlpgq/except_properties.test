@@ -24,7 +24,7 @@ statement ok
 CREATE PROPERTY GRAPH pg_all_except_properties
 VERTEX TABLES (
     Student                 LABEL Person,
-    School  ALL COLUMNS EXCEPT (school_id)   LABEL School IN School_kind (Hogeschool, University)
+    School  PROPERTIES ALL COLUMNS EXCEPT (school_id)   LABEL School IN School_kind (Hogeschool, University)
     )
 EDGE TABLES (
     know    SOURCE KEY ( src ) REFERENCES Student ( id )
