@@ -26,7 +26,7 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 				all_columns = true;
 				continue;
 			}
-			auto column_alias =
+			auto column_alias __attribute__((unused)) =
 			    reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->next->data.ptr_value);
 			// TODO
 			//  	- 	Change this to support the optional as
@@ -35,9 +35,6 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 			all_columns ? except_list.emplace_back(column_name->colname) : column_names.emplace_back(column_name->colname);
 		}
 	}
-
-
-
 
 	for (auto label_element = graph_table->labels->head; label_element != nullptr;
 	     label_element = label_element->next) {

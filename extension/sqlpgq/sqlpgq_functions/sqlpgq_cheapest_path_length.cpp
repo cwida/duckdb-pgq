@@ -152,7 +152,7 @@ void TemplatedBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args,
 static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (CheapestPathLengthFunctionData &)*func_expr.bind_info;
-	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
+	int32_t id __attribute__((unused)) = args.data[0].GetValue(0).GetValue<int32_t>();
 	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
 
 	auto &src = args.data[2];
