@@ -21002,7 +21002,7 @@ yyreduce:
   case 268:
 #line 209 "third_party/libpg_query/grammar/statements/pgq.y"
     { 
-				(yyval.list) = list_make2(list_make1(makeString("*")),list_make1(makeString("*"))); 
+				(yyval.list) = list_make1(list_make2(makeString("*"), makeString("*")));
 				if ((yyvsp[(4) - (4)].list)) (yyval.list) = list_concat((yyval.list),(yyvsp[(4) - (4)].list)); 
 			;}
     break;
@@ -21024,7 +21024,7 @@ yyreduce:
 
   case 272:
 #line 223 "third_party/libpg_query/grammar/statements/pgq.y"
-    { (yyval.list) = list_make1(list_make1(makeString("*"))); ;}
+    { (yyval.list) = list_make1(list_make2(makeString("*"), makeString("*"))); ;}
     break;
 
   case 273:
