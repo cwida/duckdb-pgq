@@ -32,6 +32,8 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 			//  	- 	Change this to support the optional as
 			// 		  	Looking at the next element of column_optional_as, which is a linked list
 			// 			If the string is equal to the first string then there is no alias
+
+			//! Every column listed after * is seen as part of the except columns
 			all_columns ? except_list.emplace_back(column_name->colname) : column_names.emplace_back(column_name->colname);
 		}
 	}
