@@ -20259,7 +20259,7 @@ yyreduce:
 
   case 293: /* TopKOptional: %empty  */
 #line 306 "third_party/libpg_query/grammar/statements/pgq.y"
-                                                                { (yyval.ival) = 0 }
+                                                                { (yyval.ival) = 0; }
 #line 20264 "third_party/libpg_query/grammar/grammar_out.cpp"
     break;
 

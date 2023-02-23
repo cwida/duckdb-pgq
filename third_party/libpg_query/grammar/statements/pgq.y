@@ -303,7 +303,7 @@ PathModeOptional:
 TopKOptional:
 		ICONST						{ $$ = $1; }
 	|
-		/* EMPTY */					{ $$ = 0 }
+		/* EMPTY */					{ $$ = 0; }
 		;
 
 PathPrefix:
