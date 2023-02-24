@@ -26,10 +26,8 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 	}
 
 	// columns
-	for (idx_t i = 0; i < column_list.size(); i++) {
-		if (!column_list[i]->Equals(other->column_list[i].get())) {
-			return false;
-		}
+	if (column_list != other->column_list) {
+		return false;
 	}
 
 	// where clause

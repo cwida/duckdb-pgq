@@ -10,7 +10,6 @@ class GraphElementPattern {
 public:
 	GraphElementPattern();
 
-
 	unique_ptr<ParsedExpression> where_clause;
 
 	bool Equals(const GraphElementPattern *other_p) const;
