@@ -24842,7 +24842,7 @@ yyreduce:
   case 831: /* table_ref: GRAPH_TABLE GraphTableStmt  */
 #line 940 "third_party/libpg_query/grammar/statements/select.y"
                                 {
-                                        (yyval.node) = (PGNode *) (yyvsp[-1].keyword);
+                                        (yyval.node) = (PGNode *) (yyvsp[0].node);
                                 }
 #line 24848 "third_party/libpg_query/grammar/grammar_out.cpp"
     break;
