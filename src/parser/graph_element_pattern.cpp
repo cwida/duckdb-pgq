@@ -14,5 +14,12 @@ void GraphElementPattern::Serialize(Serializer &serializer) const {
 unique_ptr<GraphElementPattern> GraphElementPattern::Deserialize(Deserializer &deserializer) {
 	return unique_ptr<GraphElementPattern>();
 }
+bool GraphElementPattern::Equals(const GraphElementPattern *other_p) const {
+	if (!where_clause->Equals(other_p->where_clause.get())) {
+		return false;
+	}
+
+	return true;
+}
 
 }
