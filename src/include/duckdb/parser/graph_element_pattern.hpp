@@ -13,6 +13,7 @@ public:
 
 	unique_ptr<ParsedExpression> where_clause;
 
+	bool Equals(const GraphElementPattern *other_p) const;
 
 	void Serialize(Serializer &serializer) const;
 

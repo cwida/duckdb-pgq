@@ -3,6 +3,43 @@
 
 namespace duckdb {
 
+string MatchRef::ToString() const {
+    // TODO Implement
+
+	return "";
+};
+bool MatchRef::Equals(const TableRef *other_p) const {
+	if (!TableRef::Equals(other_p)) {
+		return false;
+	}
+
+	auto other = (MatchRef *)other_p;
+	if (pg_name != other->pg_name) {
+		return false;
+	}
+
+	// path_list
+	for (idx_t i = 0; i < path_list.size(); i++) {
+		if (!path_list[i]->Equals(other->path_list[i].get())) {
+			return false;
+		}
+	}
+
+	// columns
+	for (idx_t i = 0; i < column_list.size(); i++) {
+		if (!column_list[i]->Equals(other->column_list[i].get())) {
+			return false;
+		}
+	}
+
+	// where clause
+	if (!where_clause->Equals(other->where_clause.get())) {
+		return false;
+	}
+
+	return true;
+};
+
 unique_ptr<TableRef> MatchRef::Copy() {
 	auto copy = make_unique<MatchRef>();
 	copy->pg_name = pg_name;
@@ -34,6 +71,8 @@ unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
 	result->path_list = reader.ReadRequiredSerializableList<GraphElementPattern>();
 	result->column_list = reader.ReadRequiredSerializableList<ParsedExpression>();
 	result->where_clause = reader.ReadRequiredSerializable<ParsedExpression>();
+
+	return result;
 }
 
 }
