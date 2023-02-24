@@ -10,6 +10,9 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 	result->pg_name = root->pg_name; // Name of the property graph to bind to
 
 
+	result->where_clause = TransformExpression(root->where_clause);
+
+	TransformExpressionList(*root->columns, result->column_list);
 
 	return result;
 }

@@ -78,6 +78,8 @@ unique_ptr<TableRef> TableRef::Deserialize(Deserializer &source) {
 	case TableReferenceType::EXPRESSION_LIST:
 		result = ExpressionListRef::Deserialize(reader);
 		break;
+	case TableReferenceType::MATCH:
+		result = MatchRef::Deserialize(reader);
 	case TableReferenceType::CTE:
 	case TableReferenceType::INVALID:
 		throw InternalException("Unsupported type for TableRef::Deserialize");
