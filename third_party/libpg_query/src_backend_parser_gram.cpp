@@ -24805,7 +24805,7 @@ yyreduce:
 					star->except_list = (yyvsp[(4) - (6)].list);
 					star->replace_list = (yyvsp[(5) - (6)].list);
 					star->columns = true;
-
+					star->location = (yylsp[(1) - (4)]);
 					(yyval.node) = (PGNode *) star;
 				;}
     break;
