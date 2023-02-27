@@ -20,7 +20,7 @@ unique_ptr<PathPattern> PathPattern::Deserialize(Deserializer &deserializer) {
 	result->path_elements = reader.ReadRequiredSerializableList<PathElement>();
 	result->where_clause = reader.ReadOptional<ParsedExpression>(nullptr);
 	reader.Finalize();
-	return unique_ptr<PathPattern>();
+	return result;
 }
 
 bool PathPattern::Equals(const PathPattern *other_p) const {

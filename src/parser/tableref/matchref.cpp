@@ -41,7 +41,13 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 	}
 
 	// where clause
-	if (!where_clause->Equals(other->where_clause.get())) {
+	if (where_clause && other->where_clause.get()) {
+		if (!where_clause->Equals(other->where_clause.get())) {
+			return false;
+		}
+	}
+	if ((where_clause && !other->where_clause.get())
+	    || (!where_clause && other->where_clause.get())) {
 		return false;
 	}
 
