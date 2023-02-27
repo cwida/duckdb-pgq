@@ -41,11 +41,16 @@ def read_list_from_file(fname):
 
 kwdir = os.path.join(base_dir, 'keywords')
 unreserved_keywords = read_list_from_file(os.path.join(kwdir, 'unreserved_keywords.list'))
-pgq_unreserved_keywords = read_list_from_file(os.path.join(kwdir, 'pgq_unreserved_keywords.list'))
 colname_keywords = read_list_from_file(os.path.join(kwdir, 'column_name_keywords.list'))
 func_name_keywords = read_list_from_file(os.path.join(kwdir, 'func_name_keywords.list'))
 type_name_keywords = read_list_from_file(os.path.join(kwdir, 'type_name_keywords.list'))
 reserved_keywords = read_list_from_file(os.path.join(kwdir, 'reserved_keywords.list'))
+
+# SQL/PGQ introduces new keywords, in principle as unreserved keywords, but we need to avoid these as PGQ idents
+pgq_unreserved_keywords = read_list_from_file(os.path.join(kwdir, 'pgq_unreserved_keywords.list'))
+
+# COLUMNS is a PGQ-problematic ident, but exists already (so cannot be in the above), we do not allow it as a PGQ ident
+pgq_colname_keywords = list(filter(lambda word: word != "COLUMNS", colname_keywords))
 
 def strip_p(x):
     if x.endswith("_P"):
@@ -54,11 +59,12 @@ def strip_p(x):
         return x
 
 unreserved_keywords.sort(key=lambda x: strip_p(x))
-pgq_unreserved_keywords.sort(key=lambda x: strip_p(x))
 colname_keywords.sort(key=lambda x: strip_p(x))
 func_name_keywords.sort(key=lambda x: strip_p(x))
 type_name_keywords.sort(key=lambda x: strip_p(x))
 reserved_keywords.sort(key=lambda x: strip_p(x))
+pgq_unreserved_keywords.sort(key=lambda x: strip_p(x))
+pgq_colname_keywords.sort(key=lambda x: strip_p(x))
 
 statements = read_list_from_file(os.path.join(base_dir, 'statements.list'))
 statements.sort()
@@ -217,13 +223,14 @@ other_keyword = list(other_dict.keys())
 other_keyword.sort()
 
 kw_definitions = "unreserved_keyword: " + " | ".join(unreserved_keywords) + "\n"
-kw_definitions += "pgq_unreserved_keyword: " + " | ".join(pgq_unreserved_keywords) + "\n"
 kw_definitions += "col_name_keyword: " + " | ".join(colname_keywords) + "\n"
 kw_definitions += "func_name_keyword: " + " | ".join(func_name_keywords) + "\n"
 kw_definitions += "type_name_keyword: " + " | ".join(type_name_keywords) + "\n"
 kw_definitions += "other_keyword: " + " | ".join(other_keyword) + "\n"
 kw_definitions += "type_func_name_keyword: " + " | ".join(type_func_name_keywords) + "\n"
 kw_definitions += "reserved_keyword: " + " | ".join(reserved_keywords) + "\n"
+kw_definitions += "pgq_unreserved_keyword: " + " | ".join(pgq_unreserved_keywords) + "\n"
+kw_definitions += "pgq_col_name_keyword: " + " | ".join(pgq_colname_keywords) + "\n"
 text = text.replace("{{{ KEYWORD_DEFINITIONS }}}", kw_definitions)
 
 # types

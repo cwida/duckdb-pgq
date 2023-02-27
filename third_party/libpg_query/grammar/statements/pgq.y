@@ -39,7 +39,7 @@
   */
  PGQ_IDENT:		IDENT									{ $$ = $1; }
  			| unreserved_keyword					{ $$ = pstrdup($1); }
- 			| col_name_keyword						{ $$ = pstrdup($1); }
+ 			| pgq_col_name_keyword						{ $$ = pstrdup($1); }
  		;
 
 /* -------------------------------
@@ -228,8 +228,14 @@ PropertiesClause:
  * ------------------------------
  */
 
+GraphTableWhereOptional:
+		WHERE pgq_expr 			{ $$ = $2; }
+	|
+		/* EMPTY */				{ $$ = NULL; }
+		;
+
 GraphTableStmt:
-		'(' PGQ_IDENT ',' MATCH PathPatternList KeepOptional WHERE pgq_expr
+		'(' PGQ_IDENT ',' MATCH PathPatternList KeepOptional GraphTableWhereOptional
 		COLUMNS '(' ColumnList ')' ')' qualified_name
 			{
 				PGMatchClause *n = makeNode(PGMatchClause);
@@ -247,9 +253,9 @@ GraphTableStmt:
 						list = lnext(list);
 					}
 				}
-				n->where_clause = $8;
-				n->columns = $11;
-				n->graph_table = $14;
+				n->where_clause = $7;
+				n->columns = $10;
+				n->graph_table = $13;
 				$$ = (PGNode *) n;
 			}
 		;
