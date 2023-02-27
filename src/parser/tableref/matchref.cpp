@@ -18,6 +18,10 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 		return false;
 	}
 
+	if (path_list.size() != other->path_list.size()) {
+		return false;
+	}
+
 	// path_list
 	for (idx_t i = 0; i < path_list.size(); i++) {
 		if (!path_list[i]->Equals(other->path_list[i].get())) {
@@ -25,9 +29,15 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 		}
 	}
 
-	// columns
-	if (column_list != other->column_list) {
+	if (column_list.size() != column_list.size()) {
 		return false;
+	}
+
+	// columns
+	for (idx_t i = 0; i < column_list.size(); i++) {
+		if (!column_list[i]->Equals(other->column_list[i].get())) {
+			return false;
+		}
 	}
 
 	// where clause
