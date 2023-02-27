@@ -1,10 +1,9 @@
 
 #pragma once
 
-#include "duckdb/parser/tableref.hpp"
-#include "duckdb/parser/graph_element_pattern.hpp"
 #include "duckdb/common/vector.hpp"
-
+#include "duckdb/parser/path_pattern.hpp"
+#include "duckdb/parser/tableref.hpp"
 
 namespace duckdb {
 

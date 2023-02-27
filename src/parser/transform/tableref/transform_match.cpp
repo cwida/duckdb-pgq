@@ -2,9 +2,14 @@
 
 namespace duckdb {
 
-unique_ptr<GraphElementPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPattern *root) {
-	auto result = make_unique<GraphElementPattern>();
+unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPattern *root) {
+	auto result = make_unique<PathPattern>();
 
+	for (auto node = root->path->head; node != nullptr; node = lnext(node)) {
+		//Parse  path element
+
+		result->path_elements.push_back();
+	}
 
 	return result;
 }

@@ -170,6 +170,9 @@ unique_ptr<BoundTableRef> Binder::Bind(TableRef &ref) {
 	case TableReferenceType::EXPRESSION_LIST:
 		result = Bind((ExpressionListRef &)ref);
 		break;
+	case TableReferenceType::MATCH:
+		result = Bind((MatchRef &)ref);
+		break;
 	case TableReferenceType::CTE:
 	case TableReferenceType::INVALID:
 		throw InternalException("Unknown table ref type");
@@ -202,6 +205,8 @@ unique_ptr<LogicalOperator> Binder::CreatePlan(BoundTableRef &ref) {
 	case TableReferenceType::CTE:
 		root = CreatePlan((BoundCTERef &)ref);
 		break;
+//	case TableReferenceType::MATCH:
+//		root = CreatePlan((BoundMatchRef &)ref);
 	case TableReferenceType::INVALID:
 		throw InternalException("Unsupported bound table ref type");
 	}

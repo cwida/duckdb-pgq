@@ -6,17 +6,19 @@
 
 namespace duckdb {
 
-class GraphElementPattern {
+class PathPattern {
+public: 
+	vector<unique_ptr<PathElement>> path_elements;
 public:
-	GraphElementPattern();
+	PathPattern();
 
 	unique_ptr<ParsedExpression> where_clause;
 
-	bool Equals(const GraphElementPattern *other_p) const;
+	bool Equals(const PathPattern *other_p) const;
 
 	void Serialize(Serializer &serializer) const;
 
-	static unique_ptr<GraphElementPattern> Deserialize(Deserializer &deserializer);
+	static unique_ptr<PathPattern> Deserialize(Deserializer &deserializer);
 
 };
 
