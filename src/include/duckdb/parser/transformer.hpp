@@ -16,6 +16,7 @@
 #include "duckdb/parser/group_by_node.hpp"
 #include "duckdb/parser/parsed_data/create_info.hpp"
 #include "duckdb/parser/path_pattern.hpp"
+#include "duckdb/parser/path_element.hpp"
 #include "duckdb/parser/qualified_name.hpp"
 #include "duckdb/parser/query_node.hpp"
 #include "duckdb/parser/tokens.hpp"
@@ -288,12 +289,14 @@ private:
 	unique_ptr<TableRef> TransformMatch(duckdb_libpgquery::PGMatchClause *root);
 
 	//===--------------------------------------------------------------------===//
-	// SQL/pGQ Property graph transform
+	// SQL/PGQ Property graph transform
 	//===--------------------------------------------------------------------===//
 	//! Transform a node/edge table create (SQL/PGQ)
 	unique_ptr<PropertyGraphTable> TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *node);
+	//! Transform a path pattern (SQL/PGQ)
+	unique_ptr<PathPattern> TransformPath(duckdb_libpgquery::PGPathPattern *root);
 	//! Transform a path element (SQL/PGQ)
-	unique_ptr<GraphElementPattern> TransformPath(duckdb_libpgquery::PGPathPattern *root);
+	unique_ptr<PathElement> TransformPathElement(duckdb_libpgquery::PGPathElement *element);
 
 	//! Transform a range var into a (schema) qualified name
 	QualifiedName TransformQualifiedName(duckdb_libpgquery::PGRangeVar *root);

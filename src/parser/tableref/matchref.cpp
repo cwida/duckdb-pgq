@@ -57,7 +57,7 @@ unique_ptr<TableRef> MatchRef::Copy() {
 
 void MatchRef::Serialize(FieldWriter &writer) const {
 	writer.WriteString(pg_name);
-	writer.WriteSerializableList<GraphElementPattern>(path_list);
+	writer.WriteSerializableList<PathPattern>(path_list);
 	writer.WriteSerializableList<ParsedExpression>(column_list);
 	writer.WriteSerializable<ParsedExpression>(*where_clause);
 }
@@ -66,7 +66,7 @@ unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
 	auto result = make_unique<MatchRef>();
 
 	result->pg_name = reader.ReadRequired<string>();
-	result->path_list = reader.ReadRequiredSerializableList<GraphElementPattern>();
+	result->path_list = reader.ReadRequiredSerializableList<PathPattern>();
 	result->column_list = reader.ReadRequiredSerializableList<ParsedExpression>();
 	result->where_clause = reader.ReadRequiredSerializable<ParsedExpression>();
 
