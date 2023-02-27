@@ -33,5 +33,16 @@ bool PathPattern::Equals(const PathPattern *other_p) const {
 
 	return true;
 }
+unique_ptr<PathPattern> PathPattern::Copy() {
+	auto result = make_unique<PathPattern>();
+
+	for (auto &path_element: path_elements) {
+		result->path_elements.push_back(std::move(path_element));
+	}
+
+	result->where_clause = std::move(where_clause);
+
+	return result;
+}
 
 }

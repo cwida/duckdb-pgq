@@ -8,12 +8,13 @@
 namespace duckdb {
 
 class PathPattern {
-public: 
-	vector<unique_ptr<PathElement>> path_elements;
 public:
+	unique_ptr<ParsedExpression> where_clause;
+	vector<unique_ptr<PathElement>> path_elements;
+
 	PathPattern();
 
-	unique_ptr<ParsedExpression> where_clause;
+	unique_ptr<PathPattern> Copy();
 
 	bool Equals(const PathPattern *other_p) const;
 

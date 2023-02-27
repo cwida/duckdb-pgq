@@ -30,5 +30,13 @@ unique_ptr<PathElement> PathElement::Deserialize(Deserializer &deserializer) {
 	result->variable_binding = reader.ReadRequired<string>();
 	return result;
 }
+unique_ptr<PathElement> PathElement::Copy() {
+	auto result = make_unique<PathElement>();
+	result->match_type = match_type;
+	result->label = label;
+	result->variable_binding = variable_binding;
+
+	return result;
+}
 
 }

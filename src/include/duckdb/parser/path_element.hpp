@@ -20,6 +20,9 @@ public:
 	std::string variable_binding;
 
 public:
+
+	unique_ptr<PathElement> Copy();
+
 	bool Equals(const PathElement *other_p) const;
 
 	void Serialize(Serializer &serializer) const;

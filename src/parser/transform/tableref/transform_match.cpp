@@ -58,7 +58,8 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 
 	for (auto node = root->paths->head; node != nullptr; node = lnext(node)) {
 		auto path = reinterpret_cast<duckdb_libpgquery::PGPathPattern *>(node->data.ptr_value);
-		TransformPath(path);
+		auto transformed_path = TransformPath(path);
+		result->path_list.push_back(std::move(transformed_path));
 	}
 
 	for (auto node = root->columns->head; node != nullptr; node = lnext(node)) {
