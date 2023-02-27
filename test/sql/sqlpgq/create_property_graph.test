@@ -24,7 +24,7 @@ statement ok
 CREATE PROPERTY GRAPH pg
 VERTEX TABLES (
     Student PROPERTIES ( id, name ) LABEL Person,
-    School as school_alias PROPERTIES ( school_id, school_name) LABEL School IN School_kind (Hogeschool, University)
+    School as school_alias PROPERTIES ( school_id, school_name ) LABEL School IN School_kind (Hogeschool, University)
     )
 EDGE TABLES (
     know    SOURCE KEY ( src ) REFERENCES Student ( id )

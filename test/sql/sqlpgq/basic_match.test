@@ -39,7 +39,6 @@ statement ok
 SELECT study.id
 FROM GRAPH_TABLE (pg,
     MATCH
-    (a:Person WHERE a.name = 'Daniel')
-    WHERE a.id = 0
+    (a:Person)
     COLUMNS (a.id)
     ) study
