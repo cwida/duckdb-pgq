@@ -3,6 +3,7 @@
 
 #include "duckdb/parser/tableref.hpp"
 #include "duckdb/parser/parsed_expression.hpp"
+#include "duckdb/parser/path_element.hpp"
 
 namespace duckdb {
 

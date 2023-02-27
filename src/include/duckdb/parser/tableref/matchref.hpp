@@ -14,7 +14,7 @@ public:
 	}
 
 	string pg_name;
-	vector<unique_ptr<GraphElementPattern>> path_list;
+	vector<unique_ptr<PathPattern>> path_list;
 
 	vector<unique_ptr<ParsedExpression>> column_list;
 

@@ -2,13 +2,24 @@
 
 namespace duckdb {
 
+unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGPathElement *element) {
+	auto result = make_unique<PathElement>();
+	result->match_type = "";
+	result->label = "";
+	result->variable_binding = "";
+
+	return result;
+}
+
+
 unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPattern *root) {
 	auto result = make_unique<PathPattern>();
 
 	for (auto node = root->path->head; node != nullptr; node = lnext(node)) {
 		//Parse  path element
-
-		result->path_elements.push_back();
+		auto element = reinterpret_cast<duckdb_libpgquery::PGPathElement *>(node);
+		TransformPathElement(element);
+//		result->path_elements.push_back();
 	}
 
 	return result;
