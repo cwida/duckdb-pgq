@@ -3,9 +3,17 @@
 
 namespace duckdb {
 
+enum class PGQMatchType : uint8_t {
+	MATCH_VERTEX = 0,
+	MATCH_EDGE_ANY = 1,
+	MATCH_EDGE_LEFT = 2,
+	MATCH_EDGE_RIGHT = 3,
+	MATCH_EDGE_LEFT_RIGHT = 4
+};
+
 class PathElement {
 public:
-	std::string match_type; // probably better enum
+	PGQMatchType match_type; // probably better enum
 
 	std::string label;
 

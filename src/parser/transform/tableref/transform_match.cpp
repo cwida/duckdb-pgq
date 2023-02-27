@@ -3,10 +3,30 @@
 namespace duckdb {
 
 unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGPathElement *element) {
+	//! Vertex or edge pattern
 	auto result = make_unique<PathElement>();
-	result->match_type = "";
-	result->label = "";
-	result->variable_binding = "";
+	switch(element->match_type) {
+	case duckdb_libpgquery::PG_MATCH_VERTEX:
+		result->match_type = PGQMatchType::MATCH_VERTEX;
+		break;
+	case duckdb_libpgquery::PG_MATCH_EDGE_ANY:
+		result->match_type = PGQMatchType::MATCH_EDGE_ANY;
+		break;
+	case duckdb_libpgquery::PG_MATCH_EDGE_LEFT:
+		result->match_type = PGQMatchType::MATCH_EDGE_LEFT;
+		break;
+	case duckdb_libpgquery::PG_MATCH_EDGE_RIGHT:
+		result->match_type = PGQMatchType::MATCH_EDGE_RIGHT;
+		break;
+	case duckdb_libpgquery::PG_MATCH_EDGE_LEFT_RIGHT:
+		result->match_type = PGQMatchType::MATCH_EDGE_LEFT_RIGHT;
+		break;
+	default:
+		throw InternalException("Unrecognized match type detected");
+	}
+	auto label_expression = reinterpret_cast<duckdb_libpgquery::PGLabelTest *>(element->label_expr);
+	result->label = label_expression->name;
+	result->variable_binding = element->element_var;
 
 	return result;
 }
@@ -15,11 +35,12 @@ unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGP
 unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPattern *root) {
 	auto result = make_unique<PathPattern>();
 
+	//! Path sequence
 	for (auto node = root->path->head; node != nullptr; node = lnext(node)) {
 		//Parse  path element
-		auto element = reinterpret_cast<duckdb_libpgquery::PGPathElement *>(node);
-		TransformPathElement(element);
-//		result->path_elements.push_back();
+		auto element = reinterpret_cast<duckdb_libpgquery::PGPathElement *>(node->data.ptr_value);
+		auto path_element = TransformPathElement(element);
+		result->path_elements.push_back(std::move(path_element));
 	}
 
 	return result;

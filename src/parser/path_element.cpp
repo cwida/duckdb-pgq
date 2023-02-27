@@ -17,7 +17,7 @@ bool PathElement::Equals(const PathElement *other_p) const {
 
 void PathElement::Serialize(Serializer &serializer) const {
 	FieldWriter writer(serializer);
-	writer.WriteString(match_type);
+	writer.WriteField<PGQMatchType>(match_type);
 	writer.WriteString(label);
 	writer.WriteString(variable_binding);
 }
@@ -25,7 +25,7 @@ void PathElement::Serialize(Serializer &serializer) const {
 unique_ptr<PathElement> PathElement::Deserialize(Deserializer &deserializer) {
 	auto result = make_unique<PathElement>();
 	FieldReader reader(deserializer);
-	result->match_type = reader.ReadRequired<string>();
+	result->match_type = reader.ReadRequired<PGQMatchType>();
 	result->label = reader.ReadRequired<string>();
 	result->variable_binding = reader.ReadRequired<string>();
 	return result;
