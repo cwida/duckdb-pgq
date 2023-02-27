@@ -26,9 +26,9 @@ public:
 
 	unique_ptr<TableRef> Copy() override;
 
-	//! Serializes a blob into a DummyTableRef
+	//! Serializes a blob into a MatchRef
 	void Serialize(FieldWriter &serializer) const override;
-	//! Deserializes a blob back into a DummyTableRef
+	//! Deserializes a blob back into a MatchRef
 	static unique_ptr<TableRef> Deserialize(FieldReader &source);
 
 };

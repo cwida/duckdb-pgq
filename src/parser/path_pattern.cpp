@@ -9,20 +9,28 @@ PathPattern::PathPattern() {
 
 void PathPattern::Serialize(Serializer &serializer) const {
 	FieldWriter writer(serializer);
-	writer.WriteSerializableList<PathElement>(path_elements);
-	writer.WriteSerializable<ParsedExpression>(*where_clause);
+	writer.WriteSerializableList(path_elements);
+	writer.WriteOptional(where_clause);
+	writer.Finalize();
 }
 
 unique_ptr<PathPattern> PathPattern::Deserialize(Deserializer &deserializer) {
 	auto result = make_unique<PathPattern>();
 	FieldReader reader(deserializer);
 	result->path_elements = reader.ReadRequiredSerializableList<PathElement>();
-	result->where_clause = reader.ReadRequiredSerializable<ParsedExpression>();
+	result->where_clause = reader.ReadOptional<ParsedExpression>(nullptr);
+	reader.Finalize();
 	return unique_ptr<PathPattern>();
 }
 
 bool PathPattern::Equals(const PathPattern *other_p) const {
-	if (!where_clause->Equals(other_p->where_clause.get())) {
+	if (where_clause && other_p->where_clause.get()) {
+		if (!where_clause->Equals(other_p->where_clause.get())) {
+			return false;
+		}
+	}
+	if ((where_clause && !other_p->where_clause.get())
+	    || (!where_clause && other_p->where_clause.get())) {
 		return false;
 	}
 	for (idx_t idx = 0; idx < path_elements.size(); idx++) {
@@ -37,10 +45,12 @@ unique_ptr<PathPattern> PathPattern::Copy() {
 	auto result = make_unique<PathPattern>();
 
 	for (auto &path_element: path_elements) {
-		result->path_elements.push_back(std::move(path_element));
+		result->path_elements.push_back(path_element->Copy());
 	}
 
-	result->where_clause = std::move(where_clause);
+	if (result->where_clause) {
+		result->where_clause = where_clause->Copy();
+	}
 
 	return result;
 }

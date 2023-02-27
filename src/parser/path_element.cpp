@@ -20,6 +20,7 @@ void PathElement::Serialize(Serializer &serializer) const {
 	writer.WriteField<PGQMatchType>(match_type);
 	writer.WriteString(label);
 	writer.WriteString(variable_binding);
+	writer.Finalize();
 }
 
 unique_ptr<PathElement> PathElement::Deserialize(Deserializer &deserializer) {
@@ -28,6 +29,7 @@ unique_ptr<PathElement> PathElement::Deserialize(Deserializer &deserializer) {
 	result->match_type = reader.ReadRequired<PGQMatchType>();
 	result->label = reader.ReadRequired<string>();
 	result->variable_binding = reader.ReadRequired<string>();
+	reader.Finalize();
 	return result;
 }
 unique_ptr<PathElement> PathElement::Copy() {

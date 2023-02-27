@@ -43,11 +43,11 @@ unique_ptr<TableRef> MatchRef::Copy() {
 	copy->pg_name = pg_name;
 
 	for (auto &path : path_list) {
-		copy->path_list.push_back(std::move(path));
+		copy->path_list.push_back(path->Copy());
 	}
 
 	for (auto &column : column_list) {
-		copy->column_list.push_back(std::move(column));
+		copy->column_list.push_back(column->Copy());
 	}
 
 	copy->where_clause = std::move(where_clause);
@@ -59,7 +59,7 @@ void MatchRef::Serialize(FieldWriter &writer) const {
 	writer.WriteString(pg_name);
 	writer.WriteSerializableList<PathPattern>(path_list);
 	writer.WriteSerializableList<ParsedExpression>(column_list);
-	writer.WriteSerializable<ParsedExpression>(*where_clause);
+	writer.WriteOptional(where_clause);
 }
 
 unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
@@ -68,8 +68,7 @@ unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
 	result->pg_name = reader.ReadRequired<string>();
 	result->path_list = reader.ReadRequiredSerializableList<PathPattern>();
 	result->column_list = reader.ReadRequiredSerializableList<ParsedExpression>();
-	result->where_clause = reader.ReadRequiredSerializable<ParsedExpression>();
-
+	result->where_clause = reader.ReadOptional<ParsedExpression>(nullptr);
 	return result;
 }
 
