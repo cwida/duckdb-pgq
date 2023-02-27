@@ -80,6 +80,7 @@ unique_ptr<TableRef> TableRef::Deserialize(Deserializer &source) {
 		break;
 	case TableReferenceType::MATCH:
 		result = MatchRef::Deserialize(reader);
+		break;
 	case TableReferenceType::CTE:
 	case TableReferenceType::INVALID:
 		throw InternalException("Unsupported type for TableRef::Deserialize");
