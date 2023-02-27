@@ -512,13 +512,13 @@ CostOptional:
 		;
 
 SubPath:
-		PathVariableOptional PathModeOptional PathConcatenation WHERE pgq_expr  CostOptional
+		PathVariableOptional PathModeOptional PathConcatenation GraphTableWhereOptional  CostOptional
 			{
-				PGPathInfo *n = (PGPathInfo*) $6;
+				PGPathInfo *n = (PGPathInfo*) $5;
 				n->var_name = $1;
 				n->mode = (PGPathMode) $2;
 				n->path = $3;
-				n->where_clause = $5;
+				n->where_clause = $4;
 				$$ = (PGNode*) n;
 			}
 		;
@@ -698,11 +698,11 @@ VariableOptional:
 	    ;
 
 FullElementSpec:
-        VariableOptional LabelExpressionOptional WHERE pgq_expr  CostOptional
+        VariableOptional LabelExpressionOptional GraphTableWhereOptional  CostOptional
 			{
-				PGPathInfo *n = (PGPathInfo*) $5;
+				PGPathInfo *n = (PGPathInfo*) $4;
 				n->var_name = $1;
-				n->where_clause = $4;
+				n->where_clause = $3;
 				n->label_expr = (PGLabelTest*) $2;
 				$$ = (PGNode*) n;
 			}
