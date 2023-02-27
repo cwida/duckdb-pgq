@@ -18,6 +18,7 @@
 #include "duckdb/parser/qualified_name.hpp"
 #include "duckdb/parser/query_node.hpp"
 #include "duckdb/parser/tokens.hpp"
+#include "duckdb/parser/graph_element_pattern.hpp"
 #include "nodes/parsenodes.hpp"
 #include "pg_definitions.hpp"
 #include "property_graph_table.hpp"
@@ -291,7 +292,8 @@ private:
 	//===--------------------------------------------------------------------===//
 	//! Transform a node/edge table create (SQL/PGQ)
 	unique_ptr<PropertyGraphTable> TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *node);
-
+	//! Transform a path element (SQL/PGQ)
+	unique_ptr<GraphElementPattern> TransformPath(duckdb_libpgquery::PGPathPattern *root);
 
 	//! Transform a range var into a (schema) qualified name
 	QualifiedName TransformQualifiedName(duckdb_libpgquery::PGRangeVar *root);
