@@ -12,7 +12,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 	auto pg_table = reinterpret_cast<CreatePropertyGraphInfo *>(pg_table_entry->second.get());
 
-
 	auto select_node = make_unique<SelectNode>();
 	auto from_clause = make_unique<BaseTableRef>();
 	auto subquery = make_unique<SelectStatement>();
