@@ -14,10 +14,22 @@ string MatchRef::ToString() const {
 		}
 		for (idx_t j = 0; j < path_list[i]->path_elements.size(); j++) {
 			auto &path_element = path_list[i]->path_elements[j];
-			if (path_element->match_type == PGQMatchType::MATCH_VERTEX) {
+			switch(path_element->match_type) {
+			case PGQMatchType::MATCH_VERTEX:
 				result += "(" + path_element->variable_binding + ":" + path_element->label + ")";
-			} else {
-				// TODO Implement for the edges
+				break;
+			case PGQMatchType::MATCH_EDGE_ANY:
+				result += "-[" + path_element->variable_binding + ":" + path_element->label + "]-";
+				break;
+			case PGQMatchType::MATCH_EDGE_LEFT:
+				result += "<-[" + path_element->variable_binding + ":" + path_element->label + "]-";
+				break;
+			case PGQMatchType::MATCH_EDGE_RIGHT:
+				result += "-[" + path_element->variable_binding + ":" + path_element->label + "]->";
+				break;
+			case PGQMatchType::MATCH_EDGE_LEFT_RIGHT:
+				result += "<-[" + path_element->variable_binding + ":" + path_element->label + "]->";
+				break;
 			}
 		}
 	}

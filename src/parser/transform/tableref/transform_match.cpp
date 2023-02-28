@@ -68,7 +68,6 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 
 	for (auto node = root->columns->head; node != nullptr; node = lnext(node)) {
 		auto column = reinterpret_cast<duckdb_libpgquery::PGList *>(node->data.ptr_value);
-		auto column_spec = column->head;
 		auto target = reinterpret_cast<duckdb_libpgquery::PGResTarget *>(column->head->next->data.ptr_value);
 		auto res_target = TransformResTarget(target);
 		result->column_list.push_back(std::move(res_target));
