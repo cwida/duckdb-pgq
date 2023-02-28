@@ -37,7 +37,7 @@ unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPatt
 
 	//! Path sequence
 	for (auto node = root->path->head; node != nullptr; node = lnext(node)) {
-		//Parse  path element
+		//Parse path element
 		auto element = reinterpret_cast<duckdb_libpgquery::PGPathElement *>(node->data.ptr_value);
 		auto path_element = TransformPathElement(element);
 		result->path_elements.push_back(std::move(path_element));
@@ -56,7 +56,7 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 	auto alias = TransformQualifiedName(root->graph_table);
 	result->alias = alias.name;
 
-	if (result->where_clause) {
+	if (root->where_clause) {
 		result->where_clause = TransformExpression(root->where_clause);
 	}
 

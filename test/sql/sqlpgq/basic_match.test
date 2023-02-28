@@ -46,3 +46,15 @@ FROM GRAPH_TABLE (pg,
 2
 3
 4
+
+query II
+SELECT study.id, study.name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)
+    WHERE a.id = 0
+    COLUMNS (a.id, a.name)
+    ) study
+----
+0	Daniel
+
