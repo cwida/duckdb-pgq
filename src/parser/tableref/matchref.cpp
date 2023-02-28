@@ -1,12 +1,35 @@
 
 #include "duckdb/parser/tableref/matchref.hpp"
+#include "duckdb/parser/expression/columnref_expression.hpp"
 
 namespace duckdb {
 
 string MatchRef::ToString() const {
-    // TODO Implement
+    string result = "GRAPH_TABLE (";
+	result += pg_name + ", MATCH";
 
-	return "";
+	for (idx_t i = 0; i < path_list.size(); i++) {
+		if (i > 0) {
+			result += ",";
+		}
+		for (idx_t j = 0; j < path_list[i]->path_elements.size(); j++) {
+			auto &path_element = path_list[i]->path_elements[j];
+			if (path_element->match_type == PGQMatchType::MATCH_VERTEX) {
+				result += "(" + path_element->variable_binding + ":" + path_element->label + ")";
+			} else {
+				// TODO Implement for the edges
+			}
+		}
+	}
+	result += "\nCOLUMNS (";
+	for (auto &c : column_list) {
+		auto &column = (ColumnRefExpression &)*c;
+		result += column.column_names[0] + "." + column.column_names[1];
+	}
+	result += ")\n";
+	result += ")" + alias;
+
+	return result;
 };
 bool MatchRef::Equals(const TableRef *other_p) const {
 	if (!TableRef::Equals(other_p)) {
@@ -15,6 +38,10 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 
 	auto other = (MatchRef *)other_p;
 	if (pg_name != other->pg_name) {
+		return false;
+	}
+
+	if (alias != other->alias) {
 		return false;
 	}
 
@@ -57,6 +84,7 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 unique_ptr<TableRef> MatchRef::Copy() {
 	auto copy = make_unique<MatchRef>();
 	copy->pg_name = pg_name;
+	copy->alias = alias;
 
 	for (auto &path : path_list) {
 		copy->path_list.push_back(path->Copy());
@@ -73,6 +101,7 @@ unique_ptr<TableRef> MatchRef::Copy() {
 
 void MatchRef::Serialize(FieldWriter &writer) const {
 	writer.WriteString(pg_name);
+	writer.WriteString(alias);
 	writer.WriteSerializableList<PathPattern>(path_list);
 	writer.WriteSerializableList<ParsedExpression>(column_list);
 	writer.WriteOptional(where_clause);
@@ -82,6 +111,7 @@ unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
 	auto result = make_unique<MatchRef>();
 
 	result->pg_name = reader.ReadRequired<string>();
+	result->alias = reader.ReadRequired<string>();
 	result->path_list = reader.ReadRequiredSerializableList<PathPattern>();
 	result->column_list = reader.ReadRequiredSerializableList<ParsedExpression>();
 	result->where_clause = reader.ReadOptional<ParsedExpression>(nullptr);
