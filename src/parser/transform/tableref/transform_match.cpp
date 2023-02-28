@@ -52,6 +52,10 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 	auto result = make_unique<MatchRef>();
 
 	result->pg_name = root->pg_name; // Name of the property graph to bind to
+
+	auto alias = TransformQualifiedName(root->graph_table);
+	result->alias = alias.name;
+
 	if (result->where_clause) {
 		result->where_clause = TransformExpression(root->where_clause);
 	}
