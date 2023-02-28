@@ -21,10 +21,15 @@ string MatchRef::ToString() const {
 			}
 		}
 	}
+	if (where_clause) {
+		result += "WHERE " + where_clause->ToString();
+	}
+
 	result += "\nCOLUMNS (";
-	for (auto &c : column_list) {
-		auto &column = (ColumnRefExpression &)*c;
-		result += column.column_names[0] + "." + column.column_names[1];
+	for (idx_t i = 0; i < column_list.size(); i++) {
+		auto &column = (ColumnRefExpression &)*column_list[i];
+		result += i > 0 ? ", " + column.column_names[0] + "." + column.column_names[1]
+		     : column.column_names[0] + "." + column.column_names[1];
 	}
 	result += ")\n";
 	result += ")" + alias;
@@ -93,8 +98,9 @@ unique_ptr<TableRef> MatchRef::Copy() {
 	for (auto &column : column_list) {
 		copy->column_list.push_back(column->Copy());
 	}
-
-	copy->where_clause = std::move(where_clause);
+	if (where_clause) {
+		copy->where_clause = where_clause->Copy();
+	}
 
 	return std::move(copy);
 }

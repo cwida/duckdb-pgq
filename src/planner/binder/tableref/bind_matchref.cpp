@@ -35,6 +35,8 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 	select_node->select_list = std::move(ref.column_list);
 	select_node->from_table = std::move(from_clause);
 
+	select_node->where_clause = std::move(ref.where_clause);
+
 	subquery->node = std::move(select_node);
 
 	auto result = make_unique<SubqueryRef>(std::move(subquery), ref.alias);
