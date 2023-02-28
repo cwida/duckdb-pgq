@@ -63,8 +63,8 @@ void PropertyGraphTable::Serialize(Serializer &serializer) const {
 	}
 }
 
-unique_ptr<PropertyGraphTable> PropertyGraphTable::Deserialize(Deserializer &source) {
-	auto pg_table = make_unique<PropertyGraphTable>();
+shared_ptr<PropertyGraphTable> PropertyGraphTable::Deserialize(Deserializer &source) {
+	auto pg_table = make_shared<PropertyGraphTable>();
 
 	pg_table->table_name = source.Read<string>();
 	source.ReadStringVector(pg_table->column_names);
@@ -87,8 +87,8 @@ unique_ptr<PropertyGraphTable> PropertyGraphTable::Deserialize(Deserializer &sou
 	return pg_table;
 }
 
-unique_ptr<PropertyGraphTable> PropertyGraphTable::Copy() {
-	auto result = make_unique<PropertyGraphTable>();
+shared_ptr<PropertyGraphTable> PropertyGraphTable::Copy() {
+	auto result = make_shared<PropertyGraphTable>();
 	result->table_name = table_name;
 	for (auto &column_name : column_names) {
 		result->column_names.push_back(column_name);
