@@ -32,7 +32,7 @@ void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &
 	auto &client_data = ClientData::Get(context.client);
 
 	//! During the binder we already check if the property graph exists
-	client_data.registered_property_graphs[info->property_graph_name] = info.get();
+	client_data.registered_property_graphs[info->property_graph_name] = info->Copy();
 
 	state.finished = true;
 }
