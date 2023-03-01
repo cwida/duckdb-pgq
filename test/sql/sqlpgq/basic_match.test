@@ -34,30 +34,30 @@ EDGE TABLES (
     );
 
 
-#query I
-#SELECT study.id
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)
-#    COLUMNS (a.id)
-#    ) study
-#----
-#0
-#1
-#2
-#3
-#4
-#
-#query II
-#SELECT study.a_id, study.name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)
-#    WHERE a.id = 0
-#    COLUMNS (a.id as a_id, a.name)
-#    ) study
-#----
-#0	Daniel
+query I
+SELECT study.id
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)
+    COLUMNS (a.id)
+    ) study
+----
+0
+1
+2
+3
+4
+
+query II
+SELECT study.a_id, study.name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)
+    WHERE a.id = 0
+    COLUMNS (a.id as a_id, a.name)
+    ) study
+----
+0	Daniel
 
 
 query II
@@ -67,7 +67,10 @@ FROM GRAPH_TABLE (pg,
     (a:Person)-[k:Knows]->(b:Person)
     WHERE a.id = 0
     COLUMNS (a.name as a_name, b.name as b_name)
-    ) study
+    ) study;
 ----
-0	Daniel;
+Daniel	Tavneet
+Daniel	Gabor
+Daniel	Peter
+
 
