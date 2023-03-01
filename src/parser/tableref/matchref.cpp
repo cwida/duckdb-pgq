@@ -33,7 +33,7 @@ string MatchRef::ToString() const {
 			}
 		}
 	}
-	result += where_clause ? "WHERE " + where_clause->ToString() : "";
+	result += where_clause ? "\nWHERE " + where_clause->ToString() : "";
 
 	result += "\nCOLUMNS (";
 	for (idx_t i = 0; i < column_list.size(); i++) {
