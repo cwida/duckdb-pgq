@@ -77,55 +77,48 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 		auto previous_vertex_table = FindGraphTable(previous_vertex_element, *pg_table);
 
 		alias_map[previous_vertex_element->variable_binding] = previous_vertex_table->table_name;
-		if (path_list->path_elements.size() == 1) {
-			auto from_clause = make_unique<BaseTableRef>();
-			auto graph_table = FindGraphTable(previous_vertex_element, *pg_table);
-			from_clause->table_name = graph_table->table_name;
-			from_clause->alias = previous_vertex_element->variable_binding;
-			select_node->from_table = std::move(from_clause);
-		} else {
-			for (idx_t idx_j = 1; idx_j < ref.path_list[idx_i]->path_elements.size(); idx_j = idx_j + 2) {
-				auto &edge_element = ref.path_list[idx_i]->path_elements[idx_j];
-				auto &next_vertex_element = path_list->path_elements[idx_j + 1];
-				if (next_vertex_element->match_type != PGQMatchType::MATCH_VERTEX ||
-				    previous_vertex_element->match_type != PGQMatchType::MATCH_VERTEX) {
-					throw BinderException("Vertex and edge patterns must be alternated.");
-				}
 
-				auto next_vertex_table = FindGraphTable(next_vertex_element, *pg_table);
-				auto edge_table = FindGraphTable(edge_element, *pg_table);
-
-				// check aliases
-				alias_map[next_vertex_element->variable_binding] = next_vertex_table->table_name;
-				alias_map[edge_element->variable_binding] = edge_table->table_name;
-
-				switch(edge_element->match_type) {
-				case PGQMatchType::MATCH_EDGE_ANY:
-					throw NotImplementedException("The match statement contains a undirected edge pattern which is not yet implemented.");
-				case PGQMatchType::MATCH_EDGE_LEFT:
-					CheckEdgeTableConstraints(next_vertex_table->table_name, previous_vertex_table->table_name, edge_table);
-					break;
-				case PGQMatchType::MATCH_EDGE_RIGHT:
-					CheckEdgeTableConstraints(previous_vertex_table->table_name, next_vertex_table->table_name, edge_table);
-					conditions.push_back(CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
-					                                               previous_vertex_element->variable_binding, edge_element->variable_binding));
-					conditions.push_back(CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
-					                                               next_vertex_element->variable_binding, edge_element->variable_binding));
-					previous_vertex_element = std::move(next_vertex_element);
-					break;
-				case PGQMatchType::MATCH_EDGE_LEFT_RIGHT:
-					break;
-				default:
-					throw InternalException("Unknown match type found");
-				}
-				// Check the edge type
-				// If (a)-[b]->(c) 	-> 	b.src = a.id AND b.dst = c.id
-				// If (a)<-[b]-(c) 	-> 	b.dst = a.id AND b.src = c.id
-				// If (a)-[b]-(c)  	-> 	(b.src = a.id AND b.dst = c.id) OR
-				// 						(b.dst = a.id AND b.src = c.id)
-				// If (a)<-[b]->(c)	->  (b.src = a.id AND b.dst = c.id) AND
-				//						(b.dst = a.id AND b.src = c.id)
+		for (idx_t idx_j = 1; idx_j < ref.path_list[idx_i]->path_elements.size(); idx_j = idx_j + 2) {
+			auto &edge_element = ref.path_list[idx_i]->path_elements[idx_j];
+			auto &next_vertex_element = path_list->path_elements[idx_j + 1];
+			if (next_vertex_element->match_type != PGQMatchType::MATCH_VERTEX ||
+				previous_vertex_element->match_type != PGQMatchType::MATCH_VERTEX) {
+				throw BinderException("Vertex and edge patterns must be alternated.");
 			}
+
+			auto next_vertex_table = FindGraphTable(next_vertex_element, *pg_table);
+			auto edge_table = FindGraphTable(edge_element, *pg_table);
+
+			// check aliases
+			alias_map[next_vertex_element->variable_binding] = next_vertex_table->table_name;
+			alias_map[edge_element->variable_binding] = edge_table->table_name;
+
+			switch(edge_element->match_type) {
+			case PGQMatchType::MATCH_EDGE_ANY:
+				throw NotImplementedException("The match statement contains a undirected edge pattern which is not yet implemented.");
+			case PGQMatchType::MATCH_EDGE_LEFT:
+				CheckEdgeTableConstraints(next_vertex_table->table_name, previous_vertex_table->table_name, edge_table);
+				break;
+			case PGQMatchType::MATCH_EDGE_RIGHT:
+				CheckEdgeTableConstraints(previous_vertex_table->table_name, next_vertex_table->table_name, edge_table);
+				conditions.push_back(CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
+															   previous_vertex_element->variable_binding, edge_element->variable_binding));
+				conditions.push_back(CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+															   next_vertex_element->variable_binding, edge_element->variable_binding));
+				previous_vertex_element = std::move(next_vertex_element);
+				break;
+			case PGQMatchType::MATCH_EDGE_LEFT_RIGHT:
+				break;
+			default:
+				throw InternalException("Unknown match type found");
+			}
+			// Check the edge type
+			// If (a)-[b]->(c) 	-> 	b.src = a.id AND b.dst = c.id
+			// If (a)<-[b]-(c) 	-> 	b.dst = a.id AND b.src = c.id
+			// If (a)-[b]-(c)  	-> 	(b.src = a.id AND b.dst = c.id) OR
+			// 						(b.dst = a.id AND b.src = c.id)
+			// If (a)<-[b]->(c)	->  (b.src = a.id AND b.dst = c.id) AND
+			//						(b.dst = a.id AND b.src = c.id)
 		}
 	}
 
