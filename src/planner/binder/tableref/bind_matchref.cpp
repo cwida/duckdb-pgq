@@ -67,6 +67,8 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 	auto subquery = make_unique<SelectStatement>();
 	unordered_map<string, string> alias_map;
 
+	auto extra_alias_counter = 0;
+
 	for (idx_t idx_i = 0; idx_i < ref.path_list.size(); idx_i++) {
 		auto &path_list = ref.path_list[idx_i];
 		if (path_list->path_elements.size() % 2 == 0) {
@@ -94,10 +96,29 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 			alias_map[edge_element->variable_binding] = edge_table->table_name;
 
 			switch(edge_element->match_type) {
-			case PGQMatchType::MATCH_EDGE_ANY:
-				throw NotImplementedException("The match statement contains a undirected edge pattern which is not yet implemented.");
+			case PGQMatchType::MATCH_EDGE_ANY: {
+
+				auto src_left_expr = CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
+				                                               next_vertex_element->variable_binding, edge_element->variable_binding);
+				auto dst_left_expr = CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+				                                               previous_vertex_element->variable_binding, edge_element->variable_binding);
+
+				auto combined_left_expr = make_unique<ConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(src_left_expr), std::move(dst_left_expr));
+
+				auto src_right_expr = CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
+				                                                previous_vertex_element->variable_binding, edge_element->variable_binding);
+				auto dst_right_expr = CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+				                                                next_vertex_element->variable_binding, edge_element->variable_binding);
+				auto combined_right_expr = make_unique<ConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(src_right_expr), std::move(dst_right_expr));
+
+				auto combined_expr = make_unique<ConjunctionExpression>(ExpressionType::CONJUNCTION_OR, std::move(combined_left_expr), std::move(combined_right_expr));
+			}
 			case PGQMatchType::MATCH_EDGE_LEFT:
 				CheckEdgeTableConstraints(next_vertex_table->table_name, previous_vertex_table->table_name, edge_table);
+				conditions.push_back(CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
+				                                              next_vertex_element->variable_binding, edge_element->variable_binding));
+				conditions.push_back(CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+				                                               previous_vertex_element->variable_binding, edge_element->variable_binding));
 				break;
 			case PGQMatchType::MATCH_EDGE_RIGHT:
 				CheckEdgeTableConstraints(previous_vertex_table->table_name, next_vertex_table->table_name, edge_table);
@@ -105,13 +126,36 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 															   previous_vertex_element->variable_binding, edge_element->variable_binding));
 				conditions.push_back(CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
 															   next_vertex_element->variable_binding, edge_element->variable_binding));
-				previous_vertex_element = std::move(next_vertex_element);
 				break;
-			case PGQMatchType::MATCH_EDGE_LEFT_RIGHT:
+			case PGQMatchType::MATCH_EDGE_LEFT_RIGHT: {
+				auto src_left_expr = CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
+				                                               next_vertex_element->variable_binding, edge_element->variable_binding);
+				auto dst_left_expr = CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+				                                               previous_vertex_element->variable_binding, edge_element->variable_binding);
+
+				auto combined_left_expr = make_unique<ConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(src_left_expr), std::move(dst_left_expr));
+
+				auto additional_edge_alias = edge_element->variable_binding + std::to_string(extra_alias_counter);
+				extra_alias_counter++;
+
+				alias_map[additional_edge_alias] = edge_table->table_name;
+
+				auto src_right_expr = CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
+														   	previous_vertex_element->variable_binding, additional_edge_alias);
+				auto dst_right_expr = CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+																next_vertex_element->variable_binding, additional_edge_alias);
+				auto combined_right_expr = make_unique<ConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(src_right_expr), std::move(dst_right_expr));
+
+				auto combined_expr = make_unique<ConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(combined_left_expr), std::move(combined_right_expr));
+				conditions.push_back(std::move(combined_expr));
 				break;
+			}
+
 			default:
 				throw InternalException("Unknown match type found");
 			}
+			previous_vertex_element = std::move(next_vertex_element);
+
 			// Check the edge type
 			// If (a)-[b]->(c) 	-> 	b.src = a.id AND b.dst = c.id
 			// If (a)<-[b]-(c) 	-> 	b.dst = a.id AND b.src = c.id

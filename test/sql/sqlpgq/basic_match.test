@@ -17,7 +17,7 @@ statement ok
 INSERT INTO Student VALUES (0, 'Daniel'), (1, 'Tavneet'), (2, 'Gabor'), (3, 'Peter'), (4, 'David');
 
 statement ok
-INSERT INTO know VALUES (0,1, 10), (0,2, 11), (0,3, 12), (1,2, 14), (1,3, 15), (2,3, 16);
+INSERT INTO know VALUES (0,1, 10), (0,2, 11), (0,3, 12), (3,0, 13), (1,2, 14), (1,3, 15), (2,3, 16), (4,3, 17);
 
 # vertex table with alias
 #    School PROPERTIES ( school_id, school_name) LABEL School
@@ -65,12 +65,72 @@ SELECT study.a_name, study.b_name
 FROM GRAPH_TABLE (pg,
     MATCH
     (a:Person)-[k:Knows]->(b:Person)
-    WHERE a.id = 0
+    WHERE a.name = 'Daniel'
     COLUMNS (a.name as a_name, b.name as b_name)
     ) study;
 ----
 Daniel	Tavneet
 Daniel	Gabor
 Daniel	Peter
+
+#query II
+#SELECT study.a_name, study.b_name
+#FROM (SELECT a.name as a_name, b.name as b_name
+#       FROM Student a, Know k, Student b
+#       WHERE (a.id = k.src and b.id = k.dst) or (a.id = k.dst and b.id = k.src)
+#       )
+#       study
+#----
+#Daniel	Gabor
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]->(b:Person)
+    WHERE a.name = 'Daniel' and b.name = 'Gabor'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Daniel	Gabor
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)<-[k:Knows]-(b:Person)
+    WHERE a.name = 'Peter'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Peter	Daniel
+Peter	Tavneet
+Peter	Gabor
+Peter	David
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]-(b:Person)
+    WHERE a.name = 'Peter'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Peter	Daniel
+Peter	Tavneet
+Peter	Gabor
+Peter	David
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)<-[k:Knows]->(b:Person)
+    WHERE a.name = 'Peter'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Peter	Daniel
 
 
