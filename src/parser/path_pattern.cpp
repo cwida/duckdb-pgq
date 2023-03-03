@@ -3,10 +3,6 @@
 
 namespace duckdb {
 
-PathPattern::PathPattern() {
-
-}
-
 void PathPattern::Serialize(Serializer &serializer) const {
 	FieldWriter writer(serializer);
 	writer.WriteSerializableList(path_elements);
@@ -17,7 +13,7 @@ void PathPattern::Serialize(Serializer &serializer) const {
 unique_ptr<PathPattern> PathPattern::Deserialize(Deserializer &deserializer) {
 	auto result = make_unique<PathPattern>();
 	FieldReader reader(deserializer);
-	result->path_elements = reader.ReadRequiredSerializableList<PathElement>();
+	result->path_elements = reader.ReadRequiredSerializableList<PathReference>();
 	result->where_clause = reader.ReadOptional<ParsedExpression>(nullptr);
 	reader.Finalize();
 	return result;
@@ -31,6 +27,9 @@ bool PathPattern::Equals(const PathPattern *other_p) const {
 	}
 	if ((where_clause && !other_p->where_clause.get())
 	    || (!where_clause && other_p->where_clause.get())) {
+		return false;
+	}
+	if (path_elements.size() != other_p->path_elements.size()) {
 		return false;
 	}
 	for (idx_t idx = 0; idx < path_elements.size(); idx++) {

@@ -4,7 +4,7 @@ namespace duckdb {
 
 unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGPathElement *element) {
 	//! Vertex or edge pattern
-	auto result = make_unique<PathElement>();
+	auto result = make_unique<PathElement>(PGQPathReferenceType::PATH_ELEMENT);
 	switch(element->match_type) {
 	case duckdb_libpgquery::PG_MATCH_VERTEX:
 		result->match_type = PGQMatchType::MATCH_VERTEX;
@@ -27,6 +27,12 @@ unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGP
 	auto label_expression = reinterpret_cast<duckdb_libpgquery::PGLabelTest *>(element->label_expr);
 	result->label = label_expression->name;
 	result->variable_binding = element->element_var;
+	return result;
+}
+
+unique_ptr<SubPath> Transformer::TransformSubPathElement(duckdb_libpgquery::PGSubPath *element) {
+	auto result = make_unique<SubPath>(PGQPathReferenceType::SUBPATH);
+
 
 	return result;
 }
@@ -38,9 +44,16 @@ unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPatt
 	//! Path sequence
 	for (auto node = root->path->head; node != nullptr; node = lnext(node)) {
 		//Parse path element
-		auto element = reinterpret_cast<duckdb_libpgquery::PGPathElement *>(node->data.ptr_value);
-		auto path_element = TransformPathElement(element);
-		result->path_elements.push_back(std::move(path_element));
+		auto path_node = reinterpret_cast<duckdb_libpgquery::PGNode *>(node->data.ptr_value);
+		if (path_node->type == duckdb_libpgquery::T_PGPathElement) {
+			auto element = reinterpret_cast<duckdb_libpgquery::PGPathElement *>(path_node);
+			auto path_element = TransformPathElement(element);
+			result->path_elements.push_back(std::move(path_element));
+		} else if (path_node->type == duckdb_libpgquery::T_PGSubPath) {
+			auto subpath = reinterpret_cast<duckdb_libpgquery::PGSubPath *>(path_node);
+			auto subpath_element = TransformSubPathElement(subpath);
+			result->path_elements.push_back(std::move(subpath_element));
+		}
 	}
 
 	return result;
