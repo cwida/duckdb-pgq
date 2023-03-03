@@ -698,7 +698,7 @@ VariableOptional:
 	    ;
 
 FullElementSpec:
-        VariableOptional LabelExpressionOptional GraphTableWhereOptional  CostOptional
+        VariableOptional LabelExpressionOptional GraphTableWhereOptional CostOptional
 			{
 				PGPathInfo *n = (PGPathInfo*) $4;
 				n->var_name = $1;

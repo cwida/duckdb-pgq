@@ -9,28 +9,24 @@ string MatchRef::ToString() const {
 	result += pg_name + ", MATCH";
 
 	for (idx_t i = 0; i < path_list.size(); i++) {
-		if (i > 0) {
-			result += ",";
-		}
+		(i > 0) ? result += ", " : result;
 		for (idx_t j = 0; j < path_list[i]->path_elements.size(); j++) {
-			auto &path_element = path_list[i]->path_elements[j];
-			switch(path_element->match_type) {
-			case PGQMatchType::MATCH_VERTEX:
-				result += "(" + path_element->variable_binding + ":" + path_element->label + ")";
-				break;
-			case PGQMatchType::MATCH_EDGE_ANY:
-				result += "-[" + path_element->variable_binding + ":" + path_element->label + "]-";
-				break;
-			case PGQMatchType::MATCH_EDGE_LEFT:
-				result += "<-[" + path_element->variable_binding + ":" + path_element->label + "]-";
-				break;
-			case PGQMatchType::MATCH_EDGE_RIGHT:
-				result += "-[" + path_element->variable_binding + ":" + path_element->label + "]->";
-				break;
-			case PGQMatchType::MATCH_EDGE_LEFT_RIGHT:
-				result += "<-[" + path_element->variable_binding + ":" + path_element->label + "]->";
+			auto &path_reference = path_list[i]->path_elements[j];
+			switch(path_reference->path_reference_type) {
+			case PGQPathReferenceType::PATH_ELEMENT: {
+				auto path_element = reinterpret_cast<PathElement *>(path_reference.get());
+				result += " " + path_element->ToString();
 				break;
 			}
+			case PGQPathReferenceType::SUBPATH: {
+				auto subpath = reinterpret_cast<SubPath *>(path_reference.get());
+				result += " " + subpath->ToString();
+				break;
+			}
+			default:
+				throw InternalException("Unknown path reference type found in ToString()");
+			}
+
 		}
 	}
 	result += where_clause ? "\nWHERE " + where_clause->ToString() : "";

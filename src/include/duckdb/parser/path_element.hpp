@@ -1,5 +1,7 @@
 
 #pragma once
+#include "duckdb/parser/path_reference.hpp"
+
 
 namespace duckdb {
 
@@ -11,22 +13,27 @@ enum class PGQMatchType : uint8_t {
 	MATCH_EDGE_LEFT_RIGHT = 4
 };
 
-class PathElement {
+class PathElement : public PathReference {
 public:
-	PGQMatchType match_type; // probably better enum
+	PGQMatchType match_type;
 
 	std::string label;
 
 	std::string variable_binding;
 
 public:
+	explicit PathElement(PGQPathReferenceType path_reference_type) :
+		PathReference(path_reference_type) {
+	}
 
-	unique_ptr<PathElement> Copy();
+	string ToString() const override;
 
-	bool Equals(const PathElement *other_p) const;
+	unique_ptr<PathReference> Copy() override;
 
-	void Serialize(Serializer &serializer) const;
+	bool Equals(const PathReference *other_p) const override;
 
-	static unique_ptr<PathElement> Deserialize(Deserializer &deserializer);
+	void Serialize(FieldWriter &writer) const override;
+
+	static unique_ptr<PathReference> Deserialize(FieldReader &reader);
 };
 }

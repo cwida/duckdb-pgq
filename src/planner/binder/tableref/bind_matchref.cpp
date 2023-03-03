@@ -97,7 +97,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 			switch(edge_element->match_type) {
 			case PGQMatchType::MATCH_EDGE_ANY: {
-
 				auto src_left_expr = CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
 				                                               next_vertex_element->variable_binding, edge_element->variable_binding);
 				auto dst_left_expr = CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,

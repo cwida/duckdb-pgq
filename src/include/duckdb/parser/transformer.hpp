@@ -17,6 +17,7 @@
 #include "duckdb/parser/parsed_data/create_info.hpp"
 #include "duckdb/parser/path_pattern.hpp"
 #include "duckdb/parser/path_element.hpp"
+#include "duckdb/parser/subpath_element.hpp"
 #include "duckdb/parser/qualified_name.hpp"
 #include "duckdb/parser/query_node.hpp"
 #include "duckdb/parser/tokens.hpp"
@@ -297,6 +298,10 @@ private:
 	unique_ptr<PathPattern> TransformPath(duckdb_libpgquery::PGPathPattern *root);
 	//! Transform a path element (SQL/PGQ)
 	unique_ptr<PathElement> TransformPathElement(duckdb_libpgquery::PGPathElement *element);
+	//! Transform a subpath (SQL/PGQ)
+	unique_ptr<SubPath> TransformSubPathElement(duckdb_libpgquery::PGSubPath *element);
+
+
 
 	//! Transform a range var into a (schema) qualified name
 	QualifiedName TransformQualifiedName(duckdb_libpgquery::PGRangeVar *root);
