@@ -56,7 +56,7 @@ bool SubPath::Equals(const PathReference *other_p) const {
 	if (single_bind != other->single_bind) {
 		return false;
 	}
-	return false;
+	return true;
 
 }
 void SubPath::Serialize(FieldWriter &writer) const {
