@@ -32,7 +32,6 @@ unique_ptr<PathReference> PathElement::Deserialize(FieldReader &reader) {
 	result->match_type = reader.ReadRequired<PGQMatchType>();
 	result->label = reader.ReadRequired<string>();
 	result->variable_binding = reader.ReadRequired<string>();
-	reader.Finalize();
 	return result;
 }
 

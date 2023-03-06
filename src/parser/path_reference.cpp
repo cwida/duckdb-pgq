@@ -19,8 +19,8 @@ void PathReference::Serialize(Serializer &serializer) const {
 	writer.WriteField<PGQPathReferenceType>(path_reference_type);
 	Serialize(writer);
 	writer.Finalize();
-
 }
+
 unique_ptr<PathReference> PathReference::Deserialize(Deserializer &deserializer) {
 	FieldReader reader(deserializer);
 
