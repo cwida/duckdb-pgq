@@ -10,7 +10,7 @@ unique_ptr<PathReference> SubPath::Copy() {
 	for (auto &path : path_list) {
 		result->path_list.push_back(path->Copy());
 	}
-	if (result->where_clause) {
+	if (where_clause) {
 		result->where_clause = where_clause->Copy();
 	}
 	result->lower = lower;
@@ -67,6 +67,7 @@ void SubPath::Serialize(FieldWriter &writer) const {
 	writer.WriteField<int32_t>(upper);
 	writer.WriteOptional(where_clause);
 }
+
 unique_ptr<PathReference> SubPath::Deserialize(FieldReader &reader) {
 	auto result = make_unique<SubPath>(PGQPathReferenceType::SUBPATH);
 
