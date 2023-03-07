@@ -169,6 +169,14 @@ PhysicalPlanGenerator::ExtractAggregateExpressions(unique_ptr<PhysicalOperator> 
 	vector<unique_ptr<Expression>> expressions;
 	vector<LogicalType> types;
 
+	// bind sorted aggregates
+	for (auto &aggr : aggregates) {
+		auto &bound_aggr = (BoundAggregateExpression &)*aggr;
+		if (bound_aggr.order_bys) {
+			// sorted aggregate!
+			FunctionBinder::BindSortedAggregate(context, bound_aggr, groups);
+		}
+	}
 	for (auto &group : groups) {
 		auto ref = make_unique<BoundReferenceExpression>(group->return_type, expressions.size());
 		types.push_back(group->return_type);
