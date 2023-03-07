@@ -14,6 +14,7 @@
 #include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/common/atomic.hpp"
 #include "duckdb/common/compressed_sparse_row.h"
+#include "duckdb/parser/parsed_data/create_info.hpp"
 
 namespace duckdb {
 class AttachedDatabase;
