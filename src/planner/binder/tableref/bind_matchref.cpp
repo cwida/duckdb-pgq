@@ -154,6 +154,33 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
                     sum_children.push_back(std::move(create_vertex_function));
                     auto sum_function = make_unique<FunctionExpression>("sum", std::move(sum_children));
 
+                    auto inner_select_statement = make_unique<SelectStatement>();
+                    auto inner_select_node = make_unique<SelectNode>();
+
+                    auto source_rowid_colref = make_unique<ColumnRefExpression>("rowid",
+                                                                           edge_table->source_reference);
+                    source_rowid_colref->alias = "dense_id";
+
+                    auto count_create_inner_expr = make_unique<SubqueryExpression>();
+                    count_create_inner_expr->subquery_type = SubqueryType::SCALAR;
+                    auto edge_src_colref = make_unique<ColumnRefExpression>(edge_table->source_fk[0],
+                                                                            edge_table->table_name);
+                    vector<unique_ptr<ParsedExpression>> inner_count_children;
+                    inner_count_children.push_back(std::move(edge_src_colref));
+                    auto inner_count_function = make_unique<FunctionExpression>("count", std::move(inner_count_children));
+                    inner_count_function->alias = "cnt";
+
+                    inner_select_node->select_list.push_back(std::move(source_rowid_colref));
+                    inner_select_node->select_list.push_back(std::move(inner_count_function));
+                    auto source_rowid_colref_1 = make_unique<ColumnRefExpression>("rowid",
+                                                                                  edge_table->source_reference);
+
+                    expression_map_t<idx_t> grouping_expression_map;
+                    inner_select_node->groups.group_expressions.push_back(std::move(source_rowid_colref_1));
+                    GroupingSet grouping_set = {0};
+                    inner_select_node->groups.grouping_sets.push_back(grouping_set);
+
+
 
                     // create CTE with CSR
                         // create_csr_vertex function
