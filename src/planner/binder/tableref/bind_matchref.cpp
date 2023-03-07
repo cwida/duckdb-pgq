@@ -1,5 +1,8 @@
 #include "duckdb/main/client_data.hpp"
 #include "duckdb/parser/tableref/matchref.hpp"
+#include "duckdb/parser/expression/subquery_expression.hpp"
+#include "duckdb/parser/expression/function_expression.hpp"
+
 
 
 namespace duckdb {
@@ -62,6 +65,23 @@ PathElement* GetPathElement(unique_ptr<PathReference> &path_reference, vector<un
     }
 }
 
+static unique_ptr<SelectStatement> GetCountTable(shared_ptr<PropertyGraphTable> &edge_table) {
+    auto select_count = make_unique<SelectStatement>();
+    auto select_inner = make_unique<SelectNode>();
+    auto ref = make_unique<BaseTableRef>();
+
+    ref->table_name = edge_table->source_reference;
+    select_inner->from_table = std::move(ref);
+    vector<unique_ptr<ParsedExpression>> children;
+    children.push_back(make_unique<ColumnRefExpression>(edge_table->source_pk[0], edge_table->source_reference));
+
+    auto count_function = make_unique<FunctionExpression>("count", std::move(children));
+    select_inner->select_list.push_back(std::move(count_function));
+    select_count->node = std::move(select_inner);
+    return select_count;
+}
+
+
 
 unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 	auto &client_data = ClientData::Get(context);
@@ -91,15 +111,85 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
         alias_map[previous_vertex_element->variable_binding] = previous_vertex_table->table_name;
 
 		for (idx_t idx_j = 1; idx_j < ref.path_list[idx_i]->path_elements.size(); idx_j = idx_j + 2) {
-			PathElement* edge_element = GetPathElement(path_list->path_elements[idx_j], conditions);
+
+            PathElement* edge_element = GetPathElement(path_list->path_elements[idx_j], conditions);
 			PathElement* next_vertex_element = GetPathElement(path_list->path_elements[idx_j + 1], conditions);
 			if (next_vertex_element->match_type != PGQMatchType::MATCH_VERTEX ||
 				previous_vertex_element->match_type != PGQMatchType::MATCH_VERTEX) {
 				throw BinderException("Vertex and edge patterns must be alternated.");
 			}
 
-			auto next_vertex_table = FindGraphTable(next_vertex_element->label, *pg_table);
-			auto edge_table = FindGraphTable(edge_element->label, *pg_table);
+            auto edge_table = FindGraphTable(edge_element->label, *pg_table);
+            auto next_vertex_table = FindGraphTable(next_vertex_element->label, *pg_table);
+
+            if (path_list->path_elements[idx_j]->path_reference_type == PGQPathReferenceType::SUBPATH) {
+                SubPath* subpath = reinterpret_cast<SubPath*>(path_list->path_elements[idx_j].get());
+
+                if (subpath->upper > 1) {
+
+                    //! Do path finding
+                    auto csr_edge_id_constant = make_unique<ConstantExpression>(Value::INTEGER((int32_t)0));
+                    auto count_create_edge_select = make_unique<SubqueryExpression>();
+
+                    count_create_edge_select->subquery = GetCountTable(edge_table);
+                    count_create_edge_select->subquery_type = SubqueryType::SCALAR;
+
+                    auto cast_subquery_expr = make_unique<SubqueryExpression>();
+                    auto cast_select_node = make_unique<SelectNode>();
+
+                    vector<unique_ptr<ParsedExpression>> csr_vertex_children;
+                    csr_vertex_children.push_back(make_unique<ConstantExpression>(Value::INTEGER((int32_t)0)));
+
+                    auto count_create_vertex_expr = make_unique<SubqueryExpression>();
+                    count_create_vertex_expr->subquery = GetCountTable(edge_table);
+                    count_create_vertex_expr->subquery_type = SubqueryType::SCALAR;
+                    csr_vertex_children.push_back(std::move(count_create_vertex_expr));
+
+                    csr_vertex_children.push_back(make_unique<ColumnRefExpression>("dense_id", "sub"));
+                    csr_vertex_children.push_back(make_unique<ColumnRefExpression>("cnt", "sub"));
+
+                    auto create_vertex_function = make_unique<FunctionExpression>("create_csr_vertex",
+                                                                                  std::move(csr_vertex_children));
+                    vector<unique_ptr<ParsedExpression>> sum_children;
+                    sum_children.push_back(std::move(create_vertex_function));
+                    auto sum_function = make_unique<FunctionExpression>("sum", std::move(sum_children));
+
+
+                    // create CTE with CSR
+                        // create_csr_vertex function
+                            //#SELECT c1id, c2id, weight
+                            //#FROM (
+                            //#    WITH cte1 AS (
+                            //#    SELECT sum( CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
+                            //#        CAST ((
+                            //#          SELECT sum(CREATE_CSR_VERTEX(0,
+                            //#            (SELECT count(c.cid) as vcount FROM Customer c),
+                            //#            sub.dense_id,
+                            //#            sub.cnt
+                            //#           )) as numEdges
+                            //#          FROM (
+                            //#            SELECT c.rowid as dense_id, count(t.from_id) as cnt
+                            //#            FROM Customer c
+                            //#            LEFT JOIN Transfers t ON t.from_id = c.cid
+                            //#            GROUP BY c.rowid
+                            //#          ) sub) AS BIGINT
+                            //#        ), src.rowid, dst.rowid
+                            //#    ) ) as temp,
+                            //#    (SELECT count(c.cid) FROM Customer c) as vcount
+                            //#    FROM
+                            //#      Transfers t
+                            //#      JOIN Customer src ON t.from_id = src.cid
+                            //#      JOIN Customer dst ON t.to_id = dst.cid
+                            //#    )
+                            //#    SELECT src_dest.src AS c1id, src_dest.dst AS c2id, shortest_path(0, true, cte1.vcount, src_dest.src, src_dest.dst) as weight
+                            //#    FROM cte1, src_dest
+                            //#    WHERE ( shortest_path(0, true, cte1.vcount, src_dest.src, src_dest.dst) <= cte1.temp )
+                            //#);
+                        // create_csr_edge function
+
+                    // Do path-finding function
+                }
+            }
 
 			// check aliases
 			alias_map[next_vertex_element->variable_binding] = next_vertex_table->table_name;

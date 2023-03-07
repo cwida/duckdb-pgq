@@ -23,7 +23,7 @@ public:
 	PGQPathMode path_mode;
 
 	bool single_bind;
-	int32_t lower, upper;
+	int64_t lower, upper;
 
 	// TODO cost_expr, default_value
 public:
