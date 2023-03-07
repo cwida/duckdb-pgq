@@ -4,11 +4,10 @@
 
 namespace duckdb {
 
-shared_ptr<PropertyGraphTable> FindGraphTable(unique_ptr<PathElement> &path_element, CreatePropertyGraphInfo &pg_table) {
-
-	auto graph_table_entry = pg_table.label_map.find(path_element->label);
+shared_ptr<PropertyGraphTable> FindGraphTable(const string& label, CreatePropertyGraphInfo &pg_table) {
+	auto graph_table_entry = pg_table.label_map.find(label);
 	if (graph_table_entry == pg_table.label_map.end()) {
-		throw BinderException("The label %s is not registered in property graph %s", path_element->label, pg_table.property_graph_name);
+		throw BinderException("The label %s is not registered in property graph %s", label, pg_table.property_graph_name);
 	}
 
 	return graph_table_entry->second;
@@ -49,6 +48,20 @@ unique_ptr<ParsedExpression> CreateMatchJoinExpression(vector<string> vertex_key
 	return where_clause;
 }
 
+PathElement* GetPathElement(unique_ptr<PathReference> &path_reference, vector<unique_ptr<ParsedExpression>> &conditions) {
+    if (path_reference->path_reference_type == PGQPathReferenceType::PATH_ELEMENT) {
+        return reinterpret_cast<PathElement *>(path_reference.get());
+    } else if (path_reference->path_reference_type ==  PGQPathReferenceType::SUBPATH) {
+        auto subpath = reinterpret_cast<SubPath*>(path_reference.get());
+        if (subpath->where_clause) {
+            conditions.push_back(std::move(subpath->where_clause));
+        }
+        return reinterpret_cast<PathElement*>(subpath->path_list[0].get());
+    } else {
+        throw InternalException("Unknown path reference type detected");
+    }
+}
+
 
 unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 	auto &client_data = ClientData::Get(context);
@@ -71,25 +84,22 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 	for (idx_t idx_i = 0; idx_i < ref.path_list.size(); idx_i++) {
 		auto &path_list = ref.path_list[idx_i];
-		if (path_list->path_elements.size() % 2 == 0) {
-			throw BinderException("Even number of element patterns is not supported.");
-		}
 
-		auto &previous_vertex_element = path_list->path_elements[0];
-		auto previous_vertex_table = FindGraphTable(previous_vertex_element, *pg_table);
+        PathElement* previous_vertex_element = GetPathElement(path_list->path_elements[0], conditions);
 
-		alias_map[previous_vertex_element->variable_binding] = previous_vertex_table->table_name;
+		auto previous_vertex_table = FindGraphTable(previous_vertex_element->label, *pg_table);
+        alias_map[previous_vertex_element->variable_binding] = previous_vertex_table->table_name;
 
 		for (idx_t idx_j = 1; idx_j < ref.path_list[idx_i]->path_elements.size(); idx_j = idx_j + 2) {
-			auto &edge_element = ref.path_list[idx_i]->path_elements[idx_j];
-			auto &next_vertex_element = path_list->path_elements[idx_j + 1];
+			PathElement* edge_element = GetPathElement(path_list->path_elements[idx_j], conditions);
+			PathElement* next_vertex_element = GetPathElement(path_list->path_elements[idx_j + 1], conditions);
 			if (next_vertex_element->match_type != PGQMatchType::MATCH_VERTEX ||
 				previous_vertex_element->match_type != PGQMatchType::MATCH_VERTEX) {
 				throw BinderException("Vertex and edge patterns must be alternated.");
 			}
 
-			auto next_vertex_table = FindGraphTable(next_vertex_element, *pg_table);
-			auto edge_table = FindGraphTable(edge_element, *pg_table);
+			auto next_vertex_table = FindGraphTable(next_vertex_element->label, *pg_table);
+			auto edge_table = FindGraphTable(edge_element->label, *pg_table);
 
 			// check aliases
 			alias_map[next_vertex_element->variable_binding] = next_vertex_table->table_name;
@@ -153,7 +163,7 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 			default:
 				throw InternalException("Unknown match type found");
 			}
-			previous_vertex_element = std::move(next_vertex_element);
+			previous_vertex_element = next_vertex_element;
 
 			// Check the edge type
 			// If (a)-[b]->(c) 	-> 	b.src = a.id AND b.dst = c.id
