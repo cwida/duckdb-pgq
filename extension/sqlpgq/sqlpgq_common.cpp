@@ -66,17 +66,17 @@ unique_ptr<FunctionData> IterativeLengthFunctionData::IterativeLengthBind(Client
 	}
 
 	int32_t csr_id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]).GetValue<int32_t>();
-	if ((uint64_t)csr_id + 1 > context.client_data->csr_list.size()) {
-		throw ConstraintException("Invalid ID");
-	}
-	auto csr_entry = context.client_data->csr_list.find((uint64_t)csr_id);
-	if (csr_entry == context.client_data->csr_list.end()) {
-		throw ConstraintException("Need to initialize CSR before doing shortest path");
-	}
-
-	if (!(csr_entry->second->initialized_v && csr_entry->second->initialized_e)) {
-		throw ConstraintException("Need to initialize CSR before doing shortest path");
-	}
+//	if ((uint64_t)csr_id + 1 > context.client_data->csr_list.size()) {
+//		throw ConstraintException("Invalid ID");
+//	}
+//	auto csr_entry = context.client_data->csr_list.find((uint64_t)csr_id);
+//	if (csr_entry == context.client_data->csr_list.end()) {
+//		throw ConstraintException("Need to initialize CSR before doing shortest path");
+//	}
+//
+//	if (!(csr_entry->second->initialized_v && csr_entry->second->initialized_e)) {
+//		throw ConstraintException("Need to initialize CSR before doing shortest path");
+//	}
 
 
 	return make_unique<IterativeLengthFunctionData>(context, csr_id);
