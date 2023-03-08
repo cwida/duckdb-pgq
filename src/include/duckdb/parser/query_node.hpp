@@ -17,6 +17,9 @@
 
 namespace duckdb {
 
+class FormatDeserializer;
+class FormatSerializer;
+
 enum class QueryNodeType : uint8_t {
 	SELECT_NODE = 1,
 	SET_OPERATION_NODE = 2,
