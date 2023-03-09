@@ -96,7 +96,6 @@ private:
 	static CreateScalarFunctionInfo GetTypeFunction();
 	static CreateScalarFunctionInfo GetValidFunction();
 	static CreateScalarFunctionInfo GetSerializeSqlFunction();
-	static CreateScalarFunctionInfo GetDeserializeSqlFunction();
 
 	template <class FUNCTION_INFO>
 	static void AddAliases(const vector<string> &names, FUNCTION_INFO fun, vector<FUNCTION_INFO> &functions) {
