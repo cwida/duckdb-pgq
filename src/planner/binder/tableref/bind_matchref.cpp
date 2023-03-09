@@ -4,6 +4,7 @@
 #include "duckdb/parser/expression/function_expression.hpp"
 #include "duckdb/parser/expression/cast_expression.hpp"
 #include "duckdb/parser/expression/operator_expression.hpp"
+#include "duckdb/parser/expression/between_expression.hpp"
 #include "duckdb/parser/result_modifier.hpp"
 #include "duckdb/parser/tableref/joinref.hpp"
 
@@ -281,11 +282,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
                         cte_select_node->select_list.push_back(std::move(col));
                     }
 
-
-
-//                    auto src_col_ref = make_unique<ColumnRefExpression>(edge_table->source_pk[0], previous_vertex_element->variable_binding);
-//                    auto dst_col_ref = make_unique<ColumnRefExpression>(edge_table->destination_pk[0], next_vertex_element->variable_binding);
-//
                     auto cte_ref = make_unique<BaseTableRef>();
                     cte_ref->table_name = "cte1";
                     auto cross_ref = make_unique<JoinRef>(JoinRefType::CROSS);
@@ -341,8 +337,12 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
                     addition_children.push_back(std::move(reachability_function));
 
                     auto addition_function = make_unique<FunctionExpression>("add", std::move(addition_children));
-                    conditions.push_back(
-                            make_unique<OperatorExpression>(ExpressionType::OPERATOR_IS_NOT_NULL, std::move(addition_function)));
+                    auto lower_limit = make_unique<ConstantExpression>(Value::INTEGER(subpath->lower));
+                    auto upper_limit = make_unique<ConstantExpression>(Value::INTEGER(subpath->upper));
+                    auto between_expression = make_unique<BetweenExpression>(std::move(addition_function), std::move(lower_limit), std::move(upper_limit));
+                    conditions.push_back(std::move(between_expression));
+
+
 
                     unique_ptr<ParsedExpression> cte_and_expression;
                     for (auto &condition : conditions) {
