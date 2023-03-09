@@ -3,6 +3,8 @@
 #include "duckdb/parser/expression/subquery_expression.hpp"
 #include "duckdb/parser/expression/function_expression.hpp"
 #include "duckdb/parser/expression/cast_expression.hpp"
+#include "duckdb/parser/expression/operator_expression.hpp"
+#include "duckdb/parser/result_modifier.hpp"
 #include "duckdb/parser/tableref/joinref.hpp"
 
 
@@ -263,14 +265,8 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
                     auto create_csr_edge_function = make_unique<FunctionExpression>("create_csr_edge", std::move(csr_edge_children));
                     create_csr_edge_function->alias = "temp";
-                    auto outer_src_rowid = make_unique<ColumnRefExpression>("rowid", previous_vertex_element->variable_binding);
-                    outer_src_rowid->alias = "src_row";
-                    auto outer_dst_rowid = make_unique<ColumnRefExpression>("rowid", next_vertex_element->variable_binding);
-                    outer_dst_rowid->alias = "dst_row";
 
                     outer_select_node->select_list.push_back(std::move(create_csr_edge_function));
-                    outer_select_node->select_list.push_back(std::move(outer_src_rowid));
-                    outer_select_node->select_list.push_back(std::move(outer_dst_rowid));
                     outer_select_node->from_table = GetJoinRef(edge_table, edge_element->variable_binding,
                                                                previous_vertex_element->variable_binding, next_vertex_element->variable_binding);
 
@@ -280,9 +276,12 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
                     auto cte_select_node = make_unique<SelectNode>();
                     cte_select_node->cte_map.map["cte1"] = std::move(info);
+                    cte_select_node->modifiers.push_back(make_unique<DistinctModifier>());
                     for (auto &col : ref.column_list) {
                         cte_select_node->select_list.push_back(std::move(col));
                     }
+
+
 
 //                    auto src_col_ref = make_unique<ColumnRefExpression>(edge_table->source_pk[0], previous_vertex_element->variable_binding);
 //                    auto dst_col_ref = make_unique<ColumnRefExpression>(edge_table->destination_pk[0], next_vertex_element->variable_binding);
@@ -291,8 +290,19 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
                     cte_ref->table_name = "cte1";
                     auto cross_ref = make_unique<JoinRef>(JoinRefType::CROSS);
                     cross_ref->left = std::move(cte_ref);
-                    cross_ref->right = GetJoinRef(edge_table, edge_element->variable_binding,
-                                                  previous_vertex_element->variable_binding, next_vertex_element->variable_binding);
+                    auto src_vertex_ref = make_unique<BaseTableRef>();
+                    src_vertex_ref->table_name = edge_table->source_reference;
+                    src_vertex_ref->alias = previous_vertex_element->variable_binding;
+
+                    auto dst_vertex_ref = make_unique<BaseTableRef>();
+                    dst_vertex_ref->table_name = edge_table->destination_reference;
+                    dst_vertex_ref->alias = next_vertex_element->variable_binding;
+
+                    auto cross_join_src_dst = make_unique<JoinRef>(JoinRefType::CROSS);
+                    cross_join_src_dst->left = std::move(src_vertex_ref);
+                    cross_join_src_dst->right = std::move(dst_vertex_ref);
+
+                    cross_ref->right = std::move(cross_join_src_dst);
                     cte_select_node->from_table = std::move(cross_ref);
 
                     auto src_row_id = make_unique<ColumnRefExpression>("rowid", previous_vertex_element->variable_binding);
@@ -300,10 +310,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
                     auto dst_row_id = make_unique<ColumnRefExpression>("rowid", next_vertex_element->variable_binding);
                     auto cte_dst_row = make_unique<ColumnRefExpression>("dst_row", "cte1");
-                    conditions.push_back(
-                            make_unique<ComparisonExpression>(ExpressionType::COMPARE_EQUAL, std::move(src_row_id), std::move(cte_src_row)));
-                    conditions.push_back(
-                            make_unique<ComparisonExpression>(ExpressionType::COMPARE_EQUAL, std::move(dst_row_id), std::move(cte_dst_row)));
 
                     vector<unique_ptr<ParsedExpression>> reachability_children;
                     auto cte_where_src_row = make_unique<ColumnRefExpression>("rowid", previous_vertex_element->variable_binding);
@@ -313,7 +319,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
                     reachability_subquery_expr->subquery_type = SubqueryType::SCALAR;
 
                     auto reachability_id_constant = make_unique<ConstantExpression>(Value::INTEGER((int32_t)0));
-                    auto reachability_bool_constant = make_unique<ConstantExpression>(Value::BOOLEAN(true));
 
                     reachability_children.push_back(std::move(reachability_id_constant));
                     reachability_children.push_back(std::move(reachability_subquery_expr));
@@ -322,8 +327,22 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
                     auto reachability_function = make_unique<FunctionExpression>("iterativelength", std::move(reachability_children));
                     auto cte_col_ref = make_unique<ColumnRefExpression>("temp", "cte1");
+
+                    auto zero_constant = make_unique<ConstantExpression>(Value::INTEGER((int32_t)0));
+
+                    vector<unique_ptr<ParsedExpression>> multiply_children;
+
+                    multiply_children.push_back(std::move(zero_constant));
+                    multiply_children.push_back(std::move(cte_col_ref));
+                    auto multiply_function = make_unique<FunctionExpression>("multiply", std::move(multiply_children));
+
+                    vector<unique_ptr<ParsedExpression>> addition_children;
+                    addition_children.push_back(std::move(multiply_function));
+                    addition_children.push_back(std::move(reachability_function));
+
+                    auto addition_function = make_unique<FunctionExpression>("add", std::move(addition_children));
                     conditions.push_back(
-                            make_unique<ComparisonExpression>(ExpressionType::COMPARE_GREATERTHANOREQUALTO, std::move(cte_col_ref), std::move(reachability_function)));
+                            make_unique<OperatorExpression>(ExpressionType::OPERATOR_IS_NOT_NULL, std::move(addition_function)));
 
                     unique_ptr<ParsedExpression> cte_and_expression;
                     for (auto &condition : conditions) {
@@ -337,7 +356,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 //                    cte_select_node->select_list = std::move(ref.column_list);
                     cte_select_node->where_clause = std::move(cte_and_expression);
                     cte_select_statement->node = std::move(cte_select_node);
-                    break;
 
                     //WITH cte1 AS (
                     //SELECT CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
