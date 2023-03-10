@@ -85,8 +85,6 @@ Peter	Gabor
 Peter	Peter
 Peter	David
 
-statement ok
-pragma delete_csr=0;
 
 query II
 SELECT study.a_name, study.b_name
@@ -103,9 +101,6 @@ Peter	Gabor
 Peter	Peter
 Peter	David
 
-statement ok
-pragma delete_csr=0;
-
 query II
 SELECT study.a_name, study.b_name
 FROM GRAPH_TABLE (pg,
@@ -118,6 +113,3 @@ FROM GRAPH_TABLE (pg,
 Peter	Daniel
 Peter	Tavneet
 Peter	Gabor
-
-statement ok
-pragma delete_csr=0;

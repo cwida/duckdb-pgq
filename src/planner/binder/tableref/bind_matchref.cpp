@@ -371,33 +371,9 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 							cte_and_expression = std::move(condition);
 						}
 					}
-					//                    cte_select_node->select_list = std::move(ref.column_list);
 					cte_select_node->where_clause = std::move(cte_and_expression);
 					cte_select_statement->node = std::move(cte_select_node);
-
-					// WITH cte1 AS (
-					// SELECT CREATE_CSR_EDGE(0, (SELECT count(c.cid) as vcount FROM Customer c),
-					// CAST ((SELECT sum(CREATE_CSR_VERTEX(0, (SELECT count(c.cid) as vcount FROM Customer c),
-					// sub.dense_id , sub.cnt )) as numEdges
-					// FROM (
-					//     SELECT c.rowid as dense_id, count(t.from_id) as cnt
-					//     FROM Customer c
-					//     LEFT JOIN  Transfers t ON t.from_id = c.cid
-					//     GROUP BY c.rowid
-					//) sub) AS BIGINT),
-					// src.rowid, dst.rowid ) as temp, src.rowid as src_row, dst.rowid as dst_row
-					// FROM
-					//   Transfers t
-					//   JOIN Customer src ON t.from_id = src.cid
-					//   JOIN Customer dst ON t.to_id = dst.cid
-					//)
-					// SELECT src.cid AS c1id, dst.cid AS c2id
-					// FROM cte1, Transfers t
-					//   JOIN Customer src ON t.from_id = src.cid
-					//   JOIN Customer dst ON t.to_id = dst.cid
-					// WHERE src.rowid = cte1.src_row AND dst.rowid = cte1.dst_row  AND
-					//( reachability(0, (SELECT count(c.cid) FROM Customer c), cte1.src_row, cte1.dst_row) = cte1.temp);
-				}
+                }
 			}
 
 			// check aliases
@@ -406,28 +382,30 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 			switch (edge_element->match_type) {
 			case PGQMatchType::MATCH_EDGE_ANY: {
+                select_node->modifiers.push_back(make_unique<DistinctModifier>());
+
 				auto src_left_expr =
 				    CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
-				                              next_vertex_element->variable_binding, edge_element->variable_binding);
-				auto dst_left_expr = CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
-				                                               previous_vertex_element->variable_binding,
-				                                               edge_element->variable_binding);
+				                              previous_vertex_element->variable_binding, edge_element->variable_binding);
+				auto dst_left_expr =
+                    CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+                                              next_vertex_element->variable_binding,edge_element->variable_binding);
 
 				auto combined_left_expr = make_unique<ConjunctionExpression>(
 				    ExpressionType::CONJUNCTION_AND, std::move(src_left_expr), std::move(dst_left_expr));
 
-				auto src_right_expr = CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
-				                                                previous_vertex_element->variable_binding,
-				                                                edge_element->variable_binding);
+				auto src_right_expr =
+                    CreateMatchJoinExpression(edge_table->source_pk, edge_table->destination_fk,
+                                              previous_vertex_element->variable_binding,edge_element->variable_binding);
 				auto dst_right_expr =
-				    CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+				    CreateMatchJoinExpression(edge_table->destination_pk, edge_table->source_fk,
 				                              next_vertex_element->variable_binding, edge_element->variable_binding);
 				auto combined_right_expr = make_unique<ConjunctionExpression>(
 				    ExpressionType::CONJUNCTION_AND, std::move(src_right_expr), std::move(dst_right_expr));
 
 				auto combined_expr = make_unique<ConjunctionExpression>(
 				    ExpressionType::CONJUNCTION_OR, std::move(combined_left_expr), std::move(combined_right_expr));
-
+                conditions.push_back(std::move(combined_expr));
 				break;
 			}
 			case PGQMatchType::MATCH_EDGE_LEFT:
