@@ -35,7 +35,8 @@ static void CsrInitializeVertex(ClientContext &context, int32_t id, int64_t v_si
 		if (csr_entry != context.client_data->csr_list.end()) {
 			context.client_data->csr_list[id] = std::move(csr);
 		} else {
-			context.client_data->csr_list.insert({id, std::move(csr)});
+//            auto pair = std::pair<int32_t, unique_ptr<CSR>>(id, std::move(csr));
+			context.client_data->csr_list[id] = std::move(csr);
 		}
 
 	} catch (std::bad_alloc const &) {
