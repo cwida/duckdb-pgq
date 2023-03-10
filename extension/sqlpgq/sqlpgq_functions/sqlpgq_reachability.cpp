@@ -255,6 +255,7 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 		}
 		result_size = result_size + curr_batch_size;
 	}
+    info.context.client_data->csr_list.erase(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetReachabilityFunction() {
