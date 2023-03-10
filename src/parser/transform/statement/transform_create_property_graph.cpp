@@ -4,7 +4,8 @@
 namespace duckdb {
 
 shared_ptr<PropertyGraphTable>
-Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *graph_table, case_insensitive_set_t &global_label_set) {
+Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *graph_table,
+                                         case_insensitive_set_t &global_label_set) {
 	vector<string> column_names;
 	vector<string> except_list;
 	case_insensitive_set_t label_set;
@@ -22,7 +23,8 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 		for (auto property_element = graph_table->properties->head; property_element != nullptr;
 		     property_element = property_element->next) {
 			auto column_optional_as = reinterpret_cast<duckdb_libpgquery::PGList *>(property_element->data.ptr_value);
-			auto column_name = reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->data.ptr_value);
+			auto column_name =
+			    reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->data.ptr_value);
 			if (strcmp(column_name->colname, "*") == 0) {
 				all_columns = true;
 				continue;
@@ -35,7 +37,8 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 			// 			If the string is equal to the first string then there is no alias
 
 			//! Every column listed after * is seen as part of the except columns
-			all_columns ? except_list.emplace_back(column_name->colname) : column_names.emplace_back(column_name->colname);
+			all_columns ? except_list.emplace_back(column_name->colname)
+			            : column_names.emplace_back(column_name->colname);
 		}
 	}
 
@@ -51,14 +54,12 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	}
 
 	unique_ptr<PropertyGraphTable> pg_table =
-	    make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias,
-	                                    column_names, label_names);
+	    make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias, column_names, label_names);
 
 	pg_table->is_vertex_table = graph_table->is_vertex_table;
 	pg_table->except_columns = std::move(except_list);
 	pg_table->all_columns = all_columns;
 	pg_table->no_columns = no_columns;
-
 
 	if (graph_table->discriminator) {
 		//! In this case there is a list with length > 1 of labels
@@ -127,7 +128,6 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 		}
 
 		info->vertex_tables.push_back(pg_table);
-
 	}
 
 	if (stmt->edge_tables) {

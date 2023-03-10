@@ -10,7 +10,6 @@ namespace duckdb {
 class MatchRef : public TableRef {
 public:
 	MatchRef() : TableRef(TableReferenceType::MATCH) {
-
 	}
 
 	string pg_name;
@@ -31,8 +30,6 @@ public:
 	void Serialize(FieldWriter &serializer) const override;
 	//! Deserializes a blob back into a MatchRef
 	static unique_ptr<TableRef> Deserialize(FieldReader &source);
-
 };
 
-
-}
+} // namespace duckdb

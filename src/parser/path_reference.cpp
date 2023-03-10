@@ -2,7 +2,6 @@
 #include "duckdb/parser/path_reference.hpp"
 #include "duckdb/common/field_writer.hpp"
 
-
 namespace duckdb {
 
 bool PathReference::Equals(const PathReference *other_p) const {

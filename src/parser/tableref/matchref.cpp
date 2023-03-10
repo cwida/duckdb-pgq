@@ -5,14 +5,14 @@
 namespace duckdb {
 
 string MatchRef::ToString() const {
-    string result = "GRAPH_TABLE (";
+	string result = "GRAPH_TABLE (";
 	result += pg_name + ", MATCH";
 
 	for (idx_t i = 0; i < path_list.size(); i++) {
 		(i > 0) ? result += ", " : result;
 		for (idx_t j = 0; j < path_list[i]->path_elements.size(); j++) {
 			auto &path_reference = path_list[i]->path_elements[j];
-			switch(path_reference->path_reference_type) {
+			switch (path_reference->path_reference_type) {
 			case PGQPathReferenceType::PATH_ELEMENT: {
 				auto path_element = reinterpret_cast<PathElement *>(path_reference.get());
 				result += " " + path_element->ToString();
@@ -26,7 +26,6 @@ string MatchRef::ToString() const {
 			default:
 				throw InternalException("Unknown path reference type found in ToString()");
 			}
-
 		}
 	}
 	result += where_clause ? "\nWHERE " + where_clause->ToString() : "";
@@ -83,8 +82,7 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 			return false;
 		}
 	}
-	if ((where_clause && !other->where_clause.get())
-	    || (!where_clause && other->where_clause.get())) {
+	if ((where_clause && !other->where_clause.get()) || (!where_clause && other->where_clause.get())) {
 		return false;
 	}
 
@@ -128,4 +126,4 @@ unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
 	return result;
 }
 
-}
+} // namespace duckdb

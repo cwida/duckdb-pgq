@@ -25,8 +25,6 @@ public:
 	void Serialize(Serializer &serializer) const;
 
 	static unique_ptr<PathPattern> Deserialize(Deserializer &deserializer);
-
 };
 
-
-}
+} // namespace duckdb

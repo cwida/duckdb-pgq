@@ -24,7 +24,7 @@ enum class TableReferenceType : uint8_t {
 	EXPRESSION_LIST = 6, // expression list
 	CTE = 7,             // Recursive CTE
 	EMPTY = 8,           // placeholder for empty FROM
-	MATCH = 9			 // MATCH clause SQL/PGQ
+	MATCH = 9            // MATCH clause SQL/PGQ
 };
 
 } // namespace duckdb
