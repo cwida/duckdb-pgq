@@ -205,8 +205,8 @@ unique_ptr<LogicalOperator> Binder::CreatePlan(BoundTableRef &ref) {
 	case TableReferenceType::CTE:
 		root = CreatePlan((BoundCTERef &)ref);
 		break;
-		//	case TableReferenceType::MATCH:
-		//		root = CreatePlan((BoundMatchRef &)ref);
+    case TableReferenceType::MATCH:
+        break;
 	case TableReferenceType::INVALID:
 		throw InternalException("Unsupported bound table ref type");
 	}
