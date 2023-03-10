@@ -202,7 +202,7 @@ unique_ptr<LogicalOperator> Binder::CreatePlan(BoundTableRef &ref) {
 	case TableReferenceType::EXPRESSION_LIST:
 		root = CreatePlan((BoundExpressionListRef &)ref);
 		break;
-	case TableReferenceType::CTE:
+    case TableReferenceType::CTE:
 		root = CreatePlan((BoundCTERef &)ref);
 		break;
     case TableReferenceType::MATCH:

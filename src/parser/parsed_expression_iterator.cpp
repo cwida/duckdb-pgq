@@ -223,8 +223,8 @@ void ParsedExpressionIterator::EnumerateTableRefChildren(
 		callback(tf_ref.function);
 		break;
 	}
-	case TableReferenceType::BASE_TABLE:
-	case TableReferenceType::EMPTY:
+    case TableReferenceType::BASE_TABLE:
+    case TableReferenceType::EMPTY:
     case TableReferenceType::MATCH:
 		// these TableRefs do not need to be unfolded
 		break;
