@@ -29,24 +29,6 @@ EDGE TABLES (
             PROPERTIES ( id ) LABEL Knows
     );
 
-
-
-query II
-SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
-    MATCH
-    (a:Person)-[k:Knows]->{1,2}(b:Person)
-    WHERE a.name = 'Peter'
-    COLUMNS (a.name as a_name, b.name as b_name)
-    ) study
-----
-Peter	Daniel
-Peter	Tavneet
-Peter	Gabor
-
-statement ok
-pragma delete_csr=0;
-
 query II
 SELECT study.a_id, study.name
 FROM GRAPH_TABLE (pg,
@@ -120,6 +102,22 @@ Peter	Tavneet
 Peter	Gabor
 Peter	Peter
 Peter	David
+
+statement ok
+pragma delete_csr=0;
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]->{1,2}(b:Person)
+    WHERE a.name = 'Peter'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study
+----
+Peter	Daniel
+Peter	Tavneet
+Peter	Gabor
 
 statement ok
 pragma delete_csr=0;
