@@ -2,7 +2,6 @@
 #pragma once
 #include "duckdb/parser/path_reference.hpp"
 
-
 namespace duckdb {
 
 enum class PGQMatchType : uint8_t {
@@ -22,8 +21,7 @@ public:
 	std::string variable_binding;
 
 public:
-	explicit PathElement(PGQPathReferenceType path_reference_type) :
-		PathReference(path_reference_type) {
+	explicit PathElement(PGQPathReferenceType path_reference_type) : PathReference(path_reference_type) {
 	}
 
 	string ToString() const override;
@@ -36,4 +34,4 @@ public:
 
 	static unique_ptr<PathReference> Deserialize(FieldReader &reader);
 };
-}
+} // namespace duckdb

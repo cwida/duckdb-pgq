@@ -2,12 +2,11 @@
 
 namespace duckdb {
 
-
 bool PathElement::Equals(const PathReference *other_p) const {
 	if (!PathReference::Equals(other_p)) {
 		return false;
 	}
-	auto other = (PathElement*)other_p;
+	auto other = (PathElement *)other_p;
 	if (match_type != other->match_type) {
 		return false;
 	}
@@ -45,7 +44,7 @@ unique_ptr<PathReference> PathElement::Copy() {
 }
 string PathElement::ToString() const {
 	string result = "";
-	switch(match_type) {
+	switch (match_type) {
 	case PGQMatchType::MATCH_VERTEX:
 		result += "(" + variable_binding + ":" + label + ")";
 		break;
@@ -65,4 +64,4 @@ string PathElement::ToString() const {
 	return result;
 }
 
-}
+} // namespace duckdb

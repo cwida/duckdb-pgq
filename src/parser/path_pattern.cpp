@@ -25,8 +25,7 @@ bool PathPattern::Equals(const PathPattern *other_p) const {
 			return false;
 		}
 	}
-	if ((where_clause && !other_p->where_clause.get())
-	    || (!where_clause && other_p->where_clause.get())) {
+	if ((where_clause && !other_p->where_clause.get()) || (!where_clause && other_p->where_clause.get())) {
 		return false;
 	}
 	if (path_elements.size() != other_p->path_elements.size()) {
@@ -43,7 +42,7 @@ bool PathPattern::Equals(const PathPattern *other_p) const {
 unique_ptr<PathPattern> PathPattern::Copy() {
 	auto result = make_unique<PathPattern>();
 
-	for (auto &path_element: path_elements) {
+	for (auto &path_element : path_elements) {
 		result->path_elements.push_back(path_element->Copy());
 	}
 
@@ -54,4 +53,4 @@ unique_ptr<PathPattern> PathPattern::Copy() {
 	return result;
 }
 
-}
+} // namespace duckdb

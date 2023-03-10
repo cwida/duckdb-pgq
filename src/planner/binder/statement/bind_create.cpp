@@ -152,7 +152,7 @@ static void CheckPropertyGraphTableColumns(shared_ptr<PropertyGraphTable> &pg_ta
 	}
 
 	if (pg_table->all_columns) {
-        for (auto &except_column : pg_table->except_columns) {
+		for (auto &except_column : pg_table->except_columns) {
 			if (!table.ColumnExists(except_column)) {
 				throw BinderException("Except column %s not found in table %s", except_column, pg_table->table_name);
 			}
@@ -161,20 +161,19 @@ static void CheckPropertyGraphTableColumns(shared_ptr<PropertyGraphTable> &pg_ta
 		auto columns_of_table = table.GetColumns().GetColumnNames();
 
 		std::sort(std::begin(columns_of_table), std::end(columns_of_table));
-        std::sort(std::begin(pg_table->except_columns), std::end(pg_table->except_columns));
-		std::set_difference(columns_of_table.begin(), columns_of_table.end(),
-		                    pg_table->except_columns.begin(), pg_table->except_columns.end(),
-            std::inserter(pg_table->column_names, pg_table->column_names.begin()));
+		std::sort(std::begin(pg_table->except_columns), std::end(pg_table->except_columns));
+		std::set_difference(columns_of_table.begin(), columns_of_table.end(), pg_table->except_columns.begin(),
+		                    pg_table->except_columns.end(),
+		                    std::inserter(pg_table->column_names, pg_table->column_names.begin()));
 		pg_table->column_aliases = pg_table->column_names;
 		return;
 	}
 
 	for (auto &column : pg_table->column_names) {
-        if (!table.ColumnExists(column)) {
-            throw BinderException("Column %s not found in table %s", column, pg_table->table_name);
-        }
-    }
-
+		if (!table.ColumnExists(column)) {
+			throw BinderException("Column %s not found in table %s", column, pg_table->table_name);
+		}
+	}
 }
 
 void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
@@ -197,7 +196,6 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 		}
 		CheckPropertyGraphTableColumns(vertex_table, *table);
 		CheckPropertyGraphTableLabels(vertex_table, *table);
-
 	}
 
 	for (auto &edge_table : info.edge_tables) {

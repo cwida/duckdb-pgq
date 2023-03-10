@@ -10,8 +10,7 @@ public:
 	PGQPathReferenceType path_reference_type;
 
 public:
-	explicit PathReference(PGQPathReferenceType path_reference_type) :
-	      path_reference_type(path_reference_type) {
+	explicit PathReference(PGQPathReferenceType path_reference_type) : path_reference_type(path_reference_type) {
 	}
 
 	virtual ~PathReference() {
@@ -30,5 +29,4 @@ public:
 	DUCKDB_API static unique_ptr<PathReference> Deserialize(Deserializer &deserializer);
 };
 
-}
-
+} // namespace duckdb

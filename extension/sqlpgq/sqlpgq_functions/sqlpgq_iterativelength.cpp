@@ -36,17 +36,17 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 
 	D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
 
-    if ((uint64_t)info.csr_id + 1 > info.context.client_data->csr_list.size()) {
-        throw ConstraintException("Invalid ID");
-    }
-    auto csr_entry = info.context.client_data->csr_list.find((uint64_t)info.csr_id);
-    if (csr_entry == info.context.client_data->csr_list.end()) {
-        throw ConstraintException("Need to initialize CSR before doing shortest path");
-    }
+	if ((uint64_t)info.csr_id + 1 > info.context.client_data->csr_list.size()) {
+		throw ConstraintException("Invalid ID");
+	}
+	auto csr_entry = info.context.client_data->csr_list.find((uint64_t)info.csr_id);
+	if (csr_entry == info.context.client_data->csr_list.end()) {
+		throw ConstraintException("Need to initialize CSR before doing shortest path");
+	}
 
-    if (!(csr_entry->second->initialized_v && csr_entry->second->initialized_e)) {
-        throw ConstraintException("Need to initialize CSR before doing shortest path");
-    }
+	if (!(csr_entry->second->initialized_v && csr_entry->second->initialized_e)) {
+		throw ConstraintException("Need to initialize CSR before doing shortest path");
+	}
 	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
 	int64_t *v = (int64_t *)info.context.client_data->csr_list[info.csr_id]->v;
 	vector<int64_t> &e = info.context.client_data->csr_list[info.csr_id]->e;

@@ -5,13 +5,7 @@
 
 namespace duckdb {
 
-enum class PGQPathMode : uint8_t {
-	NONE,
-	WALK,
-	SIMPLE,
-	TRAIL,
-	ACYCLIC
-};
+enum class PGQPathMode : uint8_t { NONE, WALK, SIMPLE, TRAIL, ACYCLIC };
 
 class SubPath : public PathReference {
 
@@ -27,8 +21,7 @@ public:
 
 	// TODO cost_expr, default_value
 public:
-	explicit SubPath(PGQPathReferenceType path_reference_type) :
-	      PathReference(path_reference_type) {
+	explicit SubPath(PGQPathReferenceType path_reference_type) : PathReference(path_reference_type) {
 	}
 
 	string ToString() const override;
@@ -41,6 +34,5 @@ public:
 
 	static unique_ptr<PathReference> Deserialize(FieldReader &reader);
 };
-
 
 } // namespace duckdb
