@@ -138,6 +138,8 @@ static void IterativeLengthFunction(DataChunk &args, ExpressionState &state, Vec
 			}
 		}
 	}
+
+    info.context.client_data->csr_list.erase(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLengthFunction() {
