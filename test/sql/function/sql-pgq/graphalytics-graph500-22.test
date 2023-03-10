@@ -1,3 +1,6 @@
+# name: test/sql/function/sql-pgq/graphalytics-graph500-22.test
+# group: [sql-pgq]
+
 ## name: test/sql/function/sql-pgq/graphalytics-graph500-22.test
 ## description: Perform pathfinding operations on graphalytics graph 500 SF 22 dataset
 ## group: [sql-pgq]
