@@ -114,7 +114,8 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 
 		// make passes while a lane is still active
 		for (int64_t iter = 0; active; iter++) {
-			if (!IterativeLengthBidirectional(v_size, v, e, (iter & 1) ? dst_seen : src_seen,
+			if (!IterativeLengthBidirectional(
+                    v_size, v, e, (iter & 1) ? dst_seen : src_seen,
                   (iter & 2)   ? (iter & 1) ? dst_visit2 : src_visit2 : (iter & 1) ? dst_visit1 : src_visit1,
                   (iter & 2)   ? (iter & 1) ? dst_visit1 : src_visit1 : (iter & 1) ? dst_visit2 : src_visit2)) {
 				break;
