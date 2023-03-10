@@ -39,7 +39,8 @@ string MatchRef::ToString() const {
 	result += ")" + alias;
 
 	return result;
-};
+}
+
 bool MatchRef::Equals(const TableRef *other_p) const {
 	if (!TableRef::Equals(other_p)) {
 		return false;
@@ -87,7 +88,7 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 	}
 
 	return true;
-};
+}
 
 unique_ptr<TableRef> MatchRef::Copy() {
 	auto copy = make_unique<MatchRef>();
