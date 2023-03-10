@@ -428,7 +428,7 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 				auto combined_expr = make_unique<ConjunctionExpression>(
 				    ExpressionType::CONJUNCTION_OR, std::move(combined_left_expr), std::move(combined_right_expr));
 
-                break;
+				break;
 			}
 			case PGQMatchType::MATCH_EDGE_LEFT:
 				CheckEdgeTableConstraints(next_vertex_table->table_name, previous_vertex_table->table_name, edge_table);
