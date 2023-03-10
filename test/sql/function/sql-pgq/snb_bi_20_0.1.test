@@ -1,3 +1,6 @@
+# name: test/sql/function/sql-pgq/snb_bi_20_0.1.test
+# group: [sql-pgq]
+
 ## name: test/sql/function/sql-pgq/snb_bi_20_0.1.test
 ## group: [sql-pgq]
 #

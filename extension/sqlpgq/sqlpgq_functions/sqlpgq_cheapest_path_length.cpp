@@ -153,7 +153,7 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (CheapestPathLengthFunctionData &)*func_expr.bind_info;
 	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
-    D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
+	D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
 	auto &src = args.data[2];
 
 	UnifiedVectorFormat vdata_src, vdata_target;
@@ -171,7 +171,7 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 		TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
 		                              info.csr_id, info.context.client_data->csr_list[info.csr_id]->w);
 	}
-    info.context.client_data->csr_list.erase(info.csr_id);
+	info.context.client_data->csr_list.erase(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetCheapestPathLengthFunction() {

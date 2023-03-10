@@ -373,7 +373,7 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 					}
 					cte_select_node->where_clause = std::move(cte_and_expression);
 					cte_select_statement->node = std::move(cte_select_node);
-                }
+				}
 			}
 
 			// check aliases
@@ -382,21 +382,21 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 			switch (edge_element->match_type) {
 			case PGQMatchType::MATCH_EDGE_ANY: {
-                select_node->modifiers.push_back(make_unique<DistinctModifier>());
+				select_node->modifiers.push_back(make_unique<DistinctModifier>());
 
-				auto src_left_expr =
-				    CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
-				                              previous_vertex_element->variable_binding, edge_element->variable_binding);
+				auto src_left_expr = CreateMatchJoinExpression(edge_table->source_pk, edge_table->source_fk,
+				                                               previous_vertex_element->variable_binding,
+				                                               edge_element->variable_binding);
 				auto dst_left_expr =
-                    CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
-                                              next_vertex_element->variable_binding,edge_element->variable_binding);
+				    CreateMatchJoinExpression(edge_table->destination_pk, edge_table->destination_fk,
+				                              next_vertex_element->variable_binding, edge_element->variable_binding);
 
 				auto combined_left_expr = make_unique<ConjunctionExpression>(
 				    ExpressionType::CONJUNCTION_AND, std::move(src_left_expr), std::move(dst_left_expr));
 
-				auto src_right_expr =
-                    CreateMatchJoinExpression(edge_table->source_pk, edge_table->destination_fk,
-                                              previous_vertex_element->variable_binding,edge_element->variable_binding);
+				auto src_right_expr = CreateMatchJoinExpression(edge_table->source_pk, edge_table->destination_fk,
+				                                                previous_vertex_element->variable_binding,
+				                                                edge_element->variable_binding);
 				auto dst_right_expr =
 				    CreateMatchJoinExpression(edge_table->destination_pk, edge_table->source_fk,
 				                              next_vertex_element->variable_binding, edge_element->variable_binding);
@@ -405,7 +405,7 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 				auto combined_expr = make_unique<ConjunctionExpression>(
 				    ExpressionType::CONJUNCTION_OR, std::move(combined_left_expr), std::move(combined_right_expr));
-                conditions.push_back(std::move(combined_expr));
+				conditions.push_back(std::move(combined_expr));
 				break;
 			}
 			case PGQMatchType::MATCH_EDGE_LEFT:
