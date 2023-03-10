@@ -72,9 +72,6 @@ NULL
 0
 
 statement ok
-pragma delete_csr=0;
-
-statement ok
 CREATE TABLE person(id BIGINT PRIMARY KEY);
 
 statement ok

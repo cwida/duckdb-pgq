@@ -89,9 +89,6 @@ NULL
 #150
 
 statement ok
-pragma delete_csr=0
-
-statement ok
 CREATE TABLE Transfers_float(tid bigint, from_id bigint, to_id bigint, amount double);
 
 statement ok
@@ -124,6 +121,3 @@ SELECT cheapest_path_length(0, v_size, src, dst) FROM src_dest;
 3.4
 NULL
 1.2
-
-statement ok
-pragma delete_csr=0

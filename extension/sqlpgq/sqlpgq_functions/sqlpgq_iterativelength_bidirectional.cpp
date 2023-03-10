@@ -146,6 +146,7 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 			}
 		}
 	}
+    info.context.client_data->csr_list.erase(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLengthBidirectionalFunction() {

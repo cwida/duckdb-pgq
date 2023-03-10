@@ -50,9 +50,6 @@ NULL
 1
 
 statement ok
-pragma delete_csr=0;
-
-statement ok
 drop table src_dest
 
 statement ok
