@@ -938,7 +938,7 @@ table_ref:	relation_expr opt_alias_clause opt_tablesample_clause
 				}
                         | GRAPH_TABLE GraphTableStmt
                                 {
-                                        $$ = (PGNode *) $1;
+                                        $$ = (PGNode *) $2;
                                 }
 		;
 

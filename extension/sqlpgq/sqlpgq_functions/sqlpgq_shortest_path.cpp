@@ -47,7 +47,7 @@ static bool IterativeLength(int64_t v_size, int64_t *V, vector<int64_t> &E, vect
 static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
-
+	D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
 	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
 	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
 
@@ -197,6 +197,7 @@ static void ShortestPathFunction(DataChunk &args, ExpressionState &state, Vector
 			total_len += result_data[search_num].length;
 		}
 	}
+	info.context.client_data->csr_list.erase(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetShortestPathFunction() {

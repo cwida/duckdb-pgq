@@ -15,6 +15,9 @@
 #include "duckdb/common/unordered_map.hpp"
 #include "duckdb/parser/group_by_node.hpp"
 #include "duckdb/parser/parsed_data/create_info.hpp"
+#include "duckdb/parser/path_pattern.hpp"
+#include "duckdb/parser/path_element.hpp"
+#include "duckdb/parser/subpath_element.hpp"
 #include "duckdb/parser/qualified_name.hpp"
 #include "duckdb/parser/query_node.hpp"
 #include "duckdb/parser/tokens.hpp"
@@ -213,8 +216,6 @@ private:
 	//! Transform a positional reference (e.g. #1)
 	unique_ptr<ParsedExpression> TransformPositionalReference(duckdb_libpgquery::PGPositionalReference *node);
 	unique_ptr<ParsedExpression> TransformStarExpression(duckdb_libpgquery::PGNode *node);
-	//! Transform a node/edge table create (SQL/PGQ)
-	unique_ptr<PropertyGraphTable> TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *node);
 
 	//! Transform a Postgres constant value into an Expression
 	unique_ptr<ParsedExpression> TransformConstant(duckdb_libpgquery::PGAConst *c);
@@ -284,6 +285,21 @@ private:
 	unique_ptr<TableRef> TransformRangeSubselect(duckdb_libpgquery::PGRangeSubselect *root);
 	//! Transform a VALUES list into a set of expressions
 	unique_ptr<TableRef> TransformValuesList(duckdb_libpgquery::PGList *list);
+	//! Transform a match clause (SQL/PGQ)
+	unique_ptr<TableRef> TransformMatch(duckdb_libpgquery::PGMatchClause *root);
+
+	//===--------------------------------------------------------------------===//
+	// SQL/PGQ Property graph transform
+	//===--------------------------------------------------------------------===//
+	//! Transform a node/edge table create (SQL/PGQ)
+	shared_ptr<PropertyGraphTable> TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable *node,
+	                                                           case_insensitive_set_t &global_label_set);
+	//! Transform a path pattern (SQL/PGQ)
+	unique_ptr<PathPattern> TransformPath(duckdb_libpgquery::PGPathPattern *root);
+	//! Transform a path element (SQL/PGQ)
+	unique_ptr<PathElement> TransformPathElement(duckdb_libpgquery::PGPathElement *element);
+	//! Transform a subpath (SQL/PGQ)
+	unique_ptr<SubPath> TransformSubPathElement(duckdb_libpgquery::PGSubPath *element);
 
 	//! Transform a range var into a (schema) qualified name
 	QualifiedName TransformQualifiedName(duckdb_libpgquery::PGRangeVar *root);

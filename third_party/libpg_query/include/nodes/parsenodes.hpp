@@ -2256,7 +2256,7 @@ typedef struct PGPathElement {
 	PGLabelTest *label_expr;
 } PGPathElement;
 
-/* temporary structto collect stuff 
+/* temporary struct to collect stuff
  * it is only used during parsing but is not emitted by parsing 
  */
 typedef struct PGPathInfo {

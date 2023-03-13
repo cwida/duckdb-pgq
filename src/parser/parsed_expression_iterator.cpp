@@ -225,6 +225,7 @@ void ParsedExpressionIterator::EnumerateTableRefChildren(
 	}
 	case TableReferenceType::BASE_TABLE:
 	case TableReferenceType::EMPTY:
+	case TableReferenceType::MATCH:
 		// these TableRefs do not need to be unfolded
 		break;
 	case TableReferenceType::INVALID:

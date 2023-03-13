@@ -60,9 +60,6 @@ SELECT cheapest_path_length(0, v_size, src, dst) FROM src_dest;
 100
 
 statement ok
-pragma delete_csr=0
-
-statement ok
 drop table src_dest
 
 statement ok
@@ -116,6 +113,3 @@ SELECT cheapest_path_length(0, v_size, src, dst) FROM src_dest;
 200.300000
 100.100000
 
-
-statement ok
-pragma delete_csr=0

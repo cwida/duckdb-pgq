@@ -1,7 +1,5 @@
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
-#include "duckdb/main/client_context.hpp"
 #include "duckdb/main/client_data.hpp"
-#include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "sqlpgq_functions.hpp"
 #include "sqlpgq_common.hpp"
@@ -73,7 +71,7 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 	vector<std::bitset<LANE_LIMIT>> dst_visit2(v_size);
 
 	// maps lane to search number
-	short lane_to_num[LANE_LIMIT];
+	int16_t lane_to_num[LANE_LIMIT];
 	for (int64_t lane = 0; lane < LANE_LIMIT; lane++) {
 		lane_to_num[lane] = -1; // inactive
 	}
@@ -148,6 +146,7 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 			}
 		}
 	}
+	info.context.client_data->csr_list.erase(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLengthBidirectionalFunction() {

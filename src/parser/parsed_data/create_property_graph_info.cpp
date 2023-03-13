@@ -26,7 +26,10 @@ void CreatePropertyGraphInfo::SerializeInternal(Serializer &serializer) const {
 	for (auto &edge_table : edge_tables) {
 		edge_table->Serialize(serializer);
 	}
-
+	for (auto &label_entry : label_map) {
+		writer.WriteString(label_entry.first);
+		label_entry.second->Serialize(serializer);
+	}
 	writer.Finalize();
 }
 
@@ -35,10 +38,13 @@ unique_ptr<CreateInfo> CreatePropertyGraphInfo::Copy() const {
 	CopyProperties(*result);
 
 	for (auto &vertex_table : vertex_tables) {
-		result->vertex_tables.push_back(vertex_table->Copy());
+		result->vertex_tables.push_back(vertex_table);
 	}
 	for (auto &edge_table : edge_tables) {
-		result->edge_tables.push_back(edge_table->Copy());
+		result->edge_tables.push_back(edge_table);
+	}
+	for (auto &label_entry : label_map) {
+		result->label_map[label_entry.first] = label_entry.second;
 	}
 
 	return std::move(result);

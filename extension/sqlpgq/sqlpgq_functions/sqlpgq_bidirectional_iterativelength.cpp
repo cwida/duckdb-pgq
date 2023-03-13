@@ -176,7 +176,7 @@
 //	auto fun = ScalarFunction("bidirectionaliterativelength",
 //	                          {LogicalType::INTEGER, LogicalType::BIGINT, LogicalType::BIGINT, LogicalType::BIGINT},
 //	                          LogicalType::BIGINT, BidirectionalIterativeLengthFunction,
-//IterativeLengthFunctionData::IterativeLengthBind); 	return CreateScalarFunctionInfo(fun);
+// IterativeLengthFunctionData::IterativeLengthBind); 	return CreateScalarFunctionInfo(fun);
 // }
 //
 // } // namespace duckdb
