@@ -113,3 +113,17 @@ FROM GRAPH_TABLE (pg,
 Peter	Daniel
 Peter	Tavneet
 Peter	Gabor
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]-> +(b:Person)
+    WHERE a.name = 'Peter'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study
+----
+Peter	Daniel
+Peter	Tavneet
+Peter	Gabor
+Peter	David
