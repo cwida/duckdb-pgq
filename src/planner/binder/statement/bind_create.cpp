@@ -182,10 +182,14 @@ static void CheckPropertyGraphTableColumns(shared_ptr<PropertyGraphTable> &pg_ta
 void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
     auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
     if (sqlpgq_state_entry == context.registered_state.end()) {
-        throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+        throw InternalException("The SQL/PGQ extension has not been loaded");
     }
     auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
     auto pg_table = sqlpgq_state->GetPropertyGraph(info.property_graph_name);
+
+    if (pg_table == nullptr) {
+        throw InternalException("Property graph table %s not found", info.property_graph_name);
+    }
 
 	auto &catalog = Catalog::GetCatalog(context, info.catalog);
 

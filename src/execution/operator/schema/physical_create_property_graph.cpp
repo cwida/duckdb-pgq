@@ -31,12 +31,11 @@ void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &
 		return;
 	}
 
-	auto &client_data = ClientData::Get(context.client);
 
 	//! During the binder we already check if the property graph exists
     auto sqlpgq_state_entry = context.client.registered_state.find("sqlpgq");
     if (sqlpgq_state_entry == context.client.registered_state.end()) {
-        throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+        throw InternalException("The SQL/PGQ extension has not been loaded");
     }
     auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
     sqlpgq_state->InsertPropertyGraph(info->property_graph_name, info->Copy());
