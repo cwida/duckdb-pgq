@@ -20,8 +20,16 @@ public:
 
     }
 
-    void InsertNewPropertyGraph() {
+    CreatePropertyGraphInfo* GetPropertyGraph(const string &pg_name) {
+        auto pg_table_entry = registered_property_graphs.find(pg_name);
+        if (pg_table_entry == registered_property_graphs.end()) {
+            throw BinderException("Property graph %s does not exist", pg_name);
+        }
+        return reinterpret_cast<CreatePropertyGraphInfo*>(pg_table_entry->second.get());
+    }
 
+    void InsertPropertyGraph(const string &pg_name, unique_ptr<CreateInfo> pg) {
+        registered_property_graphs[pg_name] = std::move(pg);
     }
 
     void InsertNewCSR(int32_t id, unique_ptr<CSR> csr) {
