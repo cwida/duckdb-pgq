@@ -8,6 +8,8 @@
 #include "duckdb/parser/result_modifier.hpp"
 #include "duckdb/parser/tableref/joinref.hpp"
 
+#include "../../../extension/sqlpgq/include/sqlpgq_common.hpp"
+
 namespace duckdb {
 
 shared_ptr<PropertyGraphTable> FindGraphTable(const string &label, CreatePropertyGraphInfo &pg_table) {
@@ -126,14 +128,13 @@ static unique_ptr<JoinRef> GetJoinRef(shared_ptr<PropertyGraphTable> &edge_table
 }
 
 unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
-	auto &client_data = ClientData::Get(context);
 
-	auto pg_table_entry = client_data.registered_property_graphs.find(ref.pg_name);
-	if (pg_table_entry == client_data.registered_property_graphs.end()) {
-		throw BinderException("Property graph %s does not exist", ref.pg_name);
-	}
-
-	auto pg_table = reinterpret_cast<CreatePropertyGraphInfo *>(pg_table_entry->second.get());
+    auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
+    if (sqlpgq_state_entry == context.registered_state.end()) {
+        throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+    }
+    auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+	auto pg_table = sqlpgq_state->GetPropertyGraph(ref.pg_name);
 
 	auto outer_select_statement = make_unique<SelectStatement>();
 	auto cte_select_statement = make_unique<SelectStatement>();
