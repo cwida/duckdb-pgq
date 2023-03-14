@@ -14,6 +14,38 @@
 
 namespace duckdb {
 
+class SQLPGQContext : public ClientContextState {
+public:
+    explicit SQLPGQContext() {
+
+    }
+
+    void InsertNewPropertyGraph() {
+
+    }
+
+    void InsertNewCSR(int32_t id, unique_ptr<CSR> csr) {
+        csr_list[id] = std::move(csr);
+    }
+    void EraseCSR(int32_t id) {
+        csr_list.erase(id);
+    }
+
+    void QueryEnd() override {
+        // Check if it contains a path query
+
+
+    }
+
+protected:
+    //! Property graphs that are registered
+    std::unordered_map<string, unique_ptr<CreateInfo>> registered_property_graphs;
+
+    //! Used to build the CSR data structures required for path-finding queries
+    std::unordered_map<int32_t, unique_ptr<CSR>> csr_list;
+    std::mutex csr_lock;
+};
+
 struct CSRFunctionData : public FunctionData {
 public:
 	CSRFunctionData(ClientContext &context, int32_t id, LogicalType weight_type);
@@ -56,5 +88,8 @@ struct CheapestPathLengthFunctionData : public FunctionData {
 	unique_ptr<FunctionData> Copy() const override;
 	bool Equals(const FunctionData &other_p) const override;
 };
+
+
+
 
 } // namespace duckdb

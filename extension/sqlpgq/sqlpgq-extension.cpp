@@ -15,7 +15,7 @@ void SQLPGQExtension::Load(DuckDB &db) {
 	for (auto &fun : SQLPGQFunctions::GetFunctions()) {
 		catalog.CreateFunction(*con.context, &fun);
 	}
-
+    con.context->registered_state["sqlpgq"] = make_unique<SQLPGQContext>();
 	con.Commit();
 }
 
