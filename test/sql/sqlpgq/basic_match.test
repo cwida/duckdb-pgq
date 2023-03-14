@@ -181,3 +181,18 @@ Peter	1
 Gabor	1
 David	1
 
+query III
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]->(b:Person)-[k2:Knows]->(c:Person)-[k3:Knows]->(a:Person)
+    COLUMNS (a.name as a_name, b.name as b_name, c.name as c_name)
+    ) study;
+----
+Daniel	Tavneet	Peter
+Daniel	Gabor	Peter
+Tavneet	Peter	Daniel
+Gabor	Peter	Daniel
+Peter	Daniel	Gabor
+Peter	Daniel	Tavneet
+
