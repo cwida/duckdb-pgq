@@ -54,7 +54,7 @@ public:
 
     }
 
-protected:
+public:
     //! Property graphs that are registered
     std::unordered_map<string, unique_ptr<CreateInfo>> registered_property_graphs;
 
