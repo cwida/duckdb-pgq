@@ -39,6 +39,9 @@
 #include "duckdb/main/attached_database.hpp"
 #include "duckdb/catalog/duck_catalog.hpp"
 
+#include "../../../extension/sqlpgq/include/sqlpgq_common.hpp"
+
+
 namespace duckdb {
 
 void Binder::BindSchemaOrCatalog(ClientContext &context, string &catalog, string &schema) {
@@ -177,11 +180,12 @@ static void CheckPropertyGraphTableColumns(shared_ptr<PropertyGraphTable> &pg_ta
 }
 
 void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
-	auto &client_data = context.client_data;
-	auto pg_table = client_data->registered_property_graphs.find(info.property_graph_name);
-	if (pg_table != client_data->registered_property_graphs.end()) {
-		throw BinderException("Property graph table %s already exists", info.property_graph_name);
-	}
+    auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
+    if (sqlpgq_state_entry == context.registered_state.end()) {
+        throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+    }
+    auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+    auto pg_table = sqlpgq_state->GetPropertyGraph(info.property_graph_name);
 
 	auto &catalog = Catalog::GetCatalog(context, info.catalog);
 
