@@ -192,7 +192,7 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
     auto pg_table = sqlpgq_state->registered_property_graphs.find(info.property_graph_name);
 
     if (pg_table != sqlpgq_state->registered_property_graphs.end()) {
-        throw InternalException("Property graph table with name %s already exists", info.property_graph_name);
+        throw ConstraintException("Property graph table with name %s already exists", info.property_graph_name);
     }
 
 	auto &catalog = Catalog::GetCatalog(context, info.catalog);
