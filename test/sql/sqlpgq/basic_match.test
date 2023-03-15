@@ -107,16 +107,6 @@ Daniel	Tavneet
 Daniel	Gabor
 Daniel	Peter
 
-#query II
-#SELECT study.a_name, study.b_name
-#FROM (SELECT a.name as a_name, b.name as b_name
-#       FROM Student a, Know k, Student b
-#       WHERE (a.id = k.src and b.id = k.dst) or (a.id = k.dst and b.id = k.src)
-#       )
-#       study
-#----
-#Daniel	Gabor
-
 query II
 SELECT study.a_name, study.b_name
 FROM GRAPH_TABLE (pg,
