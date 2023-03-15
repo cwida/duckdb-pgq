@@ -34,7 +34,7 @@ static int16_t InitialiseBfs(idx_t curr_batch, idx_t size, int64_t *src_data, co
 	return curr_batch_size;
 }
 
-static bool BfsWithoutArrayVariant(bool exit_early, int32_t id, int64_t input_size, IterativeLengthFunctionData &info,
+static bool BfsWithoutArrayVariant(bool exit_early, CSR* csr, int64_t input_size,
                                    vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                                    vector<std::bitset<LANE_LIMIT>> &visit_next, vector<int64_t> &visit_list) {
 	for (int64_t i = 0; i < input_size; i++) {
@@ -42,10 +42,9 @@ static bool BfsWithoutArrayVariant(bool exit_early, int32_t id, int64_t input_si
 			continue;
 		}
 
-		D_ASSERT(info.context.client_data->csr_list[id]);
-		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i];
-		     index < info.context.client_data->csr_list[id]->v[i + 1]; index++) {
-			auto n = info.context.client_data->csr_list[id]->e[index];
+		for (auto index = (int64_t)csr->v[i];
+		     index < csr->v[i + 1]; index++) {
+			auto n = csr->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
 	}
@@ -66,7 +65,7 @@ static bool BfsWithoutArrayVariant(bool exit_early, int32_t id, int64_t input_si
 	return exit_early;
 }
 
-static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, ClientContext &context,
+static bool BfsWithoutArray(bool exit_early, CSR* csr, int64_t input_size,
                             vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                             vector<std::bitset<LANE_LIMIT>> &visit_next) {
 	for (int64_t i = 0; i < input_size; i++) {
@@ -74,10 +73,9 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Cli
 			continue;
 		}
 
-		D_ASSERT(context.client_data->csr_list[id]);
-		for (auto index = (int64_t)context.client_data->csr_list[id]->v[i];
-		     index < (int64_t)context.client_data->csr_list[id]->v[i + 1]; index++) {
-			auto n = context.client_data->csr_list[id]->e[index];
+		for (auto index = (int64_t)csr->v[i];
+		     index < (int64_t)csr->v[i + 1]; index++) {
+			auto n = csr->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
 	}
@@ -95,8 +93,8 @@ static bool BfsWithoutArray(bool exit_early, int32_t id, int64_t input_size, Cli
 	return exit_early;
 }
 
-static pair<bool, size_t> BfsTempStateVariant(bool exit_early, int32_t id, int64_t input_size,
-                                              IterativeLengthFunctionData &info, vector<std::bitset<LANE_LIMIT>> &seen,
+static pair<bool, size_t> BfsTempStateVariant(bool exit_early, CSR* csr, int64_t input_size,
+                                              vector<std::bitset<LANE_LIMIT>> &seen,
                                               vector<std::bitset<LANE_LIMIT>> &visit,
                                               vector<std::bitset<LANE_LIMIT>> &visit_next) {
 	size_t num_nodes_to_visit = 0;
@@ -105,10 +103,9 @@ static pair<bool, size_t> BfsTempStateVariant(bool exit_early, int32_t id, int64
 			continue;
 		}
 
-		D_ASSERT(info.context.client_data->csr_list[id]);
-		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i];
-		     index < (int64_t)info.context.client_data->csr_list[id]->v[i + 1]; index++) {
-			auto n = info.context.client_data->csr_list[id]->e[index];
+		for (auto index = (int64_t)csr->v[i];
+		     index < (int64_t)csr->v[i + 1]; index++) {
+			auto n = csr->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 		}
 	}
@@ -129,23 +126,20 @@ static pair<bool, size_t> BfsTempStateVariant(bool exit_early, int32_t id, int64
 	return pair<bool, size_t>(exit_early, num_nodes_to_visit);
 }
 
-static bool BfsWithArrayVariant(bool exit_early, int32_t id, IterativeLengthFunctionData &info,
+static bool BfsWithArrayVariant(bool exit_early, CSR* csr,
                                 vector<std::bitset<LANE_LIMIT>> &seen, vector<std::bitset<LANE_LIMIT>> &visit,
                                 vector<std::bitset<LANE_LIMIT>> &visit_next, vector<int64_t> &visit_list) {
 	unordered_set<int64_t> neighbours_set;
 	for (int64_t i : visit_list) {
-		D_ASSERT(info.context.client_data->csr_list[id]);
-		for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[i];
-		     index < (int64_t)info.context.client_data->csr_list[id]->v[i + 1]; index++) {
-			auto n = info.context.client_data->csr_list[id]->e[index];
+		for (auto index = (int64_t)csr->v[i];
+		     index < (int64_t)csr->v[i + 1]; index++) {
+			auto n = csr->e[index];
 			visit_next[n] = visit_next[n] | visit[i];
 			neighbours_set.insert(n);
 		}
 	}
 	visit_list.clear();
 	for (int64_t i : neighbours_set) {
-		// if (visit_next[i].none())
-		// 	continue;
 		visit_next[i] = visit_next[i] & ~seen[i];
 		seen[i] = seen[i] | visit_next[i];
 		if (exit_early && visit_next[i].any()) {
@@ -192,7 +186,16 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 	size_t visit_limit = input_size / VISIT_SIZE_DIVISOR;
 	size_t num_nodes_to_visit = 0;
 	result.SetVectorType(VectorType::FLAT_VECTOR);
+
 	auto result_data = FlatVector::GetData<bool>(result);
+    auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
+    if (sqlpgq_state_entry == info.context.registered_state.end()) {
+        //! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+        throw InternalException("The SQL/PGQ extension has not been loaded");
+    }
+    auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+
+    CSR* csr = sqlpgq_state->GetCSR(info.csr_id);
 
 	while (result_size < args.size()) {
 		vector<std::bitset<LANE_LIMIT>> seen(input_size);
@@ -212,15 +215,15 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 				switch (mode) {
 				case 1:
 					exit_early =
-					    BfsWithArrayVariant(exit_early, info.csr_id, info, seen, visit, visit_next, visit_list);
+					    BfsWithArrayVariant(exit_early, csr, seen, visit, visit_next, visit_list);
 					break;
 				case 0:
-					exit_early = BfsWithoutArrayVariant(exit_early, info.csr_id, input_size, info, seen, visit,
+					exit_early = BfsWithoutArrayVariant(exit_early, csr, input_size, seen, visit,
 					                                    visit_next, visit_list);
 					break;
 				case 2: {
 					auto return_pair =
-					    BfsTempStateVariant(exit_early, info.csr_id, input_size, info, seen, visit, visit_next);
+					    BfsTempStateVariant(exit_early, csr, input_size, seen, visit, visit_next);
 					exit_early = return_pair.first;
 					num_nodes_to_visit = return_pair.second;
 					break;
@@ -230,7 +233,7 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 				}
 			} else {
 				exit_early =
-				    BfsWithoutArray(exit_early, info.csr_id, input_size, info.context, seen, visit, visit_next);
+				    BfsWithoutArray(exit_early, csr, input_size, seen, visit, visit_next);
 			}
 
 			visit = visit_next;
@@ -255,7 +258,7 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 		}
 		result_size = result_size + curr_batch_size;
 	}
-	info.context.client_data->csr_list.erase(info.csr_id);
+    sqlpgq_state->csr_to_delete.insert(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetReachabilityFunction() {

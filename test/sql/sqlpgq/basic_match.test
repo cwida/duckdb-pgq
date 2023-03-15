@@ -4,6 +4,8 @@
 statement ok
 pragma enable_verification
 
+require sqlpgq
+
 statement ok
 CREATE TABLE Student(id BIGINT, name VARCHAR);
 
@@ -105,16 +107,6 @@ Daniel	Tavneet
 Daniel	Gabor
 Daniel	Peter
 
-#query II
-#SELECT study.a_name, study.b_name
-#FROM (SELECT a.name as a_name, b.name as b_name
-#       FROM Student a, Know k, Student b
-#       WHERE (a.id = k.src and b.id = k.dst) or (a.id = k.dst and b.id = k.src)
-#       )
-#       study
-#----
-#Daniel	Gabor
-
 query II
 SELECT study.a_name, study.b_name
 FROM GRAPH_TABLE (pg,
@@ -195,4 +187,36 @@ Tavneet	Peter	Daniel
 Gabor	Peter	Daniel
 Peter	Daniel	Gabor
 Peter	Daniel	Tavneet
+
+
+statement ok
+CREATE PROPERTY GRAPH pg2
+VERTEX TABLES (
+    Student PROPERTIES ( id, name ) LABEL Person,
+    School LABEL SCHOOL
+    )
+EDGE TABLES (
+    know    SOURCE KEY ( src ) REFERENCES Student ( id )
+            DESTINATION KEY ( dst ) REFERENCES Student ( id )
+            LABEL Knows,
+    studyAt SOURCE KEY ( personId ) REFERENCES Student ( id )
+            DESTINATION KEY ( SchoolId ) REFERENCES School ( id )
+            LABEL StudyAt
+    );
+
+query III
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg2,
+    MATCH
+    (a:Person)-[k:Knows]->(b:Person)-[k2:Knows]->(c:Person)-[k3:Knows]->(a:Person)
+    COLUMNS (a.name as a_name, b.name as b_name, c.name as c_name)
+    ) study;
+----
+Daniel	Tavneet	Peter
+Daniel	Gabor	Peter
+Tavneet	Peter	Daniel
+Gabor	Peter	Daniel
+Peter	Daniel	Gabor
+Peter	Daniel	Tavneet
+
 

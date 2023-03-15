@@ -15,8 +15,7 @@ void SQLPGQExtension::Load(DuckDB &db) {
 	for (auto &fun : SQLPGQFunctions::GetFunctions()) {
 		catalog.CreateFunction(*con.context, &fun);
 	}
-
-	con.Commit();
+    con.Commit();
 }
 
 std::string SQLPGQExtension::Name() {
