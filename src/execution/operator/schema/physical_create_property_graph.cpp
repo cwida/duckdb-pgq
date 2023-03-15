@@ -38,7 +38,7 @@ void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &
         throw InternalException("The SQL/PGQ extension has not been loaded");
     }
     auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
-    sqlpgq_state->InsertPropertyGraph(info->property_graph_name, info->Copy());
+    sqlpgq_state->registered_property_graphs[info->property_graph_name] = info->Copy();
 	state.finished = true;
 }
 

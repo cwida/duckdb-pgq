@@ -28,17 +28,6 @@ public:
         return reinterpret_cast<CreatePropertyGraphInfo*>(pg_table_entry->second.get());
     }
 
-    void InsertPropertyGraph(const string &pg_name, unique_ptr<CreateInfo> pg) {
-        registered_property_graphs[pg_name] = std::move(pg);
-    }
-
-    void InsertCSR(int32_t id, unique_ptr<CSR> csr) {
-        csr_list[id] = std::move(csr);
-    }
-    void EraseCSR(int32_t id) {
-        csr_list.erase(id);
-    }
-
     CSR* GetCSR(int32_t id) {
         auto csr_entry = csr_list.find(id);
         if (csr_entry == csr_list.end()) {
@@ -50,8 +39,7 @@ public:
 
     void QueryEnd() override {
         // Check if it contains a path query
-
-
+        csr_list.clear();
     }
 
 public:
