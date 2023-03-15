@@ -30,8 +30,7 @@ void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &
 	if (state.finished) {
 		return;
 	}
-
-
+    
 	//! During the binder we already check if the property graph exists
     auto sqlpgq_state_entry = context.client.registered_state.find("sqlpgq");
     if (sqlpgq_state_entry == context.client.registered_state.end()) {
