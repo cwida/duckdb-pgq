@@ -181,14 +181,18 @@ static void CheckPropertyGraphTableColumns(shared_ptr<PropertyGraphTable> &pg_ta
 
 void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
     auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
+    shared_ptr<SQLPGQContext> sqlpgq_state;
     if (sqlpgq_state_entry == context.registered_state.end()) {
-        throw InternalException("The SQL/PGQ extension has not been loaded");
+        sqlpgq_state = make_shared<SQLPGQContext>();
+        context.registered_state["sqlpgq"] = sqlpgq_state;
+    } else {
+        sqlpgq_state = dynamic_pointer_cast<SQLPGQContext>(sqlpgq_state_entry->second);
     }
-    auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
-    auto pg_table = sqlpgq_state->GetPropertyGraph(info.property_graph_name);
+//    shared_ptr<SQLPGQContext> sqlpgq_state = dynamic_cast<shared_ptr<SQLPGQContext>>(sqlpgq_state_);
+    auto pg_table = sqlpgq_state->registered_property_graphs.find(info.property_graph_name);
 
-    if (pg_table == nullptr) {
-        throw InternalException("Property graph table %s not found", info.property_graph_name);
+    if (pg_table != sqlpgq_state->registered_property_graphs.end()) {
+        throw InternalException("Property graph table with name %s already exists", info.property_graph_name);
     }
 
 	auto &catalog = Catalog::GetCatalog(context, info.catalog);
