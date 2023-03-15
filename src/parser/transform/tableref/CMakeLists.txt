@@ -5,6 +5,7 @@ add_library_unity(
   transform_join.cpp
   transform_from.cpp
   transform_match.cpp
+  transform_pivot.cpp
   transform_subquery.cpp
   transform_table_function.cpp
   transform_tableref.cpp)

@@ -28,11 +28,11 @@ unique_ptr<CSVFileHandle> ReadCSV::OpenCSV(const string &file_path, FileCompress
 void ReadCSVData::InitializeFiles(ClientContext &context, const vector<string> &patterns) {
 	auto &fs = FileSystem::GetFileSystem(context);
 	for (auto &file_pattern : patterns) {
-		auto found_files = fs.Glob(file_pattern, context);
-		if (found_files.empty()) {
-			throw FileSystem::MissingFileException(file_pattern, context);
-		}
+		auto found_files = fs.GlobFiles(file_pattern, context);
 		files.insert(files.end(), found_files.begin(), found_files.end());
+	}
+	if (files.empty()) {
+		throw IOException("CSV reader needs at least one file to read");
 	}
 }
 
@@ -64,9 +64,15 @@ static unique_ptr<FunctionData> ReadCSVBind(ClientContext &context, TableFunctio
 	auto &options = result->options;
 
 	vector<string> patterns;
+	if (input.inputs[0].IsNull()) {
+		throw ParserException("CSV reader cannot take NULL as parameter");
+	}
 	if (input.inputs[0].type().id() == LogicalTypeId::LIST) {
 		// list of globs
 		for (auto &val : ListValue::GetChildren(input.inputs[0])) {
+			if (val.IsNull()) {
+				throw ParserException("CSV reader cannot take NULL input as parameter");
+			}
 			patterns.push_back(StringValue::Get(val));
 		}
 	} else {

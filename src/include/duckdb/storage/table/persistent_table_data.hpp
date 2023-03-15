@@ -12,6 +12,7 @@
 #include "duckdb/common/vector.hpp"
 #include "duckdb/storage/table/segment_tree.hpp"
 #include "duckdb/storage/data_pointer.hpp"
+#include "duckdb/storage/table/table_statistics.hpp"
 
 namespace duckdb {
 class BaseStatistics;
@@ -21,8 +22,11 @@ public:
 	explicit PersistentTableData(idx_t column_count);
 	~PersistentTableData();
 
-	vector<RowGroupPointer> row_groups;
-	vector<unique_ptr<BaseStatistics>> column_stats;
+	TableStatistics table_stats;
+	idx_t total_rows;
+	idx_t row_group_count;
+	block_id_t block_id;
+	idx_t offset;
 };
 
 } // namespace duckdb

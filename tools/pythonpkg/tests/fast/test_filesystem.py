@@ -81,8 +81,9 @@ class TestPythonFilesystem:
 
     def test_unregister_builtin(self, require: Callable[[str], DuckDBPyConnection]):
         duckdb_cursor = require('httpfs')
-        assert 'S3FileSystem' in duckdb_cursor.list_filesystems()
+        assert duckdb_cursor.filesystem_is_registered('S3FileSystem') == True
         duckdb_cursor.unregister_filesystem('S3FileSystem')
+        assert duckdb_cursor.filesystem_is_registered('S3FileSystem') == False
 
     def test_multiple_protocol_filesystems(self, duckdb_cursor: DuckDBPyConnection):
         class ExtendedMemoryFileSystem(MemoryFileSystem):
@@ -145,7 +146,6 @@ class TestPythonFilesystem:
 
         local = fs.LocalFileSystem()
         local_fsspec = ArrowFSWrapper(local, skip_instance_cache=True)
-        local_fsspec.protocol = "local"
         # posix calls here required as ArrowFSWrapper only supports url-like paths (not Windows paths)
         filename = str(PurePosixPath(tmp_path.as_posix()) / "test.csv")
         with local_fsspec.open(filename, mode='w') as f:
@@ -184,3 +184,24 @@ class TestPythonFilesystem:
         # duckdb sometimes seems to swallow write errors, so we use this to ensure that 
         # isn't happening
         assert not write_errors
+
+    def test_copy_partition(self, duckdb_cursor: DuckDBPyConnection, memory: AbstractFileSystem):
+        duckdb_cursor.register_filesystem(memory)
+
+        duckdb_cursor.execute("copy (select 1 as a) to 'memory://root' (partition_by (a))")
+
+        assert memory.open(
+            '/root\\a=1\\data_0.csv'
+            if sys.platform == 'win32' else
+            '/root/a=1/data_0.csv'
+        ).read() == b'1\n'
+
+    def test_read_hive_partition(self, duckdb_cursor: DuckDBPyConnection, memory: AbstractFileSystem):
+        duckdb_cursor.register_filesystem(memory)
+
+        with memory.open('/root/a=1/data_0.csv', 'wb') as fh:
+            fh.write(b'1\n')
+
+        duckdb_cursor.execute('''SELECT * FROM read_csv_auto('memory://root/*/*.csv', HIVE_PARTITIONING = 1);''')
+
+        assert duckdb_cursor.fetchall() == [(1, '1')]
