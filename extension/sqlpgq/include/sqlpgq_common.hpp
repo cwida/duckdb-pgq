@@ -36,9 +36,10 @@ public:
         return csr_entry->second.get();
     }
 
-
     void QueryEnd() override {
-        csr_list.clear();
+        for (const auto &csr_id : csr_to_delete) {
+            csr_list.erase(csr_id);
+        }
     }
 
 public:
