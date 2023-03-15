@@ -19,7 +19,7 @@ unique_ptr<ColumnSegment> ColumnSegment::CreatePersistentSegment(DatabaseInstanc
                                                                  block_id_t block_id, idx_t offset,
                                                                  const LogicalType &type, idx_t start, idx_t count,
                                                                  CompressionType compression_type,
-                                                                 unique_ptr<BaseStatistics> statistics) {
+                                                                 BaseStatistics statistics) {
 	auto &config = DBConfig::GetConfig(db);
 	CompressionFunction *function;
 	shared_ptr<BlockHandle> block;
@@ -48,7 +48,7 @@ unique_ptr<ColumnSegment> ColumnSegment::CreateTransientSegment(DatabaseInstance
 		buffer_manager.Allocate(segment_size, false, &block);
 	}
 	return make_unique<ColumnSegment>(db, std::move(block), type, ColumnSegmentType::TRANSIENT, start, 0, function,
-	                                  nullptr, INVALID_BLOCK, 0, segment_size);
+	                                  BaseStatistics::CreateEmpty(type), INVALID_BLOCK, 0, segment_size);
 }
 
 unique_ptr<ColumnSegment> ColumnSegment::CreateSegment(ColumnSegment &other, idx_t start) {
@@ -57,11 +57,11 @@ unique_ptr<ColumnSegment> ColumnSegment::CreateSegment(ColumnSegment &other, idx
 
 ColumnSegment::ColumnSegment(DatabaseInstance &db, shared_ptr<BlockHandle> block, LogicalType type_p,
                              ColumnSegmentType segment_type, idx_t start, idx_t count, CompressionFunction *function_p,
-                             unique_ptr<BaseStatistics> statistics, block_id_t block_id_p, idx_t offset_p,
-                             idx_t segment_size_p)
-    : SegmentBase(start, count), db(db), type(std::move(type_p)), type_size(GetTypeIdSize(type.InternalType())),
-      segment_type(segment_type), function(function_p), stats(type, std::move(statistics)), block(std::move(block)),
-      block_id(block_id_p), offset(offset_p), segment_size(segment_size_p) {
+                             BaseStatistics statistics, block_id_t block_id_p, idx_t offset_p, idx_t segment_size_p)
+    : SegmentBase<ColumnSegment>(start, count), db(db), type(std::move(type_p)),
+      type_size(GetTypeIdSize(type.InternalType())), segment_type(segment_type), function(function_p),
+      stats(std::move(statistics)), block(std::move(block)), block_id(block_id_p), offset(offset_p),
+      segment_size(segment_size_p) {
 	D_ASSERT(function);
 	if (function->init_segment) {
 		segment_state = function->init_segment(*this, block_id);
@@ -69,10 +69,10 @@ ColumnSegment::ColumnSegment(DatabaseInstance &db, shared_ptr<BlockHandle> block
 }
 
 ColumnSegment::ColumnSegment(ColumnSegment &other, idx_t start)
-    : SegmentBase(start, other.count), db(other.db), type(std::move(other.type)), type_size(other.type_size),
-      segment_type(other.segment_type), function(other.function), stats(std::move(other.stats)),
-      block(std::move(other.block)), block_id(other.block_id), offset(other.offset), segment_size(other.segment_size),
-      segment_state(std::move(other.segment_state)) {
+    : SegmentBase<ColumnSegment>(start, other.count.load()), db(other.db), type(std::move(other.type)),
+      type_size(other.type_size), segment_type(other.segment_type), function(other.function),
+      stats(std::move(other.stats)), block(std::move(other.block)), block_id(other.block_id), offset(other.offset),
+      segment_size(other.segment_size), segment_state(std::move(other.segment_state)) {
 }
 
 ColumnSegment::~ColumnSegment() {
@@ -181,13 +181,12 @@ void ColumnSegment::ConvertToPersistent(BlockManager *block_manager, block_id_t 
 	block_id = block_id_p;
 	offset = 0;
 
-	D_ASSERT(stats.statistics);
 	if (block_id == INVALID_BLOCK) {
 		// constant block: reset the block buffer
-		D_ASSERT(stats.statistics->IsConstant());
+		D_ASSERT(stats.statistics.IsConstant());
 		block.reset();
 	} else {
-		D_ASSERT(!stats.statistics->IsConstant());
+		D_ASSERT(!stats.statistics.IsConstant());
 		// non-constant block: write the block to disk
 		// the data for the block already exists in-memory of our block
 		// instead of copying the data we alter some metadata so the buffer points to an on-disk block

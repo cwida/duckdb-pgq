@@ -9,7 +9,6 @@
 #pragma once
 
 #include "duckdb/common/vector_size.hpp"
-#include "duckdb/storage/table/segment_base.hpp"
 #include "duckdb/storage/table/chunk_info.hpp"
 #include "duckdb/storage/table/append_state.hpp"
 #include "duckdb/storage/table/scan_state.hpp"
@@ -17,6 +16,7 @@
 #include "duckdb/common/enums/scan_options.hpp"
 #include "duckdb/common/mutex.hpp"
 #include "duckdb/parser/column_list.hpp"
+#include "duckdb/storage/table/segment_base.hpp"
 
 namespace duckdb {
 class AttachedDatabase;
@@ -29,6 +29,7 @@ struct DataTableInfo;
 class ExpressionExecutor;
 class RowGroupWriter;
 class UpdateSegment;
+class TableStatistics;
 class TableStorageInfo;
 class Vector;
 struct ColumnCheckpointState;
@@ -38,10 +39,10 @@ struct VersionNode;
 
 struct RowGroupWriteData {
 	vector<unique_ptr<ColumnCheckpointState>> states;
-	vector<unique_ptr<BaseStatistics>> statistics;
+	vector<BaseStatistics> statistics;
 };
 
-class RowGroup : public SegmentBase {
+class RowGroup : public SegmentBase<RowGroup> {
 public:
 	friend class ColumnData;
 	friend class VersionDeleteState;
@@ -57,6 +58,9 @@ public:
 	RowGroup(RowGroup &row_group, idx_t start);
 	~RowGroup();
 
+	//! The index within the segment tree
+	idx_t index;
+
 private:
 	//! The database instance
 	AttachedDatabase &db;
@@ -69,7 +73,7 @@ private:
 	//! The column data of the row_group
 	vector<shared_ptr<ColumnData>> columns;
 	//! The segment statistics for each of the columns
-	vector<shared_ptr<SegmentStatistics>> stats;
+	vector<SegmentStatistics> stats;
 
 public:
 	DatabaseInstance &GetDatabase();
@@ -132,9 +136,9 @@ public:
 	idx_t Delete(TransactionData transaction, DataTable *table, row_t *row_ids, idx_t count);
 
 	RowGroupWriteData WriteToDisk(PartialBlockManager &manager, const vector<CompressionType> &compression_types);
-	RowGroupPointer Checkpoint(RowGroupWriter &writer, vector<unique_ptr<BaseStatistics>> &global_stats);
+	RowGroupPointer Checkpoint(RowGroupWriter &writer, TableStatistics &global_stats);
 	static void Serialize(RowGroupPointer &pointer, Serializer &serializer);
-	static RowGroupPointer Deserialize(Deserializer &source, const ColumnList &columns);
+	static RowGroupPointer Deserialize(Deserializer &source, const vector<LogicalType> &columns);
 
 	void InitializeAppend(RowGroupAppendState &append_state);
 	void Append(RowGroupAppendState &append_state, DataChunk &chunk, idx_t append_count);

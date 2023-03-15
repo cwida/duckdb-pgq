@@ -185,6 +185,7 @@ void Planner::VerifyPlan(ClientContext &context, unique_ptr<LogicalOperator> &op
 	}
 
 	BufferedSerializer serializer;
+	serializer.is_query_plan = true;
 	try {
 		op->Serialize(serializer);
 	} catch (NotImplementedException &ex) {
@@ -192,7 +193,7 @@ void Planner::VerifyPlan(ClientContext &context, unique_ptr<LogicalOperator> &op
 		return;
 	}
 	auto data = serializer.GetData();
-	auto deserializer = BufferedDeserializer(data.data.get(), data.size);
+	auto deserializer = BufferedContextDeserializer(context, data.data.get(), data.size);
 
 	PlanDeserializationState state(context);
 	auto new_plan = LogicalOperator::Deserialize(deserializer, state);

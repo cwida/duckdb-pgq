@@ -23,6 +23,8 @@ class TableStatistics;
 
 class BoundConstraint;
 
+class RowGroupSegmentTree;
+
 class RowGroupCollection {
 public:
 	RowGroupCollection(shared_ptr<DataTableInfo> info, BlockManager &block_manager, vector<LogicalType> types,
@@ -46,8 +48,8 @@ public:
 	void InitializeCreateIndexScan(CreateIndexScanState &state);
 	void InitializeScanWithOffset(CollectionScanState &state, const vector<column_t> &column_ids, idx_t start_row,
 	                              idx_t end_row);
-	static bool InitializeScanInRowGroup(CollectionScanState &state, RowGroup *row_group, idx_t vector_index,
-	                                     idx_t max_row);
+	static bool InitializeScanInRowGroup(CollectionScanState &state, ParallelCollectionScanState &parallel_state,
+	                                     idx_t vector_index, idx_t max_row);
 	void InitializeParallelScan(ParallelCollectionScanState &state);
 	bool NextParallelScan(ClientContext &context, ParallelCollectionScanState &state, CollectionScanState &scan_state);
 
@@ -78,7 +80,7 @@ public:
 	void UpdateColumn(TransactionData transaction, Vector &row_ids, const vector<column_t> &column_path,
 	                  DataChunk &updates);
 
-	void Checkpoint(TableDataWriter &writer, vector<unique_ptr<BaseStatistics>> &global_stats);
+	void Checkpoint(TableDataWriter &writer, TableStatistics &global_stats);
 
 	void CommitDropColumn(idx_t index);
 	void CommitDropTable();
@@ -93,8 +95,9 @@ public:
 	                                         vector<column_t> bound_columns, Expression &cast_expr);
 	void VerifyNewConstraint(DataTable &parent, const BoundConstraint &constraint);
 
+	void CopyStats(TableStatistics &stats);
 	unique_ptr<BaseStatistics> CopyStats(column_t column_id);
-	void SetStatistics(column_t column_id, const std::function<void(BaseStatistics &)> &set_fun);
+	void SetDistinct(column_t column_id, unique_ptr<DistinctStatistics> distinct_stats);
 
 private:
 	bool IsEmpty(SegmentLock &) const;
@@ -108,7 +111,7 @@ private:
 	vector<LogicalType> types;
 	idx_t row_start;
 	//! The segment trees holding the various row_groups of the table
-	shared_ptr<SegmentTree> row_groups;
+	shared_ptr<RowGroupSegmentTree> row_groups;
 	//! Table statistics
 	TableStatistics stats;
 };

@@ -75,10 +75,7 @@ void JSONScanData::InitializeFilePaths(ClientContext &context, const vector<stri
                                        vector<string> &file_paths) {
 	auto &fs = FileSystem::GetFileSystem(context);
 	for (auto &file_pattern : patterns) {
-		auto found_files = fs.Glob(file_pattern, context);
-		if (found_files.empty()) {
-			throw FileSystem::MissingFileException(file_pattern, context);
-		}
+		auto found_files = fs.GlobFiles(file_pattern, context);
 		file_paths.insert(file_paths.end(), found_files.begin(), found_files.end());
 	}
 }
@@ -224,7 +221,7 @@ unique_ptr<GlobalTableFunctionState> JSONGlobalTableFunctionState::Init(ClientCo
 		}
 		bind_data.names = std::move(names);
 	}
-	return result;
+	return std::move(result);
 }
 
 idx_t JSONGlobalTableFunctionState::MaxThreads() const {
@@ -265,7 +262,7 @@ unique_ptr<LocalTableFunctionState> JSONLocalTableFunctionState::Init(ExecutionC
 	result->state.transform_options = gstate.state.bind_data.transform_options;
 	result->state.transform_options.date_format_map = &result->state.date_format_map;
 
-	return result;
+	return std::move(result);
 }
 
 idx_t JSONLocalTableFunctionState::GetBatchIndex() const {
