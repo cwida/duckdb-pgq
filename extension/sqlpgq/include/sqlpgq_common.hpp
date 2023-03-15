@@ -38,7 +38,6 @@ public:
 
 
     void QueryEnd() override {
-        // Check if it contains a path query
         csr_list.clear();
     }
 
@@ -49,6 +48,8 @@ public:
     //! Used to build the CSR data structures required for path-finding queries
     std::unordered_map<int32_t, unique_ptr<CSR>> csr_list;
     std::mutex csr_lock;
+    std::unordered_set<int32_t> csr_to_delete;
+
 };
 
 struct CSRFunctionData : public FunctionData {

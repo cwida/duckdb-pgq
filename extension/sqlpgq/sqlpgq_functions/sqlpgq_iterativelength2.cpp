@@ -132,6 +132,7 @@ static void IterativeLength2Function(DataChunk &args, ExpressionState &state, Ve
 			}
 		}
 	}
+    sqlpgq_state->csr_to_delete.insert(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLength2Function() {

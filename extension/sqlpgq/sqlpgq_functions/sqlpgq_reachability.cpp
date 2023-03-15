@@ -258,6 +258,7 @@ static void ReachabilityFunction(DataChunk &args, ExpressionState &state, Vector
 		}
 		result_size = result_size + curr_batch_size;
 	}
+    sqlpgq_state->csr_to_delete.insert(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetReachabilityFunction() {
