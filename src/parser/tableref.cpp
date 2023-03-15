@@ -89,10 +89,14 @@ unique_ptr<TableRef> TableRef::FormatDeserialize(FormatDeserializer &deserialize
 	case TableReferenceType::PIVOT:
 		result = PivotRef::FormatDeserialize(deserializer);
 		break;
+    case TableReferenceType::MATCH:
+        result = MatchRef::FormatDeserialize(deserializer);
+        break;
 	case TableReferenceType::CTE:
 	case TableReferenceType::INVALID:
 		throw InternalException("Unsupported type for TableRef::FormatDeserialize");
-	}
+
+    }
 	result->alias = alias;
 	result->sample = std::move(sample);
 	return result;
@@ -124,11 +128,10 @@ unique_ptr<TableRef> TableRef::Deserialize(Deserializer &source) {
 	case TableReferenceType::EXPRESSION_LIST:
 		result = ExpressionListRef::Deserialize(reader);
 		break;
-	case TableReferenceType::PIVOT:
-		result = PivotRef::Deserialize(reader);
-		break;
 	case TableReferenceType::MATCH:
 		result = MatchRef::Deserialize(reader);
+	case TableReferenceType::PIVOT:
+		result = PivotRef::Deserialize(reader);
 		break;
 	case TableReferenceType::CTE:
 	case TableReferenceType::INVALID:
