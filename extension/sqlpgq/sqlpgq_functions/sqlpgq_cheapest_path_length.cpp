@@ -165,6 +165,7 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 		TemplatedBellmanFord<int64_t>(csr, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
 		                              csr->w);
 	}
+    sqlpgq_state->csr_to_delete.insert(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetCheapestPathLengthFunction() {
