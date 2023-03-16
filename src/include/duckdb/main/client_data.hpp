@@ -62,7 +62,6 @@ struct ClientData {
 	//! The file search path
 	string file_search_path;
 
-
 public:
 	DUCKDB_API static ClientData &Get(ClientContext &context);
 };

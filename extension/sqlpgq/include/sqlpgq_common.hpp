@@ -16,41 +16,39 @@ namespace duckdb {
 
 class SQLPGQContext : public ClientContextState {
 public:
-    explicit SQLPGQContext() {
+	explicit SQLPGQContext() {
+	}
 
-    }
+	CreatePropertyGraphInfo *GetPropertyGraph(const string &pg_name) {
+		auto pg_table_entry = registered_property_graphs.find(pg_name);
+		if (pg_table_entry == registered_property_graphs.end()) {
+			throw BinderException("Property graph %s does not exist", pg_name);
+		}
+		return reinterpret_cast<CreatePropertyGraphInfo *>(pg_table_entry->second.get());
+	}
 
-    CreatePropertyGraphInfo* GetPropertyGraph(const string &pg_name) {
-        auto pg_table_entry = registered_property_graphs.find(pg_name);
-        if (pg_table_entry == registered_property_graphs.end()) {
-            throw BinderException("Property graph %s does not exist", pg_name);
-        }
-        return reinterpret_cast<CreatePropertyGraphInfo*>(pg_table_entry->second.get());
-    }
+	CSR *GetCSR(int32_t id) {
+		auto csr_entry = csr_list.find(id);
+		if (csr_entry == csr_list.end()) {
+			throw InternalException("CSR not found with ID %s", id);
+		}
+		return csr_entry->second.get();
+	}
 
-    CSR* GetCSR(int32_t id) {
-        auto csr_entry = csr_list.find(id);
-        if (csr_entry == csr_list.end()) {
-            throw InternalException("CSR not found with ID %s", id);
-        }
-        return csr_entry->second.get();
-    }
-
-    void QueryEnd() override {
-        for (const auto &csr_id : csr_to_delete) {
-            csr_list.erase(csr_id);
-        }
-    }
+	void QueryEnd() override {
+		for (const auto &csr_id : csr_to_delete) {
+			csr_list.erase(csr_id);
+		}
+	}
 
 public:
-    //! Property graphs that are registered
-    std::unordered_map<string, unique_ptr<CreateInfo>> registered_property_graphs;
+	//! Property graphs that are registered
+	std::unordered_map<string, unique_ptr<CreateInfo>> registered_property_graphs;
 
-    //! Used to build the CSR data structures required for path-finding queries
-    std::unordered_map<int32_t, unique_ptr<CSR>> csr_list;
-    std::mutex csr_lock;
-    std::unordered_set<int32_t> csr_to_delete;
-
+	//! Used to build the CSR data structures required for path-finding queries
+	std::unordered_map<int32_t, unique_ptr<CSR>> csr_list;
+	std::mutex csr_lock;
+	std::unordered_set<int32_t> csr_to_delete;
 };
 
 struct CSRFunctionData : public FunctionData {
@@ -95,8 +93,5 @@ struct CheapestPathLengthFunctionData : public FunctionData {
 	unique_ptr<FunctionData> Copy() const override;
 	bool Equals(const FunctionData &other_p) const override;
 };
-
-
-
 
 } // namespace duckdb

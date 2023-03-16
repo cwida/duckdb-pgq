@@ -32,14 +32,14 @@ static void IterativeLength2Function(DataChunk &args, ExpressionState &state, Ve
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
-    auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
-    if (sqlpgq_state_entry == info.context.registered_state.end()) {
-        //! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
-        throw InternalException("The SQL/PGQ extension has not been loaded");
-    }
-    auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+	auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == info.context.registered_state.end()) {
+		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+		throw InternalException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
 
-    D_ASSERT(sqlpgq_state->csr_list[info.csr_id]);
+	D_ASSERT(sqlpgq_state->csr_list[info.csr_id]);
 	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
 	int64_t *v = (int64_t *)sqlpgq_state->csr_list[info.csr_id]->v;
 	vector<int64_t> &e = sqlpgq_state->csr_list[info.csr_id]->e;
@@ -132,7 +132,7 @@ static void IterativeLength2Function(DataChunk &args, ExpressionState &state, Ve
 			}
 		}
 	}
-    sqlpgq_state->csr_to_delete.insert(info.csr_id);
+	sqlpgq_state->csr_to_delete.insert(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLength2Function() {

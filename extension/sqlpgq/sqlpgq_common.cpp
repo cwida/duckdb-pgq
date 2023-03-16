@@ -78,15 +78,15 @@ CheapestPathLengthFunctionData::CheapestPathLengthBind(ClientContext &context, S
 		throw InvalidInputException("Id must be constant.");
 	}
 
-    auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
-    if (sqlpgq_state_entry == context.registered_state.end()) {
-        //! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
-        throw InternalException("The SQL/PGQ extension has not been loaded");
-    }
-    auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+	auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == context.registered_state.end()) {
+		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+		throw InternalException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
 
 	int32_t csr_id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]).GetValue<int32_t>();
-    CSR* csr = sqlpgq_state->GetCSR(csr_id);
+	CSR *csr = sqlpgq_state->GetCSR(csr_id);
 
 	if (!(csr->initialized_v && csr->initialized_e && csr->initialized_w)) {
 		throw ConstraintException("Need to initialize CSR before doing cheapest path");
