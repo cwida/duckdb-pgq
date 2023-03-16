@@ -54,9 +54,9 @@ WITH cte1 AS (
     JOIN person a on a.id = k.person1id
     JOIN person c on c.id = k.person2id
 )
-SELECT a_id, b_id
+SELECT a.a_id, a.firstname, b.b_id
 FROM (SELECT count(temp) * 0 AS temp FROM cte1) x, (SELECT a.id as a_id, a.firstname, a.rowid as src, b.id as b_id, b.rowid as dst FROM person a, person b where a.id = 332) p__
-    where (x.temp + iterativelength(0, (SELECT count(c.id) FROM person c), p__.src, p__.dst))
+    where x.temp + iterativelength(0, (SELECT count(c.id) FROM person c), p__.src, p__.dst)
     limit 10
 ----
 Peter	Daniel

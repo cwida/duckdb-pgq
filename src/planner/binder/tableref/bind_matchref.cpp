@@ -155,8 +155,32 @@ unique_ptr<SubqueryExpression> CreateCountCTESubquery() {
 
     temp_cte_select_subquery->alias = "__x";
     temp_cte_select_subquery->subquery = std::move(temp_cte_select_statement);
+    temp_cte_select_subquery->subquery_type = SubqueryType::SCALAR;
     //! END OF (SELECT count(cte1.temp) from cte1) __x
     return temp_cte_select_subquery;
+}
+
+unique_ptr<SubqueryExpression> CreateSrcDstPairsSubquery(vector<unique_ptr<ParsedExpression>> &column_list,
+                                                         const string &prev_binding, const string &next_binding,
+                                                         shared_ptr<PropertyGraphTable> &edge_table) {
+    auto src_dst_pairs_subquery = make_unique<SubqueryExpression>();
+
+    auto src_dst_pairs_statement = make_unique<SelectStatement>();
+    auto src_dst_pairs_node = make_unique<SelectNode>();
+
+
+    //! src.rowid
+    src_dst_pairs_node->select_list.push_back(make_unique<ColumnRefExpression>("rowid", prev_binding));
+    //! dst.rowid
+    src_dst_pairs_node->select_list.push_back(make_unique<ColumnRefExpression>("rowid", next_binding));
+
+
+    for (auto &column : column_list) {
+        src_dst_pairs_node->select_list.push_back(std::move(column));
+    }
+
+    src_dst_pairs_subquery->subquery_type = SubqueryType::SCALAR;
+    return src_dst_pairs_subquery;
 }
 
 
@@ -176,7 +200,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 	conditions.push_back(std::move(ref.where_clause));
 
 	auto select_node = make_unique<SelectNode>();
-	auto subquery = make_unique<SelectStatement>();
 	unordered_map<string, string> alias_map;
 
 	auto extra_alias_counter = 0;
@@ -333,7 +356,10 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 //						cte_select_node->select_list.push_back(std::move(col));
 //					}
 
-
+                    auto source_destination_pairs_subquery = CreateSrcDstPairsSubquery(ref.column_list,
+                                                                                       previous_vertex_element->variable_binding,
+                                                                                       next_vertex_element->variable_binding,
+                                                                                       edge_table);
 
 
 					auto cte_ref = make_unique<BaseTableRef>();
@@ -548,6 +574,8 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 	select_node->where_clause = std::move(where_clause);
 
 	select_node->select_list = std::move(ref.column_list);
+
+    auto subquery = make_unique<SelectStatement>();
 	subquery->node = std::move(select_node);
 
 	auto result = make_unique<SubqueryRef>(std::move(subquery), ref.alias);
