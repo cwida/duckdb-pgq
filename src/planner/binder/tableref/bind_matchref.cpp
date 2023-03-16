@@ -292,10 +292,14 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 					auto cte_select_node = make_unique<SelectNode>();
 					cte_select_node->cte_map.map["cte1"] = std::move(info);
-					cte_select_node->modifiers.push_back(make_unique<DistinctModifier>());
+//					cte_select_node->modifiers.push_back(make_unique<DistinctModifier>());
 					for (auto &col : ref.column_list) {
 						cte_select_node->select_list.push_back(std::move(col));
 					}
+
+
+
+
 
 					auto cte_ref = make_unique<BaseTableRef>();
 					cte_ref->table_name = "cte1";

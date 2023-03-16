@@ -1,6 +1,9 @@
 # name: test/sql/sqlpgq/subpath_match.test
 # group: [sqlpgq]
 
+statement ok
+pragma enable_verification
+
 require sqlpgq
 
 statement ok
@@ -74,10 +77,9 @@ WITH cte1 AS (
     FROM Know k
     JOIN student a on a.id = k.src
     JOIN student c on c.id = k.dst
-) SELECT distinct a.name AS a_name, b.name AS b_name,
-FROM cte1, Student a, Student b
-    WHERE a.name = 'Peter'
-    and ((cte1.temp * 0) + iterativelength(0, (SELECT count(c.id) FROM Student c), a.rowid, b.rowid)) NOT NULL
+) SELECT count(*)
+FROM (SELECT count(temp) * 0 AS temp FROM cte1) x, (SELECT a.id, a.name, a.rowid FROM student a WHERE a.name = 'Peter') a, (SELECT b.id, b.name, b.rowid from student b) b
+        where (x.temp + iterativelength(0, (SELECT count(c.id) FROM student c), a.rowid, b.rowid)) NOT NULL
 ----
 Peter	Daniel
 Peter	Tavneet
