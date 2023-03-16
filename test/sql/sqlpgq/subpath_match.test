@@ -52,6 +52,12 @@ FROM GRAPH_TABLE (pg,
 ----
 0	1
 
+statement ok
+PRAGMA enable_profiling='json';
+
+statement ok
+PRAGMA profile_output='manual_sql.json';
+
 query II
 WITH cte1 AS (
     SELECT  CREATE_CSR_EDGE(
@@ -77,9 +83,9 @@ WITH cte1 AS (
     FROM Know k
     JOIN student a on a.id = k.src
     JOIN student c on c.id = k.dst
-) SELECT count(*)
-FROM (SELECT count(temp) * 0 AS temp FROM cte1) x, (SELECT a.id, a.name, a.rowid FROM student a WHERE a.name = 'Peter') a, (SELECT b.id, b.name, b.rowid from student b) b
-        where (x.temp + iterativelength(0, (SELECT count(c.id) FROM student c), a.rowid, b.rowid)) NOT NULL
+) SELECT __p.a_name, __p.b_name
+FROM (SELECT count(temp) * 0 AS temp FROM cte1) x, (SELECT a.name as a_name, a.rowid as __src, b.name as b_name, b.rowid as __dst FROM student a, student b WHERE a.name = 'Peter') __p
+WHERE x.temp + iterativelength(0, (SELECT count(c.id) FROM student c), __p.__src, __p.__dst) BETWEEN 0 and 10000
 ----
 Peter	Daniel
 Peter	Tavneet
@@ -87,6 +93,9 @@ Peter	Gabor
 Peter	Peter
 Peter	David
 
+
+statement ok
+PRAGMA profile_output='sqlpgq.json';
 
 query II
 SELECT study.a_name, study.b_name
