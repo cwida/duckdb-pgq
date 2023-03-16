@@ -292,11 +292,30 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 					auto cte_select_node = make_unique<SelectNode>();
 					cte_select_node->cte_map.map["cte1"] = std::move(info);
-//					cte_select_node->modifiers.push_back(make_unique<DistinctModifier>());
-					for (auto &col : ref.column_list) {
-						cte_select_node->select_list.push_back(std::move(col));
-					}
 
+                    //! BEGIN OF (SELECT count(cte1.temp) from cte1) __x
+                    auto temp_cte_select_subquery = make_unique<SubqueryExpression>();
+                    auto temp_cte_select_statement = make_unique<SelectStatement>();
+                    auto temp_cte_select_node = make_unique<SelectNode>();
+
+                    auto cte_table_ref = make_unique<BaseTableRef>();
+
+                    cte_table_ref->table_name = "cte1";
+                    temp_cte_select_node->from_table = std::move(cte_table_ref);
+                    vector<unique_ptr<ParsedExpression>> children;
+                    children.push_back(make_unique<ColumnRefExpression>("temp", "cte1"));
+
+                    auto count_function = make_unique<FunctionExpression>("count", std::move(children));
+                    temp_cte_select_node->select_list.push_back(std::move(count_function));
+                    temp_cte_select_statement->node = std::move(temp_cte_select_node);
+
+                    temp_cte_select_subquery->alias = "__x";
+                    temp_cte_select_subquery->subquery = std::move(temp_cte_select_statement);
+                    //! END OF (SELECT count(cte1.temp) from cte1) __x
+
+//					for (auto &col : ref.column_list) {
+//						cte_select_node->select_list.push_back(std::move(col));
+//					}
 
 
 
