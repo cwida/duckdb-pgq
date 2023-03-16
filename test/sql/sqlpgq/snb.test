@@ -1,0 +1,74 @@
+require sqlpgq
+
+require parquet
+
+statement ok
+create table person as (select * from read_parquet('/Users/dljtw/git/duckdb-pgq/examples/SQL-PGQ/SNB-SF1-dataset/person.parquet'));
+
+statement ok
+create table person_knows_person as (select * from read_parquet('/Users/dljtw/git/duckdb-pgq/examples/SQL-PGQ/SNB-SF1-dataset/person_knows_person.parquet'));
+
+statement ok
+CREATE PROPERTY GRAPH pg
+VERTEX TABLES (
+    person LABEL Person
+    )
+EDGE TABLES (
+    person_knows_person    SOURCE KEY ( Person1id ) REFERENCES person ( id )
+            DESTINATION KEY ( Person2id ) REFERENCES person ( id )
+            LABEL Knows
+    );
+
+statement ok
+SELECT s.id1, s.id2
+FROM GRAPH_TABLE(pg,
+    MATCH (p:Person)-[k:Knows]->(p2:Person)
+    WHERE p.firstName = 'Bob'
+    COLUMNS (p.id as id1, p2.id as id2)
+    ) s
+
+
+query II
+WITH cte1 AS (
+    SELECT  CREATE_CSR_EDGE(
+            0,
+            (SELECT count(a.id) FROM person a),
+            CAST (
+                (SELECT sum(CREATE_CSR_VERTEX(
+                            0,
+                            (SELECT count(a.id) FROM person a),
+                            sub.dense_id,
+                            sub.cnt)
+                            )
+                FROM (
+                    SELECT a.rowid as dense_id, count(k.person1id) as cnt
+                    FROM person a
+                    LEFT JOIN person_knows_person k ON k.person1id = a.id
+                    GROUP BY a.rowid) sub
+                )
+            AS BIGINT),
+            a.rowid,
+            c.rowid,
+            k.rowid) as temp
+    FROM person_knows_person k
+    JOIN person a on a.id = k.person1id
+    JOIN person c on c.id = k.person2id
+)
+SELECT a_id, b_id
+FROM (SELECT count(temp) * 0 AS temp FROM cte1) x, (SELECT a.id as a_id, a.firstname, a.rowid as src, b.id as b_id, b.rowid as dst FROM person a, person b where a.id = 332) p__
+    where (x.temp + iterativelength(0, (SELECT count(c.id) FROM person c), p__.src, p__.dst))
+    limit 10
+----
+Peter	Daniel
+Peter	Tavneet
+Peter	Gabor
+Peter	Peter
+
+
+#statement ok
+#SELECT s.id1, s.id2
+#FROM GRAPH_TABLE(pg,
+#    MATCH (p:Person)-[k:person_knows_persons]-> *(p2:Person)
+#    WHERE p.id = 332
+#    COLUMNS (p.id as id1, p2.id as id2)
+#    ) s
