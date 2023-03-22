@@ -31,7 +31,7 @@ static void CsrInitializeVertex(SQLPGQContext &context, int32_t id, int64_t v_si
 			csr->v[i] = 0;
 		}
 		csr->initialized_v = true;
-        context.csr_list[id] = std::move(csr);
+		context.csr_list[id] = std::move(csr);
 	} catch (std::bad_alloc const &) {
 		throw Exception("Unable to initialise vector of size for csr vertex table representation");
 	}
@@ -86,12 +86,12 @@ static void CreateCsrVertexFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (CSRFunctionData &)*func_expr.bind_info;
 
-    auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
-    if (sqlpgq_state_entry == info.context.registered_state.end()) {
-        //! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
-        throw InternalException("The SQL/PGQ extension has not been loaded");
-    }
-    auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+	auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == info.context.registered_state.end()) {
+		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+		throw InternalException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
 
 	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
 	auto csr_entry = sqlpgq_state->csr_list.find(info.id);
@@ -120,12 +120,12 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (CSRFunctionData &)*func_expr.bind_info;
 
-    auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
-    if (sqlpgq_state_entry == info.context.registered_state.end()) {
-        //! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
-        throw InternalException("The SQL/PGQ extension has not been loaded");
-    }
-    auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+	auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == info.context.registered_state.end()) {
+		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+		throw InternalException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
 
 	int64_t vertex_size = args.data[1].GetValue(0).GetValue<int64_t>();
 	int64_t edge_size = args.data[2].GetValue(0).GetValue<int64_t>();
