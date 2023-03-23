@@ -30,7 +30,7 @@ public:
 	CSR *GetCSR(int32_t id) {
 		auto csr_entry = csr_list.find(id);
 		if (csr_entry == csr_list.end()) {
-			throw InternalException("CSR not found with ID %s", id);
+			throw InternalException("CSR not found with ID %d", id);
 		}
 		return csr_entry->second.get();
 	}
