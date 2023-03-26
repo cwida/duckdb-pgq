@@ -49,6 +49,15 @@ unique_ptr<FunctionData> CSRFunctionData::CSREdgeBind(ClientContext &context, Sc
 	}
 }
 
+unique_ptr<FunctionData> CSRFunctionData::CSRBind(ClientContext &context, ScalarFunction &bound_function,
+                                                        vector<unique_ptr<Expression>> &arguments) {
+        if (!arguments[0]->IsFoldable()) {
+                throw InvalidInputException("Id must be constant.");
+        }
+        Value id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
+        return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), LogicalType::BOOLEAN);
+}
+
 unique_ptr<FunctionData> IterativeLengthFunctionData::Copy() const {
 	return make_unique<IterativeLengthFunctionData>(context, csr_id);
 }

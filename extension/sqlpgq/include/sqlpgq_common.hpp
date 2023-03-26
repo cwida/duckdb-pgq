@@ -60,6 +60,8 @@ public:
 	                                              vector<unique_ptr<Expression>> &arguments);
 	static unique_ptr<FunctionData> CSREdgeBind(ClientContext &context, ScalarFunction &bound_function,
 	                                            vector<unique_ptr<Expression>> &arguments);
+	static unique_ptr<FunctionData> CSRBind(ClientContext &context, ScalarFunction &bound_function,
+                                                    vector<unique_ptr<Expression>> &arguments);
 
 public:
 	ClientContext &context;
