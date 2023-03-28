@@ -461,7 +461,7 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 				throw InternalException("Unknown match type found");
 			}
 			previous_vertex_element = next_vertex_element;
-            previous_vertex_table = next_vertex_table;
+			previous_vertex_table = next_vertex_table;
 
 			// Check the edge type
 			// If (a)-[b]->(c) 	-> 	b.src = a.id AND b.dst = c.id
