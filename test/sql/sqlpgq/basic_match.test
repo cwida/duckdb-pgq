@@ -4,6 +4,8 @@
 statement ok
 pragma enable_verification
 
+require sqlpgq
+
 statement ok
 CREATE TABLE Student(id BIGINT, name VARCHAR);
 
@@ -104,7 +106,6 @@ FROM GRAPH_TABLE (pg,
 Daniel	Tavneet
 Daniel	Gabor
 Daniel	Peter
-
 
 query II
 SELECT study.a_name, study.b_name
@@ -209,4 +210,3 @@ FROM GRAPH_TABLE (pg,
     MATCH
     ()-[k:Knows]->(b:Person)
     COLUMNS (a.name as a_name, b.name as b_name)
-    ) study;
