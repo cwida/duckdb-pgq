@@ -105,15 +105,6 @@ Daniel	Tavneet
 Daniel	Gabor
 Daniel	Peter
 
-#query II
-#SELECT study.a_name, study.b_name
-#FROM (SELECT a.name as a_name, b.name as b_name
-#       FROM Student a, Know k, Student b
-#       WHERE (a.id = k.src and b.id = k.dst) or (a.id = k.dst and b.id = k.src)
-#       )
-#       study
-#----
-#Daniel	Gabor
 
 query II
 SELECT study.a_name, study.b_name
@@ -196,3 +187,26 @@ Gabor	Peter	Daniel
 Peter	Daniel	Gabor
 Peter	Daniel	Tavneet
 
+statement error
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (:Person)-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+
+statement error
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a)-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+
+statement error
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    ()-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;

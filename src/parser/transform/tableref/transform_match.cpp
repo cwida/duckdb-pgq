@@ -24,9 +24,15 @@ unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGP
 	default:
 		throw InternalException("Unrecognized match type detected");
 	}
+    if (!element->label_expr) {
+        throw ConstraintException("All patterns must bind to a label");
+    }
 	auto label_expression = reinterpret_cast<duckdb_libpgquery::PGLabelTest *>(element->label_expr);
-	result->label = label_expression->name;
-	result->variable_binding = element->element_var;
+    result->label = label_expression->name;
+	if (!element->element_var) {
+        throw ConstraintException("All patterns must bind to a variable, %s is missing a variable", result->label);
+    }
+    result->variable_binding = element->element_var;
 	return result;
 }
 
