@@ -171,11 +171,11 @@ unique_ptr<BoundTableRef> Binder::Bind(TableRef &ref) {
 	case TableReferenceType::EXPRESSION_LIST:
 		result = Bind((ExpressionListRef &)ref);
 		break;
-	case TableReferenceType::PIVOT:
-		result = Bind((PivotRef &)ref);
-		break;
 	case TableReferenceType::MATCH:
 		result = Bind((MatchRef &)ref);
+		break;
+	case TableReferenceType::PIVOT:
+		result = Bind((PivotRef &)ref);
 		break;
 	case TableReferenceType::CTE:
 	case TableReferenceType::INVALID:
