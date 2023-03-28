@@ -5,7 +5,6 @@
 #include "sqlpgq_common.hpp"
 #include "sqlpgq_functions.hpp"
 
-#include <chrono>
 #include <math.h>
 #include <mutex>
 
