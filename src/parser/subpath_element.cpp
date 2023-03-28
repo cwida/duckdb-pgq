@@ -112,6 +112,9 @@ string SubPath::ToString() const {
 			break;
 		}
 	}
-	return result;
+    if (lower != upper) {
+        result += "{" + std::to_string(lower) + "," + std::to_string(upper) + "}";
+    }
+    return result;
 }
 } // namespace duckdb

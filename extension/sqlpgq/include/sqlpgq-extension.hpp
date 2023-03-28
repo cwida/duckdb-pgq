@@ -9,6 +9,7 @@
 #pragma once
 
 #include "duckdb.hpp"
+#include "sqlpgq_common.hpp"
 
 namespace duckdb {
 
