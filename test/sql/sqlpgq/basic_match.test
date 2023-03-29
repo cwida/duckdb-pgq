@@ -45,185 +45,168 @@ EDGE TABLES (
             LABEL StudyAt
     );
 
-#query II
-#SELECT study.name, study.school
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)-[s:StudyAt]->(b:School)
-#    WHERE a.name = 'Daniel'
-#    COLUMNS (a.name as name, b.name as school)
-#    ) study;
-#----
-#Daniel	VU
-#
-#query III
-#SELECT study.name, study.school, study.know_name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a2:Person)-[s2:StudyAt]->(b:School)<-[s:StudyAt]-(a:Person)
-#    WHERE a.name = 'Daniel' and a.id <> a2.id
-#    COLUMNS (a.name as name, b.name as school, a2.name as know_name)
-#    ) study;
-#----
-#Daniel	VU	Tavneet
-#
-#
-#query I
-#SELECT study.id
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)
-#    COLUMNS (a.id)
-#    ) study
-#----
-#0
-#1
-#2
-#3
-#4
-#
-#query II
-#SELECT study.a_id, study.name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)
-#    WHERE a.id = 0
-#    COLUMNS (a.id as a_id, a.name)
-#    ) study
-#----
-#0	Daniel
-#
-#
-#query II
-#SELECT study.a_name, study.b_name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)-[k:Knows]->(b:Person)
-#    WHERE a.name = 'Daniel'
-#    COLUMNS (a.name as a_name, b.name as b_name)
-#    ) study;
-#----
-#Daniel	Tavneet
-#Daniel	Gabor
-#Daniel	Peter
-#
-#query II
-#SELECT study.a_name, study.b_name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)-[k:Knows]->(b:Person)
-#    WHERE a.name = 'Daniel' and b.name = 'Gabor'
-#    COLUMNS (a.name as a_name, b.name as b_name)
-#    ) study;
-#----
-#Daniel	Gabor
-#
-#query II
-#SELECT study.a_name, study.b_name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)<-[k:Knows]-(b:Person)
-#    WHERE a.name = 'Peter'
-#    COLUMNS (a.name as a_name, b.name as b_name)
-#    ) study;
-#----
-#Peter	Daniel
-#Peter	Tavneet
-#Peter	Gabor
-#Peter	David
-#
-#query II
-#SELECT study.a_name, study.b_name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)-[k:Knows]-(b:Person)
-#    WHERE a.name = 'Peter'
-#    COLUMNS (a.name as a_name, b.name as b_name)
-#    ) study;
-#----
-#Peter	Daniel
-#Peter	Tavneet
-#Peter	Gabor
-#Peter	David
-#
-#query II
-#SELECT study.a_name, study.b_name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)<-[k:Knows]->(b:Person)
-#    WHERE a.name = 'Peter'
-#    COLUMNS (a.name as a_name, b.name as b_name)
-#    ) study;
-#----
-#Peter	Daniel
-#
-#query II
-#SELECT study.a_name, count(study.b_name)
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)-[k:Knows]->(b:Person)
-#    COLUMNS (a.name as a_name, b.name as b_name)
-#    ) study
-#    GROUP BY study.a_name
-#    ORDER BY count(study.b_name) DESC;
-#----
-#Daniel	3
-#Tavneet	2
-#Peter	1
-#Gabor	1
-#David	1
-#
-#query III
-#SELECT study.a_name, study.b_name, study.c_name
-#FROM GRAPH_TABLE (pg,
-#    MATCH
-#    (a:Person)-[k:Knows]->(b:Person)-[k2:Knows]->(c:Person)-[k3:Knows]->(a:Person)
-#    COLUMNS (a.name as a_name, b.name as b_name, c.name as c_name)
-#    ) study;
-#----
-#Daniel	Tavneet	Peter
-#Daniel	Gabor	Peter
-#Tavneet	Peter	Daniel
-#Gabor	Peter	Daniel
-#Peter	Daniel	Gabor
-#Peter	Daniel	Tavneet
-#
-#
-#statement ok
-#CREATE PROPERTY GRAPH pg2
-#VERTEX TABLES (
-#    Student PROPERTIES ( id, name ) LABEL Person,
-#    School LABEL SCHOOL
-#    )
-#EDGE TABLES (
-#    know    SOURCE KEY ( src ) REFERENCES Student ( id )
-#            DESTINATION KEY ( dst ) REFERENCES Student ( id )
-#            LABEL Knows,
-#    studyAt SOURCE KEY ( personId ) REFERENCES Student ( id )
-#            DESTINATION KEY ( SchoolId ) REFERENCES School ( id )
-#            LABEL StudyAt
-#    );
-#
-#query III
-#SELECT study.a_name, study.b_name, study.c_name
-#FROM GRAPH_TABLE (pg2,
-#    MATCH
-#    (a:Person)-[k:Knows]->(b:Person)-[k2:Knows]->(c:Person)-[k3:Knows]->(a:Person)
-#    COLUMNS (a.name as a_name, b.name as b_name, c.name as c_name)
-#    ) study;
-#----
-#Daniel	Tavneet	Peter
-#Daniel	Gabor	Peter
-#Tavneet	Peter	Daniel
-#Gabor	Peter	Daniel
-#Peter	Daniel	Gabor
-#Peter	Daniel	Tavneet
+query II
+SELECT study.name, study.school
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[s:StudyAt]->(b:School)
+    WHERE a.name = 'Daniel'
+    COLUMNS (a.name as name, b.name as school)
+    ) study;
+----
+Daniel	VU
 
+query III
+SELECT study.name, study.school, study.know_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a2:Person)-[s2:StudyAt]->(b:School)<-[s:StudyAt]-(a:Person)
+    WHERE a.name = 'Daniel' and a.id <> a2.id
+    COLUMNS (a.name as name, b.name as school, a2.name as know_name)
+    ) study;
+----
+Daniel	VU	Tavneet
+
+
+query I
+SELECT study.id
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)
+    COLUMNS (a.id)
+    ) study
+----
+0
+1
+2
+3
+4
+
+query II
+SELECT study.a_id, study.name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)
+    WHERE a.id = 0
+    COLUMNS (a.id as a_id, a.name)
+    ) study
+----
+0	Daniel
+
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]->(b:Person)
+    WHERE a.name = 'Daniel'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Daniel	Tavneet
+Daniel	Gabor
+Daniel	Peter
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]->(b:Person)
+    WHERE a.name = 'Daniel' and b.name = 'Gabor'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Daniel	Gabor
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)<-[k:Knows]-(b:Person)
+    WHERE a.name = 'Peter'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Peter	Daniel
+Peter	Tavneet
+Peter	Gabor
+Peter	David
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]-(b:Person)
+    WHERE a.name = 'Peter'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Peter	Daniel
+Peter	Tavneet
+Peter	Gabor
+Peter	David
+
+query II
+SELECT study.a_name, study.b_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)<-[k:Knows]->(b:Person)
+    WHERE a.name = 'Peter'
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Peter	Daniel
+
+query II
+SELECT study.a_name, count(study.b_name)
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study
+    GROUP BY study.a_name
+    ORDER BY count(study.b_name) DESC;
+----
+Daniel	3
+Tavneet	2
+Peter	1
+Gabor	1
+David	1
+
+query III
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]->(b:Person)-[k2:Knows]->(c:Person)-[k3:Knows]->(a:Person)
+    COLUMNS (a.name as a_name, b.name as b_name, c.name as c_name)
+    ) study;
+----
+Daniel	Tavneet	Peter
+Daniel	Gabor	Peter
+Tavneet	Peter	Daniel
+Gabor	Peter	Daniel
+Peter	Daniel	Gabor
+Peter	Daniel	Tavneet
 
 statement error
 SELECT study.a_name, study.b_name, study.c_name
-FROM GRAPH_TABLE (pg2,
+FROM GRAPH_TABLE (pg,
     MATCH
-    (:Person)-[k:Knows]->(b:Person)-[k2:Knows]->(c:Person)-[k3:Knows]->(a:Person)
-    COLUMNS (a.name as a_name, b.name as b_name, c.name as c_name)
+    (:Person)-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
     ) study;
+
+statement error
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a)-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+
+statement error
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    ()-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
