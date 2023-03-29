@@ -18,6 +18,7 @@ struct DropPropertyGraphInfo : public ParseInfo {
 public:
     unique_ptr<DropPropertyGraphInfo> Copy() const {
         auto result = make_unique<DropPropertyGraphInfo>();
+        result->type = type;
         result->name = name;
 
         return result;
@@ -25,6 +26,7 @@ public:
 
     void Serialize(Serializer &serializer) const {
         FieldWriter writer(serializer);
+        writer.WriteField<CatalogType>(type);
         writer.WriteString(name);
         writer.Finalize();
     }
@@ -32,6 +34,7 @@ public:
     static unique_ptr<ParseInfo> Deserialize(Deserializer &deserializer) {
         FieldReader reader(deserializer);
         auto drop_pg_info = make_unique<DropInfo>();
+        drop_pg_info->type = reader.ReadRequired<CatalogType>();
         drop_pg_info->name = reader.ReadRequired<string>();
         return drop_pg_info;
     }
