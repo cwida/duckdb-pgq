@@ -188,35 +188,25 @@ Gabor	Peter	Daniel
 Peter	Daniel	Gabor
 Peter	Daniel	Tavneet
 
-
-statement ok
-CREATE PROPERTY GRAPH pg2
-VERTEX TABLES (
-    Student PROPERTIES ( id, name ) LABEL Person,
-    School LABEL SCHOOL
-    )
-EDGE TABLES (
-    know    SOURCE KEY ( src ) REFERENCES Student ( id )
-            DESTINATION KEY ( dst ) REFERENCES Student ( id )
-            LABEL Knows,
-    studyAt SOURCE KEY ( personId ) REFERENCES Student ( id )
-            DESTINATION KEY ( SchoolId ) REFERENCES School ( id )
-            LABEL StudyAt
-    );
-
-query III
+statement error
 SELECT study.a_name, study.b_name, study.c_name
-FROM GRAPH_TABLE (pg2,
+FROM GRAPH_TABLE (pg,
     MATCH
-    (a:Person)-[k:Knows]->(b:Person)-[k2:Knows]->(c:Person)-[k3:Knows]->(a:Person)
-    COLUMNS (a.name as a_name, b.name as b_name, c.name as c_name)
+    (:Person)-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
     ) study;
-----
-Daniel	Tavneet	Peter
-Daniel	Gabor	Peter
-Tavneet	Peter	Daniel
-Gabor	Peter	Daniel
-Peter	Daniel	Gabor
-Peter	Daniel	Tavneet
 
+statement error
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a)-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
 
+statement error
+SELECT study.a_name, study.b_name, study.c_name
+FROM GRAPH_TABLE (pg,
+    MATCH
+    ()-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)

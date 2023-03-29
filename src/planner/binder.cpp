@@ -173,7 +173,7 @@ unique_ptr<BoundTableRef> Binder::Bind(TableRef &ref) {
 		break;
 	case TableReferenceType::MATCH:
 		result = Bind((MatchRef &)ref);
-        break;
+		break;
 	case TableReferenceType::PIVOT:
 		result = Bind((PivotRef &)ref);
 		break;
