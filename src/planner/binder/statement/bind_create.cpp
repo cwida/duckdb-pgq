@@ -187,7 +187,6 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 	} else {
 		sqlpgq_state = dynamic_pointer_cast<SQLPGQContext>(sqlpgq_state_entry->second);
 	}
-	//    shared_ptr<SQLPGQContext> sqlpgq_state = dynamic_cast<shared_ptr<SQLPGQContext>>(sqlpgq_state_);
 	auto pg_table = sqlpgq_state->registered_property_graphs.find(info.property_graph_name);
 
 	if (pg_table != sqlpgq_state->registered_property_graphs.end()) {
