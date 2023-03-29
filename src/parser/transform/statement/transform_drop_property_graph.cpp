@@ -10,7 +10,7 @@ namespace duckdb {
         auto pg_tableref = TransformQualifiedName(stmt->name);
 
         info.name = pg_tableref.name;
-
+        info.type = CatalogType::PROPERTY_GRAPH_ENTRY;
         return result;
     }
 

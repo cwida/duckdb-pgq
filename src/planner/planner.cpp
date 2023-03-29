@@ -134,6 +134,7 @@ void Planner::CreatePlan(unique_ptr<SQLStatement> statement) {
 	case StatementType::LOGICAL_PLAN_STATEMENT:
 	case StatementType::ATTACH_STATEMENT:
 	case StatementType::DETACH_STATEMENT:
+    case StatementType::DROP_PROPERTY_GRAPH_STATEMENT:
 		CreatePlan(*statement);
 		break;
 	default:

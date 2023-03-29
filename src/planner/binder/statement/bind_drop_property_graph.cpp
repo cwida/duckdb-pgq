@@ -6,15 +6,17 @@ namespace duckdb {
 
 BoundStatement Binder::Bind(DropPropertyGraphStatement &stmt) {
     BoundStatement result;
-    auto &base = (DropInfo &)*stmt.info;
+    auto &base = (DropPropertyGraphInfo &)*stmt.info;
     if (stmt.info->type != CatalogType::PROPERTY_GRAPH_ENTRY) {
         throw BinderException("Incorrect CatalogType");
     }
     auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
+    throw MissingExtensionException("Extension not loaded");
     if (sqlpgq_state_entry == context.registered_state.end()) {
         throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
     }
     auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+
 
 
 
