@@ -13,7 +13,7 @@ public:
 
     unique_ptr<DropPropertyGraphInfo> info;
 protected:
-    DropStatement(const DropPropertyGraphStatement &other);
+    DropPropertyGraphStatement(const DropPropertyGraphStatement &other);
 
 public:
     unique_ptr<SQLStatement> Copy() const override;
