@@ -20,6 +20,7 @@ add_library_unity(
   transform_explain.cpp
   transform_export.cpp
   transform_drop.cpp
+  transform_drop_property_graph.cpp
   transform_import.cpp
   transform_insert.cpp
   transform_load.cpp
