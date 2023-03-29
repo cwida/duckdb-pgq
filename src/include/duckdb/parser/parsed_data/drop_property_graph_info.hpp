@@ -7,8 +7,11 @@
 namespace duckdb {
 
 struct DropPropertyGraphInfo : public ParseInfo {
-    DropPropertyGraphInfo();
+    DropPropertyGraphInfo() {
+    }
 
+    //! The catalog type to drop
+    CatalogType type;
     //! Element name to drop
     string name;
 
