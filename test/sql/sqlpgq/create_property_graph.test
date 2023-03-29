@@ -33,6 +33,7 @@ EDGE TABLES (
     )
 
 # Error as property graph pg already exists
+
 statement error
 CREATE PROPERTY GRAPH pg
 VERTEX TABLES (
