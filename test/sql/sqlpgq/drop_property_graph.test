@@ -45,3 +45,34 @@ EDGE TABLES (
 
 statement ok
 DROP PROPERTY GRAPH pg;
+
+statement error
+SELECT study.id
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)
+    COLUMNS (a.id)
+    ) study;
+
+statement ok
+CREATE PROPERTY GRAPH pg
+VERTEX TABLES (
+    Student PROPERTIES ( id, name ) LABEL Person,
+    School LABEL SCHOOL
+    )
+EDGE TABLES (
+    know    SOURCE KEY ( src ) REFERENCES Student ( id )
+            DESTINATION KEY ( dst ) REFERENCES Student ( id )
+            LABEL Knows,
+    studyAt SOURCE KEY ( personId ) REFERENCES Student ( id )
+            DESTINATION KEY ( SchoolId ) REFERENCES School ( id )
+            LABEL StudyAt
+    );
+
+statement ok
+SELECT study.id
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)
+    COLUMNS (a.id)
+    ) study;

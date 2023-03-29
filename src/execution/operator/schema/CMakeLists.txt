@@ -12,7 +12,8 @@ add_library_unity(
   physical_create_view.cpp
   physical_create_function.cpp
   physical_detach.cpp
-  physical_drop.cpp)
+  physical_drop.cpp
+  physical_drop_property_graph.cpp)
 set(ALL_OBJECT_FILES
     ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:duckdb_operator_schema>
     PARENT_SCOPE)
