@@ -15,9 +15,17 @@ BoundStatement Binder::Bind(DropPropertyGraphStatement &stmt) {
         throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
     }
     auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+    auto property_graph = sqlpgq_state->registered_property_graphs.find(base.name);
+    if (property_graph == sqlpgq_state->registered_property_graphs.end()) {
+        throw BinderException("The property graph %s does not exist", base.name);
+    }
 
+    result.plan = make_unique<LogicalSimple>(LogicalOperatorType::LOGICAL_DROP_PROPERTY_GRAPH, std::move(stmt.info));
+    result.names = {"Success"};
+    result.types = {LogicalType::BOOLEAN};
+    properties.allow_stream_result = false;
+    properties.return_type = StatementReturnType::NOTHING;
 
-
-
+    return result;
 }
 }

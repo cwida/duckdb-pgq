@@ -8,6 +8,7 @@
 #include "duckdb/execution/operator/schema/physical_create_view.hpp"
 #include "duckdb/execution/operator/schema/physical_detach.hpp"
 #include "duckdb/execution/operator/schema/physical_drop.hpp"
+#include "duckdb/execution/operator/schema/physical_drop_property_graph.hpp"
 #include "duckdb/execution/physical_plan_generator.hpp"
 #include "duckdb/planner/logical_operator.hpp"
 #include "duckdb/planner/operator/logical_simple.hpp"
@@ -43,6 +44,9 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlan(LogicalSimple &op
 	case LogicalOperatorType::LOGICAL_DETACH:
 		return make_unique<PhysicalDetach>(unique_ptr_cast<ParseInfo, DetachInfo>(std::move(op.info)),
 		                                   op.estimated_cardinality);
+    case LogicalOperatorType::LOGICAL_DROP_PROPERTY_GRAPH:
+        return make_unique<PhysicalDropPropertyGraph>(unique_ptr_cast<ParseInfo, DropPropertyGraphInfo>(std::move(op.info)),
+                                        op.estimated_cardinality);
 	default:
 		throw NotImplementedException("Unimplemented type for logical simple operator");
 	}
