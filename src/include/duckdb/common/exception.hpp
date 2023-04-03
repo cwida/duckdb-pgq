@@ -79,7 +79,7 @@ enum class ExceptionType {
 	PARAMETER_NOT_ALLOWED = 36,  // parameter types not allowed
 	DEPENDENCY = 37,             // dependency
 	HTTP = 38,
-    MISSING_EXTENSION = 39 // Missing exception that
+	MISSING_EXTENSION = 39 // Missing exception that
 };
 class HTTPException;
 

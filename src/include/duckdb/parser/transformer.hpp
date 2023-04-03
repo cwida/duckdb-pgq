@@ -332,8 +332,8 @@ private:
 	//! Transform a subpath (SQL/PGQ)
 	unique_ptr<SubPath> TransformSubPathElement(duckdb_libpgquery::PGSubPath *element);
 
-    //! Transform a Postgres duckdb_libpgquery::T_PGDropPropertyGraphStmt node into a Drop[Table,Schema]Statement
-    unique_ptr<SQLStatement> TransformDropPropertyGraph(duckdb_libpgquery::PGNode *node);
+	//! Transform a Postgres duckdb_libpgquery::T_PGDropPropertyGraphStmt node into a Drop[Table,Schema]Statement
+	unique_ptr<SQLStatement> TransformDropPropertyGraph(duckdb_libpgquery::PGNode *node);
 
 	//! Transform a range var into a (schema) qualified name
 	QualifiedName TransformQualifiedName(duckdb_libpgquery::PGRangeVar *root);
