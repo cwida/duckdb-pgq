@@ -168,8 +168,8 @@ unique_ptr<SQLStatement> Transformer::TransformStatementInternal(duckdb_libpgque
 		return TransformPivotStatement(stmt);
 	case duckdb_libpgquery::T_PGCreatePropertyGraphStmt:
 		return TransformCreatePropertyGraph(stmt);
-    case duckdb_libpgquery::T_PGDropPropertyGraphStmt:
-        return TransformDropPropertyGraph(stmt);
+	case duckdb_libpgquery::T_PGDropPropertyGraphStmt:
+		return TransformDropPropertyGraph(stmt);
 	default:
 		throw NotImplementedException(NodetypeToString(stmt->type));
 	}

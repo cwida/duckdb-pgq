@@ -1,4 +1,4 @@
-# name: test/sql/sqlpgq/basic_match.test
+# name: test/sql/sqlpgq/drop_property_graph.test
 # group: [sqlpgq]
 
 statement ok
