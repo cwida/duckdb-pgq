@@ -1,3 +1,6 @@
+# name: test/sql/sqlpgq/snb.test
+# group: [sqlpgq]
+
 ## name: test/sql/sqlpgq/snb.test
 ## group: [sqlpgq]
 #
