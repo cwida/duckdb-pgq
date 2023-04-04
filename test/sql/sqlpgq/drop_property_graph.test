@@ -48,7 +48,7 @@ DROP PROPERTY GRAPH pg;
 
 statement error
 SELECT study.id
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)
     COLUMNS (a.id)
@@ -71,7 +71,7 @@ EDGE TABLES (
 
 statement ok
 SELECT *
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)
     COLUMNS (a.id)
