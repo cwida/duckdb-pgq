@@ -44,7 +44,7 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 	auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
 	if (sqlpgq_state_entry == info.context.registered_state.end()) {
 		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
-		throw InternalException("The SQL/PGQ extension has not been loaded");
+		throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
 	}
 	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
 
@@ -120,13 +120,10 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 
 		// make passes while a lane is still active
 		for (int64_t iter = 0; active; iter++) {
-			if (!IterativeLengthBidirectional(v_size, v, e, (iter & 1) ? dst_seen : src_seen,
-			                                  (iter & 2)   ? (iter & 1) ? dst_visit2 : src_visit2
-			                                  : (iter & 1) ? dst_visit1
-			                                               : src_visit1,
-			                                  (iter & 2)   ? (iter & 1) ? dst_visit1 : src_visit1
-			                                  : (iter & 1) ? dst_visit2
-			                                               : src_visit2)) {
+			if (!IterativeLengthBidirectional(
+			        v_size, v, e, (iter & 1) ? dst_seen : src_seen,
+			        (iter & 2) ? (iter & 1) ? dst_visit2 : src_visit2 : (iter & 1) ? dst_visit1 : src_visit1,
+			        (iter & 2) ? (iter & 1) ? dst_visit1 : src_visit1 : (iter & 1) ? dst_visit2 : src_visit2)) {
 				break;
 			}
 			std::bitset<LANE_LIMIT> done = InterSectFronteers(v_size, src_seen, dst_seen);

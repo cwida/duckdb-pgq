@@ -141,6 +141,8 @@ string PhysicalOperatorToString(PhysicalOperatorType type) {
 		return "RESULT_COLLECTOR";
 	case PhysicalOperatorType::EXTENSION:
 		return "EXTENSION";
+	case PhysicalOperatorType::DROP_PROPERTY_GRAPH:
+		return "DROP_PROPERTY_GRAPH";
 	case PhysicalOperatorType::INVALID:
 		break;
 	}

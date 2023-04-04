@@ -9,6 +9,7 @@ add_library_unity(
   detach_statement.cpp
   delete_statement.cpp
   drop_statement.cpp
+  drop_property_graph_statement.cpp
   execute_statement.cpp
   explain_statement.cpp
   export_statement.cpp

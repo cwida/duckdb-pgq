@@ -93,6 +93,8 @@ BoundStatement Binder::Bind(SQLStatement &statement) {
 		return Bind((AttachStatement &)statement);
 	case StatementType::DETACH_STATEMENT:
 		return Bind((DetachStatement &)statement);
+	case StatementType::DROP_PROPERTY_GRAPH_STATEMENT:
+		return Bind((DropPropertyGraphStatement &)statement);
 	default: // LCOV_EXCL_START
 		throw NotImplementedException("Unimplemented statement type \"%s\" for Bind",
 		                              StatementTypeToString(statement.type));
