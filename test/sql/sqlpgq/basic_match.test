@@ -210,3 +210,22 @@ FROM GRAPH_TABLE (pg,
     MATCH
     ()-[k:Knows]->(b:Person)
     COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+
+
+query II
+SELECT *
+FROM GRAPH_TABLE (pg,
+    MATCH
+    (a:Person)-[k:Knows]->(b:Person)
+    COLUMNS (a.name as a_name, b.name as b_name)
+    ) study;
+----
+Daniel	Tavneet
+Daniel	Gabor
+Daniel	Peter
+Peter	Daniel
+Tavneet	Gabor
+Tavneet	Peter
+Gabor	Peter
+David	Peter

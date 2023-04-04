@@ -70,7 +70,7 @@ EDGE TABLES (
     );
 
 statement ok
-SELECT study.id
+SELECT *
 FROM GRAPH_TABLE (pg,
     MATCH
     (a:Person)
