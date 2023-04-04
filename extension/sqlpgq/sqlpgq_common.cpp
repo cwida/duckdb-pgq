@@ -50,12 +50,12 @@ unique_ptr<FunctionData> CSRFunctionData::CSREdgeBind(ClientContext &context, Sc
 }
 
 unique_ptr<FunctionData> CSRFunctionData::CSRBind(ClientContext &context, ScalarFunction &bound_function,
-                                                        vector<unique_ptr<Expression>> &arguments) {
-        if (!arguments[0]->IsFoldable()) {
-                throw InvalidInputException("Id must be constant.");
-        }
-        Value id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
-        return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), LogicalType::BOOLEAN);
+                                                  vector<unique_ptr<Expression>> &arguments) {
+	if (!arguments[0]->IsFoldable()) {
+		throw InvalidInputException("Id must be constant.");
+	}
+	Value id = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
+	return make_unique<CSRFunctionData>(context, id.GetValue<int32_t>(), LogicalType::BOOLEAN);
 }
 
 unique_ptr<FunctionData> IterativeLengthFunctionData::Copy() const {
@@ -90,7 +90,7 @@ CheapestPathLengthFunctionData::CheapestPathLengthBind(ClientContext &context, S
 	auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
 	if (sqlpgq_state_entry == context.registered_state.end()) {
 		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
-		throw InternalException("The SQL/PGQ extension has not been loaded");
+		throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
 	}
 	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
 
