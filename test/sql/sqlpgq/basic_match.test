@@ -47,7 +47,7 @@ EDGE TABLES (
 
 query II
 SELECT study.name, study.school
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[s:StudyAt]->(b:School)
     WHERE a.name = 'Daniel'
@@ -58,7 +58,7 @@ Daniel	VU
 
 query III
 SELECT study.name, study.school, study.know_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a2:Person)-[s2:StudyAt]->(b:School)<-[s:StudyAt]-(a:Person)
     WHERE a.name = 'Daniel' and a.id <> a2.id
@@ -70,7 +70,7 @@ Daniel	VU	Tavneet
 
 query I
 SELECT study.id
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)
     COLUMNS (a.id)
@@ -84,7 +84,7 @@ FROM GRAPH_TABLE (pg,
 
 query II
 SELECT study.a_id, study.name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)
     WHERE a.id = 0
@@ -96,7 +96,7 @@ FROM GRAPH_TABLE (pg,
 
 query II
 SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]->(b:Person)
     WHERE a.name = 'Daniel'
@@ -109,7 +109,7 @@ Daniel	Peter
 
 query II
 SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]->(b:Person)
     WHERE a.name = 'Daniel' and b.name = 'Gabor'
@@ -120,7 +120,7 @@ Daniel	Gabor
 
 query II
 SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)<-[k:Knows]-(b:Person)
     WHERE a.name = 'Peter'
@@ -134,7 +134,7 @@ Peter	David
 
 query II
 SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]-(b:Person)
     WHERE a.name = 'Peter'
@@ -148,7 +148,7 @@ Peter	David
 
 query II
 SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)<-[k:Knows]->(b:Person)
     WHERE a.name = 'Peter'
@@ -159,7 +159,7 @@ Peter	Daniel
 
 query II
 SELECT study.a_name, count(study.b_name)
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]->(b:Person)
     COLUMNS (a.name as a_name, b.name as b_name)
@@ -175,7 +175,7 @@ David	1
 
 query III
 SELECT study.a_name, study.b_name, study.c_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]->(b:Person)-[k2:Knows]->(c:Person)-[k3:Knows]->(a:Person)
     COLUMNS (a.name as a_name, b.name as b_name, c.name as c_name)
@@ -190,7 +190,7 @@ Peter	Daniel	Tavneet
 
 statement error
 SELECT study.a_name, study.b_name, study.c_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (:Person)-[k:Knows]->(b:Person)
     COLUMNS (a.name as a_name, b.name as b_name)
@@ -198,7 +198,7 @@ FROM GRAPH_TABLE (pg,
 
 statement error
 SELECT study.a_name, study.b_name, study.c_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a)-[k:Knows]->(b:Person)
     COLUMNS (a.name as a_name, b.name as b_name)
@@ -206,7 +206,7 @@ FROM GRAPH_TABLE (pg,
 
 statement error
 SELECT study.a_name, study.b_name, study.c_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     ()-[k:Knows]->(b:Person)
     COLUMNS (a.name as a_name, b.name as b_name)
@@ -215,7 +215,7 @@ FROM GRAPH_TABLE (pg,
 
 query II
 SELECT *
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]->(b:Person)
     COLUMNS (a.name as a_name, b.name as b_name)
@@ -232,7 +232,7 @@ David	Peter
 
 query II
 SELECT *
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:PERSON)-[k:knows]->(B:Person)
     COLUMNS (a.name as a_name, b.name as b_name)
