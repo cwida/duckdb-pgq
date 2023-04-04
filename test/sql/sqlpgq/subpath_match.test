@@ -34,7 +34,7 @@ EDGE TABLES (
 
 query II
 SELECT study.a_id, study.name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person WHERE a.id = 0)
     COLUMNS (a.id as a_id, a.name)
@@ -44,19 +44,13 @@ FROM GRAPH_TABLE (pg,
 
 query II
 SELECT study.a_id, study.b_id
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows WHERE k.id = 10]->(b:Person)
     COLUMNS (a.id as a_id, b.id as b_id)
     ) study
 ----
 0	1
-
-statement ok
-PRAGMA enable_profiling='json';
-
-statement ok
-PRAGMA profile_output='manual_sql.json';
 
 query II
 WITH cte1 AS (
@@ -93,13 +87,9 @@ Peter	Gabor
 Peter	Peter
 Peter	David
 
-
-statement ok
-PRAGMA profile_output='sqlpgq.json';
-
 query II
 SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]-> *(b:Person)
     WHERE a.name = 'Peter'
@@ -114,7 +104,7 @@ Peter	David
 
 query II
 SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]->{1,2}(b:Person)
     WHERE a.name = 'Peter'
@@ -127,7 +117,7 @@ Peter	Gabor
 
 query II
 SELECT study.a_name, study.b_name
-FROM GRAPH_TABLE (pg,
+FROM GRAPH_TABLE (pg
     MATCH
     (a:Person)-[k:Knows]-> +(b:Person)
     WHERE a.name = 'Peter'
