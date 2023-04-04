@@ -122,8 +122,8 @@ string LogicalOperatorToString(LogicalOperatorType type) {
 		break;
 	case LogicalOperatorType::LOGICAL_EXTENSION_OPERATOR:
 		return "CUSTOM_OP";
-    case LogicalOperatorType::LOGICAL_DROP_PROPERTY_GRAPH:
-        return "DROP_PROPERTY_GRAPH";
+	case LogicalOperatorType::LOGICAL_DROP_PROPERTY_GRAPH:
+		return "DROP_PROPERTY_GRAPH";
 	}
 	return "INVALID";
 }
