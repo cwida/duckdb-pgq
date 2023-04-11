@@ -6,7 +6,7 @@ namespace duckdb {
 
 string MatchRef::ToString() const {
 	string result = "GRAPH_TABLE (";
-	result += pg_name + ", MATCH";
+	result += pg_name + " MATCH";
 
 	for (idx_t i = 0; i < path_list.size(); i++) {
 		(i > 0) ? result += ", " : result;
