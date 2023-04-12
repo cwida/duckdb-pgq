@@ -33,7 +33,6 @@ EDGE TABLES (
     )
 
 # Error as property graph pg already exists
-
 statement error
 CREATE PROPERTY GRAPH pg
 VERTEX TABLES (
@@ -104,6 +103,19 @@ VERTEX TABLES (
     )
 EDGE TABLES (
     know    SOURCE KEY ( src ) REFERENCES Student ( id )
+            DESTINATION KEY ( dst ) REFERENCES Student ( id )
+            PROPERTIES ( createDate ) LABEL Knows
+    )
+
+
+# Should fail since the edge table references vertex tables that do not exist
+statement error
+CREATE PROPERTY GRAPH pg3
+VERTEX TABLES (
+    School  LABEL School IN School_kind (Hogeschool, University)
+    )
+EDGE TABLES (
+    Students    SOURCE KEY ( src ) REFERENCES School ( id )
             DESTINATION KEY ( dst ) REFERENCES Student ( id )
             PROPERTIES ( createDate ) LABEL Knows
     )
