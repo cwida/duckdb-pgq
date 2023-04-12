@@ -48,7 +48,7 @@ void PropertyGraphTable::Serialize(Serializer &serializer) const {
 	serializer.WriteStringVector(column_aliases);
 	serializer.WriteStringVector(except_columns);
 	serializer.WriteStringVector(sub_labels);
-    serializer.WriteString(main_label);
+	serializer.WriteString(main_label);
 
 	serializer.Write<bool>(is_vertex_table);
 	serializer.Write<bool>(all_columns);
@@ -72,7 +72,7 @@ shared_ptr<PropertyGraphTable> PropertyGraphTable::Deserialize(Deserializer &sou
 	source.ReadStringVector(pg_table->column_aliases);
 	source.ReadStringVector(pg_table->except_columns);
 	source.ReadStringVector(pg_table->sub_labels);
-    pg_table->main_label = source.Read<string>();
+	pg_table->main_label = source.Read<string>();
 
 	pg_table->is_vertex_table = source.Read<bool>();
 	pg_table->all_columns = source.Read<bool>();
@@ -102,7 +102,7 @@ shared_ptr<PropertyGraphTable> PropertyGraphTable::Copy() {
 		result->sub_labels.push_back(label);
 	}
 
-    result->main_label = main_label;
+	result->main_label = main_label;
 	result->is_vertex_table = is_vertex_table;
 	result->all_columns = all_columns;
 	result->no_columns = no_columns;
