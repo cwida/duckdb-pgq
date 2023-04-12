@@ -234,7 +234,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 		alias_map[previous_vertex_element->variable_binding] = previous_vertex_table->table_name;
 
 		for (idx_t idx_j = 1; idx_j < ref.path_list[idx_i]->path_elements.size(); idx_j = idx_j + 2) {
-
 			PathElement *edge_element = GetPathElement(path_list->path_elements[idx_j], conditions);
 			PathElement *next_vertex_element = GetPathElement(path_list->path_elements[idx_j + 1], conditions);
 			if (next_vertex_element->match_type != PGQMatchType::MATCH_VERTEX ||
@@ -263,7 +262,6 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 			if (path_list->path_elements[idx_j]->path_reference_type == PGQPathReferenceType::SUBPATH) {
 				SubPath *subpath = reinterpret_cast<SubPath *>(path_list->path_elements[idx_j].get());
 				if (subpath->upper > 1) {
-
 					path_finding = true;
 					auto csr_edge_id_constant = make_unique<ConstantExpression>(Value::INTEGER((int32_t)0));
 					auto count_create_edge_select = make_unique<SubqueryExpression>();
