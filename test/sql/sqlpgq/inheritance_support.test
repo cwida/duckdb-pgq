@@ -54,10 +54,10 @@ EDGE TABLES (
             LABEL worksAt
     );
 
-query II
+query IIII
 SELECT *
 FROM GRAPH_TABLE(pg
-    MATCH (p:Person)-[w:worksAt]->(u:company)
-    COLUMNS (p.id as p_id, u.id as u_id)
+    MATCH (p:Person)-[w:worksAt]->(u:Organisation)
+    COLUMNS (p.id, p.name, u.id, u.name)
     ) result
 ----

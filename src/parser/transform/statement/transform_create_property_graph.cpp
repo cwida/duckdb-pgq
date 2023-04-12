@@ -46,11 +46,13 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	     label_element = label_element->next) {
 		auto label = reinterpret_cast<duckdb_libpgquery::PGValue *>(label_element->data.ptr_value);
 		D_ASSERT(label->type == duckdb_libpgquery::T_PGString);
-		if (global_label_set.find(label->val.str) != label_set.end()) {
-			throw ConstraintException("Label %s is not unique, make sure all labels are unique", label->val.str);
-		}
-		global_label_set.insert(label->val.str);
-		label_names.emplace_back(label->val.str);
+        std::string label_str = label->val.str;
+        transform(label_str.begin(), label_str.end(), label_str.begin(), ::tolower);
+        if (global_label_set.find(label_str) != label_set.end()) {
+            throw ConstraintException("Label %s is not unique, make sure all labels are unique", label_str);
+        }
+        global_label_set.insert(label_str);
+		label_names.emplace_back(label_str);
 	}
 
 	unique_ptr<PropertyGraphTable> pg_table =
