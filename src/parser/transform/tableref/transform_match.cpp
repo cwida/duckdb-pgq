@@ -28,8 +28,7 @@ unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGP
 		throw ConstraintException("All patterns must bind to a label");
 	}
 	auto label_expression = reinterpret_cast<duckdb_libpgquery::PGLabelTest *>(element->label_expr);
-    std::string label_name = label_expression->name;
-    transform(label_name.begin(), label_name.end(), label_name.begin(), ::tolower);
+	std::string label_name = StringUtil::Lower(label_expression->name);
 	result->label = label_name;
 	if (!element->element_var) {
 		throw ConstraintException("All patterns must bind to a variable, %s is missing a variable", result->label);

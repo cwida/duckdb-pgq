@@ -32,7 +32,7 @@ public:
 	vector<string> except_columns;
 
 	vector<string> sub_labels;
-    string main_label;
+	string main_label;
 
 	//! Associated with the PROPERTIES keyword not mentioned in the creation of table, equalling SELECT * in some sense
 	bool all_columns = false;
