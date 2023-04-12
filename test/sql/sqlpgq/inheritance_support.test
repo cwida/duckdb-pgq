@@ -57,7 +57,97 @@ EDGE TABLES (
 query IIII
 SELECT *
 FROM GRAPH_TABLE(pg
-    MATCH (p:Person)-[w:worksAt]->(u:Organisation)
+    MATCH (p:Person)-[w:worksAt]->(u:organisation)
     COLUMNS (p.id, p.name, u.id, u.name)
     ) result
 ----
+0	Daniel	1	UVA
+0	Daniel	2	EY
+0	Daniel	3	CWI
+3	Peter	0	VU
+1	Tavneet	2	EY
+1	Tavneet	3	CWI
+2	Gabor	3	CWI
+4	David	3	CWI
+
+query IIII
+SELECT *
+FROM GRAPH_TABLE(pg
+    MATCH (p:Person)-[w:worksAt]->(u:ORGANISATION)
+    COLUMNS (p.id, p.name, u.id, u.name)
+    ) result
+----
+0	Daniel	1	UVA
+0	Daniel	2	EY
+0	Daniel	3	CWI
+3	Peter	0	VU
+1	Tavneet	2	EY
+1	Tavneet	3	CWI
+2	Gabor	3	CWI
+4	David	3	CWI
+
+
+query IIII
+SELECT *
+FROM GRAPH_TABLE(pg
+    MATCH (p:Person)-[w:worksAt]->(u:university)
+    COLUMNS (p.id, p.name, u.id, u.name)
+    ) result
+----
+0	Daniel	1	UVA
+3	Peter	0	VU
+
+query IIII
+SELECT *
+FROM GRAPH_TABLE(pg
+    MATCH (p:Person)-[w:worksAt]->(u:company)
+    COLUMNS (p.id, p.name, u.id, u.name)
+    ) result
+----
+0	Daniel	3	CWI
+1	Tavneet	3	CWI
+2	Gabor	3	CWI
+4	David	3	CWI
+0	Daniel	2	EY
+1	Tavneet	2	EY
+
+# Should work with different capitalization
+query IIII
+SELECT *
+FROM GRAPH_TABLE(pg
+    MATCH (p:Person)-[w:worksAt]->(u:COMPANY)
+    COLUMNS (p.id, p.name, u.id, u.name)
+    ) result
+----
+0	Daniel	3	CWI
+1	Tavneet	3	CWI
+2	Gabor	3	CWI
+4	David	3	CWI
+0	Daniel	2	EY
+1	Tavneet	2	EY
+
+query IIII
+SELECT *
+FROM GRAPH_TABLE(pg
+    MATCH (p:organisation)<-[w:worksAt]-(u:person)
+    COLUMNS (p.id, p.name, u.id, u.name)
+    ) result
+----
+1	UVA	0	Daniel
+2	EY	0	Daniel
+3	CWI	0	Daniel
+0	VU	3	Peter
+2	EY	1	Tavneet
+3	CWI	1	Tavneet
+3	CWI	2	Gabor
+3	CWI	4	David
+
+query IIII
+SELECT *
+FROM GRAPH_TABLE(pg
+    MATCH (p:university)<-[w:worksAt]-(u:person)
+    COLUMNS (p.id, p.name, u.id, u.name)
+    ) result
+----
+1	UVA	0	Daniel
+0	VU	3	Peter
