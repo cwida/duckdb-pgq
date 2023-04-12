@@ -22,6 +22,29 @@ shared_ptr<PropertyGraphTable> FindGraphTable(const string &label, CreatePropert
 	return graph_table_entry->second;
 }
 
+void CheckInheritance(shared_ptr<PropertyGraphTable> &tableref, PathElement *element,
+                      vector<unique_ptr<ParsedExpression>> &conditions) {
+	if (tableref->main_label == element->label) {
+		return;
+	}
+	auto constant_expression_two = make_unique<ConstantExpression>(Value::INTEGER((int32_t)2));
+	std::vector<string>::iterator itr =
+	    std::find(tableref->sub_labels.begin(), tableref->sub_labels.end(), element->label);
+
+	auto idx_of_element = std::distance(tableref->sub_labels.begin(), itr);
+	auto constant_expression_idx_label = make_unique<ConstantExpression>(Value::INTEGER((int32_t)idx_of_element));
+
+	vector<unique_ptr<ParsedExpression>> power_of_children;
+	power_of_children.push_back(std::move(constant_expression_two));
+	power_of_children.push_back(std::move(constant_expression_idx_label));
+	auto power_of_term = make_unique<FunctionExpression>("power", std::move(power_of_children));
+
+	auto subcategory_colref = make_unique<ColumnRefExpression>(tableref->discriminator, element->variable_binding);
+	auto subset_compare = make_unique<ComparisonExpression>(ExpressionType::COMPARE_EQUAL,
+	                                                        std::move(subcategory_colref), std::move(power_of_term));
+	conditions.push_back(std::move(subset_compare));
+}
+
 void CheckEdgeTableConstraints(const string &src_reference, const string &dst_reference,
                                shared_ptr<PropertyGraphTable> &edge_table) {
 	if (src_reference != edge_table->source_reference) {
@@ -231,10 +254,10 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 		PathElement *previous_vertex_element = GetPathElement(path_list->path_elements[0], conditions);
 
 		auto previous_vertex_table = FindGraphTable(previous_vertex_element->label, *pg_table);
+		CheckInheritance(previous_vertex_table, previous_vertex_element, conditions);
 		alias_map[previous_vertex_element->variable_binding] = previous_vertex_table->table_name;
 
 		for (idx_t idx_j = 1; idx_j < ref.path_list[idx_i]->path_elements.size(); idx_j = idx_j + 2) {
-
 			PathElement *edge_element = GetPathElement(path_list->path_elements[idx_j], conditions);
 			PathElement *next_vertex_element = GetPathElement(path_list->path_elements[idx_j + 1], conditions);
 			if (next_vertex_element->match_type != PGQMatchType::MATCH_VERTEX ||
@@ -243,12 +266,33 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 			}
 
 			auto edge_table = FindGraphTable(edge_element->label, *pg_table);
+			CheckInheritance(edge_table, edge_element, conditions);
 			auto next_vertex_table = FindGraphTable(next_vertex_element->label, *pg_table);
+			CheckInheritance(next_vertex_table, next_vertex_element, conditions);
+			if (next_vertex_table->main_label != next_vertex_element->label) {
+				auto constant_expression_two = make_unique<ConstantExpression>(Value::INTEGER((int32_t)2));
+				std::vector<string>::iterator itr =
+				    std::find(next_vertex_table->sub_labels.begin(), next_vertex_table->sub_labels.end(),
+				              next_vertex_element->label);
 
+				auto idx_of_element = std::distance(next_vertex_table->sub_labels.begin(), itr);
+				auto constant_expression_idx_label =
+				    make_unique<ConstantExpression>(Value::INTEGER((int32_t)idx_of_element));
+
+				vector<unique_ptr<ParsedExpression>> power_of_children;
+				power_of_children.push_back(std::move(constant_expression_two));
+				power_of_children.push_back(std::move(constant_expression_idx_label));
+				auto power_of_term = make_unique<FunctionExpression>("power", std::move(power_of_children));
+
+				auto subcategory_colref = make_unique<ColumnRefExpression>(next_vertex_table->discriminator,
+				                                                           next_vertex_element->variable_binding);
+				auto subset_compare = make_unique<ComparisonExpression>(
+				    ExpressionType::COMPARE_EQUAL, std::move(subcategory_colref), std::move(power_of_term));
+				conditions.push_back(std::move(subset_compare));
+			}
 			if (path_list->path_elements[idx_j]->path_reference_type == PGQPathReferenceType::SUBPATH) {
 				SubPath *subpath = reinterpret_cast<SubPath *>(path_list->path_elements[idx_j].get());
 				if (subpath->upper > 1) {
-
 					path_finding = true;
 					auto csr_edge_id_constant = make_unique<ConstantExpression>(Value::INTEGER((int32_t)0));
 					auto count_create_edge_select = make_unique<SubqueryExpression>();
