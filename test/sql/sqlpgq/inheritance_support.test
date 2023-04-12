@@ -129,7 +129,7 @@ FROM GRAPH_TABLE(pg
 query IIII
 SELECT *
 FROM GRAPH_TABLE(pg
-    MATCH (p:organisation)<-[w:worksAt]-(u:person)
+    MATCH (p:organisation)<-[w:WORKSAT]-(u:person)
     COLUMNS (p.id, p.name, u.id, u.name)
     ) result
 ----
