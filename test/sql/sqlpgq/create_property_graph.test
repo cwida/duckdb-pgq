@@ -83,6 +83,7 @@ EDGE TABLES (
             PROPERTIES ( createDate ) LABEL Knows
     )
 
+# Should fail as ( * ) is not allowed in the PROPERTIES list, in this case, PROPERTIES ( * ) should be omitted
 statement error
 CREATE PROPERTY GRAPH pg3
 VERTEX TABLES (
@@ -95,6 +96,7 @@ EDGE TABLES (
             PROPERTIES ( createDate ) LABEL Knows
     )
 
+# Should fail since the edge table references vertex tables that do not exist
 statement error
 CREATE PROPERTY GRAPH pg3
 VERTEX TABLES (
