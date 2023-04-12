@@ -22,8 +22,8 @@ static void DeleteCsrFunction(DataChunk &args, ExpressionState &state, Vector &r
 	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
 
 	int flag = sqlpgq_state->csr_list.erase(info.id);
-	result.SetVectorType(VectorType::FLAT_VECTOR);
-	auto result_data = FlatVector::GetData<bool>(result);
+	result.SetVectorType(VectorType::CONSTANT_VECTOR);
+	auto result_data = ConstantVector::GetData<bool>(result);
 	result_data[0] = (flag == 1);
 }
 
