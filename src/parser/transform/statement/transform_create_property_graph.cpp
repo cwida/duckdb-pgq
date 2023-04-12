@@ -54,7 +54,8 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	}
 
 	unique_ptr<PropertyGraphTable> pg_table =
-	    make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias, column_names, label_names);
+	    make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias,
+                                        column_names, label_names);
 
 	pg_table->is_vertex_table = graph_table->is_vertex_table;
 	pg_table->except_columns = std::move(except_list);
@@ -67,9 +68,10 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 		auto discriminator = TransformQualifiedName(graph_table->discriminator);
 		pg_table->discriminator = discriminator.name;
 	}
+    pg_table->main_label = pg_table->sub_labels[pg_table->sub_labels.size()-1];
+    pg_table->sub_labels.pop_back();
 
-	//! Everything from this point is only related to edge tables
-
+    //! Everything from this point is only related to edge tables
 	if (!graph_table->is_vertex_table) {
 		D_ASSERT(graph_table->src_name);
 		auto src_name = TransformQualifiedName(graph_table->src_name);
@@ -123,9 +125,10 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 		}
 		auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(vertex_table->data.ptr_value);
 		auto pg_table = TransformPropertyGraphTable(graph_table, global_label_set);
-		for (auto &label : pg_table->labels) {
+		for (auto &label : pg_table->sub_labels) {
 			info->label_map[label] = pg_table;
 		}
+        info->label_map[pg_table->main_label] = pg_table;
 
 		info->vertex_tables.push_back(pg_table);
 	}
@@ -139,11 +142,12 @@ unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_lib
 			}
 			auto graph_table = reinterpret_cast<duckdb_libpgquery::PGPropertyGraphTable *>(edge_table->data.ptr_value);
 			auto pg_table = TransformPropertyGraphTable(graph_table, global_label_set);
-			for (auto &label : pg_table->labels) {
+			for (auto &label : pg_table->sub_labels) {
 				info->label_map[label] = pg_table;
 			}
+            info->label_map[pg_table->main_label] = pg_table;
 
-			info->edge_tables.push_back(pg_table);
+            info->edge_tables.push_back(pg_table);
 		}
 	}
 

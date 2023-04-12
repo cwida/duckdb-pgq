@@ -1,0 +1,63 @@
+# name: test/sql/sqlpgq/basic_match.test
+# group: [sqlpgq]
+
+statement ok
+pragma enable_verification
+
+require sqlpgq
+
+statement ok
+CREATE TABLE Person(id BIGINT, name VARCHAR);
+
+statement ok
+CREATE TABLE Organisation(name VARCHAR, id BIGINT, kind VARCHAR);
+
+statement ok
+CREATE TABLE Company(name VARCHAR, id BIGINT, kind VARCHAR);
+
+statement ok
+CREATE TABLE University(name VARCHAR, id BIGINT, kind VARCHAR);
+
+statement ok
+CREATE TABLE worksAt(personId BIGINT, organisationId BIGINT);
+
+statement ok
+INSERT INTO Person VALUES (0, 'Daniel'), (1, 'Tavneet'), (2, 'Gabor'), (3, 'Peter'), (4, 'David');
+
+statement ok
+INSERT INTO worksAt VALUES (0,1), (0,2), (0,3), (3,0), (1,2), (1,3), (2,3), (4,3);
+
+statement ok
+INSERT INTO University VALUES ('VU', 0, 'University'), ('UVA', 1, 'University');
+
+statement ok
+INSERT INTO Company VALUES ('EY', 2, 'Company'), ('CWI', 3, 'Company');
+
+statement ok
+INSERT INTO Organisation (SELECT * from university union select * from company);
+
+statement ok
+ALTER TABLE Organisation ADD COLUMN subcategory BIGINT;
+
+statement ok
+UPDATE organisation set subcategory=case when id in (select id from university) then 2**0 when id in (select id from company) then 2**1 end;
+
+statement ok
+CREATE PROPERTY GRAPH pg
+VERTEX TABLES (
+    Person LABEL Person,
+    Organisation LABEL Organisation IN subcategory(university, company)
+    )
+EDGE TABLES (
+    worksAt SOURCE KEY ( personId ) REFERENCES Person ( id )
+            DESTINATION KEY ( organisationId ) REFERENCES Organisation ( id )
+            LABEL worksAt
+    );
+
+query II
+SELECT *
+FROM GRAPH_TABLE(pg
+    MATCH (p:Person)-[w:worksAt]->(u:company)
+    COLUMNS (p.id as p_id, u.id as u_id)
+    ) result
+----
