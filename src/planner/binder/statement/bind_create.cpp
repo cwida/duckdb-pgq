@@ -195,6 +195,7 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 
 	auto &catalog = Catalog::GetCatalog(context, info.catalog);
 
+    case_insensitive_set_t v_table_names;
 	for (auto &vertex_table : info.vertex_tables) {
 		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
 
@@ -206,6 +207,8 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 		}
 		CheckPropertyGraphTableColumns(vertex_table, *table);
 		CheckPropertyGraphTableLabels(vertex_table, *table);
+
+        v_table_names.insert(vertex_table->table_name);
 	}
 
 	for (auto &edge_table : info.edge_tables) {
@@ -213,6 +216,10 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 
 		CheckPropertyGraphTableColumns(edge_table, *table);
 		CheckPropertyGraphTableLabels(edge_table, *table);
+
+        if (v_table_names.find(edge_table->source_reference) == v_table_names.end()) {
+            throw BinderException("Referenced vertex table %s does not exist.", edge_table->source_reference);
+        }
 
 		auto pk_source_table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->source_reference);
 		if (!pk_source_table) {
@@ -223,6 +230,10 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 				throw BinderException("Primary key %s does not exist in table %s", pk, edge_table->source_reference);
 			}
 		}
+
+        if (v_table_names.find(edge_table->source_reference) == v_table_names.end()) {
+            throw BinderException("Referenced vertex table %s does not exist.", edge_table->source_reference);
+        }
 
 		auto pk_destination_table =
 		    catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->destination_reference);
