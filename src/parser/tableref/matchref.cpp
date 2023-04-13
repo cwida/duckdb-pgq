@@ -33,7 +33,6 @@ string MatchRef::ToString() const {
 
 	result += "\nCOLUMNS (";
 	for (idx_t i = 0; i < column_list.size(); i++) {
-//        result += column_list[i]->ToString() + ((i == column_list.size() - 1) ? "" : ",");
         if (column_list[i]->type == ExpressionType::STAR) {
             auto &star = (StarExpression &)*column_list[i];
             result += star.ToString();
