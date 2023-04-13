@@ -13,7 +13,7 @@
 #include "duckdb/common/types/value.hpp"
 #include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/common/atomic.hpp"
-#include "duckdb/common/compressed_sparse_row.h"
+#include "duckdb/common/compressed_sparse_row.hpp"
 #include "duckdb/parser/parsed_data/create_info.hpp"
 
 namespace duckdb {
