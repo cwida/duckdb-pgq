@@ -32,7 +32,7 @@ static void CsrInitializeVertex(SQLPGQContext &context, int32_t id, int64_t v_si
 		csr->initialized_v = true;
 		context.csr_list[id] = std::move(csr);
 	} catch (std::bad_alloc const &) {
-		throw Exception("Unable to initialise vector of size for csr vertex table representation");
+		throw Exception("Unable to initialize vector of size for csr vertex table representation");
 	}
 
 	return;
@@ -49,7 +49,7 @@ static void CsrInitializeEdge(SQLPGQContext &context, int32_t id, int64_t v_size
 		csr_entry->second->e.resize(e_size, 0);
 		csr_entry->second->edge_ids.resize(e_size, 0);
 	} catch (std::bad_alloc const &) {
-		throw Exception("Unable to initialise vector of size for csr edge table representation");
+		throw Exception("Unable to initialize vector of size for csr edge table representation");
 	}
 	for (auto i = 1; i < v_size + 2; i++) {
 		csr_entry->second->v[i] += csr_entry->second->v[i - 1];
@@ -74,7 +74,7 @@ static void CsrInitializeWeight(SQLPGQContext &context, int32_t id, int64_t e_si
 			throw NotImplementedException("Unrecognized weight type detected.");
 		}
 	} catch (std::bad_alloc const &) {
-		throw Exception("Unable to initialise vector of size for csr weight table representation");
+		throw Exception("Unable to initialize vector of size for csr weight table representation");
 	}
 
 	csr_entry->second->initialized_w = true;

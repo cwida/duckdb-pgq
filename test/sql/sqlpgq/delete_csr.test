@@ -1,9 +1,6 @@
 # name: test/sql/sqlpgq/delete_csr.test
 # group: [sqlpgq]
 
-statement ok
-pragma enable_verification
-
 require sqlpgq
 
 statement ok
@@ -32,6 +29,7 @@ EDGE TABLES (
             PROPERTIES ( id ) LABEL Knows
     );
 
+statement ok
 SELECT  CREATE_CSR_EDGE(
             0,
             (SELECT count(a.id) FROM Student a),
@@ -55,18 +53,8 @@ SELECT  CREATE_CSR_EDGE(
     FROM Know k
     JOIN student a on a.id = k.src
     JOIN student c on c.id = k.dst;
-----
-1
-1
-1
-1
-1
-1
-1
-1
-1
 
-
+statement ok
 SELECT  CREATE_CSR_EDGE(
             1,
             (SELECT count(a.id) FROM Student a),
@@ -90,29 +78,23 @@ SELECT  CREATE_CSR_EDGE(
     FROM Know k
     JOIN student a on a.id = k.src
     JOIN student c on c.id = k.dst;
-----
-1
-1
-1
-1
-1
-1
-1
-1
-1
 
+query I
 SELECT delete_csr(0) as flag;
 ----
 true
 
+query I
 SELECT delete_csr(1) as flag;
 ----
 true
 
+query I
 SELECT delete_csr(0) as flag;
 ----
 false
 
+query I
 SELECT delete_csr(3) as flag;
 ----
 false
