@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="hhttps://github.com/cwida/duckdb-pgq/blob/dev/logo/DuckPGQ_Logo.png" height="50">
+  <img src="https://github.com/cwida/duckdb-pgq/blob/dev/logo/DuckPGQ_Logo.png" height="50">
 </div>
 <p>&nbsp;</p>
 
