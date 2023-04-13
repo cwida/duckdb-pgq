@@ -33,16 +33,16 @@ string MatchRef::ToString() const {
 
 	result += "\nCOLUMNS (";
 	for (idx_t i = 0; i < column_list.size(); i++) {
-        if (column_list[i]->type == ExpressionType::STAR) {
-            auto &star = (StarExpression &)*column_list[i];
-            result += star.ToString();
-            break;
-        } else if (column_list[i]->type == ExpressionType::COLUMN_REF) {
-            auto &column = (ColumnRefExpression &) *column_list[i];
-            result += (i > 0 ? ", " : "") + column.ToString() + (column.alias.empty() ? "" : " AS " + column.alias);
-        } else {
-            throw ConstraintException("Unhandled type of expression in COLUMNS");
-        }
+		if (column_list[i]->type == ExpressionType::STAR) {
+			auto &star = (StarExpression &)*column_list[i];
+			result += star.ToString();
+			break;
+		} else if (column_list[i]->type == ExpressionType::COLUMN_REF) {
+			auto &column = (ColumnRefExpression &)*column_list[i];
+			result += (i > 0 ? ", " : "") + column.ToString() + (column.alias.empty() ? "" : " AS " + column.alias);
+		} else {
+			throw ConstraintException("Unhandled type of expression in COLUMNS");
+		}
 	}
 	result += ")\n";
 	result += ")" + alias;
