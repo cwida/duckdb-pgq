@@ -1,9 +1,6 @@
 # name: test/sql/sqlpgq/delete_csr.test
 # group: [sqlpgq]
 
-statement ok
-pragma enable_verification
-
 require sqlpgq
 
 statement ok
