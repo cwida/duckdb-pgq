@@ -17,8 +17,8 @@ void SQLPGQExtension::Load(DuckDB &db) {
 	}
 
 	for (auto &fun : SQLPGQFunctions::GetTableFunctions()) {
-                catalog.CreateFunction(*con.context, &fun);
-        }
+		catalog.CreateFunction(*con.context, &fun);
+	}
 	con.Commit();
 }
 

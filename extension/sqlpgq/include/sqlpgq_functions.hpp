@@ -51,18 +51,18 @@ public:
 	}
 
 	static vector<CreateTableFunctionInfo> GetTableFunctions() {
-                vector<CreateTableFunctionInfo> functions;
+		vector<CreateTableFunctionInfo> functions;
 
-                functions.push_back(GetScanCSREFunction());
+		functions.push_back(GetScanCSREFunction());
 		functions.push_back(GetScanCSRWFunction());
 		functions.push_back(GetScanCSRVFunction());
 		functions.push_back(GetScanPGVTableFunction());
 		functions.push_back(GetScanPGVColFunction());
 		functions.push_back(GetScanPGETableFunction());
-                functions.push_back(GetScanPGEColFunction());
+		functions.push_back(GetScanPGEColFunction());
 
-                return functions;
-        }
+		return functions;
+	}
 
 private:
 	static CreateScalarFunctionInfo GetCsrVertexFunction();
@@ -99,7 +99,7 @@ private:
 	static CreateTableFunctionInfo GetScanPGVTableFunction();
 	static CreateTableFunctionInfo GetScanPGVColFunction();
 	static CreateTableFunctionInfo GetScanPGETableFunction();
-        static CreateTableFunctionInfo GetScanPGEColFunction();
+	static CreateTableFunctionInfo GetScanPGEColFunction();
 };
 
 } // namespace duckdb
