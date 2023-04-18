@@ -4,9 +4,6 @@
 #include "sqlpgq_common.hpp"
 #include "sqlpgq_functions.hpp"
 #include "duckdb/common/compressed_sparse_row.hpp"
-#include <chrono>
-#include <math.h>
-#include <mutex>
 
 namespace duckdb {
 
@@ -37,6 +34,8 @@ static void GetCsrWTypeFunction(DataChunk &args, ExpressionState &state, Vector 
 		flag = (int32_t)CSRWType::INTWEIGHT;
 	} else if (csr->w_double.size()) {
 		flag = (int32_t)CSRWType::DOUBLEWEIGHT;
+	} else {
+		throw InternalException("Corrupted weight vector");
 	}
 	result_data[0] = flag;
 }
