@@ -289,3 +289,19 @@ FROM GRAPH_TABLE (pg
 1	Tavneet
 2	Gabor
 4	David
+
+query II
+FROM GRAPH_TABLE (pg
+    MATCH
+    (a:PERSON)-[k:knows]->(b:person)
+    COLUMNS (a.*)
+    ) study;
+----
+0	Daniel
+0	Daniel
+0	Daniel
+3	Peter
+1	Tavneet
+1	Tavneet
+2	Gabor
+4	David

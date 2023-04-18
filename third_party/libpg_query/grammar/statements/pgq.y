@@ -277,7 +277,9 @@ KeepOptional:
 		;
 
 PathOrPathsOptional:
-		PATH | PATHS | /* EMPTY */
+		PATH
+		| PATHS
+		| /* EMPTY */
 		;
 
 GroupOrGroupsOptional:
