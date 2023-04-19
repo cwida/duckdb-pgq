@@ -143,3 +143,7 @@ query I
 SELECT sqlpgq_csr_get_w_type(2);
 ----
 2
+
+statement error
+SELECT sqlpgq_csr_get_w_type(3);
+
