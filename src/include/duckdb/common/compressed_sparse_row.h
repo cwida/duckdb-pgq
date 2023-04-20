@@ -13,11 +13,11 @@ using namespace std;
 
 class ClientContext;
 
-class Csr {
+class CSR {
 public:
-	Csr() {
+	CSR() {
 	}
-	~Csr() {
+	~CSR() {
 		delete[] v;
 	}
 

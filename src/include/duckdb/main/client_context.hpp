@@ -25,6 +25,7 @@
 #include "duckdb/main/client_config.hpp"
 #include "duckdb/main/external_dependencies.hpp"
 #include "duckdb/common/preserved_error.hpp"
+#include "duckdb/common/compressed_sparse_row.h"
 
 namespace duckdb {
 class Appender;
@@ -192,6 +193,8 @@ public:
 
 	//! Returns true if execution of the current query is finished
 	DUCKDB_API bool ExecutionIsFinished();
+
+
 
 private:
 	//! Parse statements and resolve pragmas from a query
