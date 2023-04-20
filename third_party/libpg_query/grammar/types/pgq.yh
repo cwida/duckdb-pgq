@@ -1,6 +1,7 @@
 %type <keyword> VertexOrNode 
 %type <keyword> EdgeOrRelationship
 %type <keyword> pgq_unreserved_keyword
+%type <keyword> pgq_col_name_keyword
 %type <str> PGQ_IDENT
 %type <list> VertexTableDefinitionList 
 %type <list> LabelList
@@ -19,6 +20,7 @@
 %type <list> PropertiesClause
 %type <list> ColumnSpec
 %type <list> ColumnList
+%type <node> GraphTableWhereOptional
 %type <node> KeepOptional
 %type <ival> GroupOrGroupsOptional
 %type <keyword> PathVariableOptional
