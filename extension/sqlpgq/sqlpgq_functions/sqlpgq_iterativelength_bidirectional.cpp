@@ -43,11 +43,10 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
 	// get csr info (TODO: do not store in context -- make global map in module that is indexed by id+&context)
-	int32_t id = args.data[0].GetValue(0).GetValue<int32_t>();
-	D_ASSERT(info.context.client_data->csr_list[id]);
+	D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
 	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
-	int64_t *v = (int64_t *)info.context.client_data->csr_list[id]->v;
-	vector<int64_t> &e = info.context.client_data->csr_list[id]->e;
+	int64_t *v = (int64_t *)info.context.client_data->csr_list[info.csr_id]->v;
+	vector<int64_t> &e = info.context.client_data->csr_list[info.csr_id]->e;
 
 	// get src and dst vectors for searches
 	auto &src = args.data[2];
@@ -103,10 +102,10 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
                 } else if (src_data[src_pos] == dst_data[dst_pos]) {
                     result_data[search_num] = (uint64_t) 0; // path of length 0 does not require a search
 				} else {
-                    src_visit1[src_data[src_pos]][lane] = 1;
-                    dst_visit1[dst_data[dst_pos]][lane] = 1;
-                    src_seen[src_data[src_pos]][lane] = 1;
-                    dst_seen[dst_data[dst_pos]][lane] = 1;
+                    src_visit1[src_data[src_pos]][lane] = true;
+                    dst_visit1[dst_data[dst_pos]][lane] = true;
+                    src_seen[src_data[src_pos]][lane] = true;
+                    dst_seen[dst_data[dst_pos]][lane] = true;
                     lane_to_num[lane] = search_num; // active lane
 					active++;
 					break;
