@@ -61,6 +61,11 @@ struct ClientData {
 	//! Property graphs that are registered
 	unordered_map<string, CreatePropertyGraphInfo*> registered_property_graphs;
 
+
+	//! Used to build the CSR data structures required for path-finding queries
+	std::unordered_map<int32_t, unique_ptr<Csr>> csr_list;
+	std::mutex csr_lock;
+
 public:
 	DUCKDB_API static ClientData &Get(ClientContext &context);
 };
