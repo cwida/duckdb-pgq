@@ -360,6 +360,10 @@ if(BUILD_SQLSMITH)
   set(BUILD_SQLSMITH_EXTENSION TRUE)
 endif()
 
+if(BUILD_SQLPGQ)
+  set(BUILD_SQLPGQ_EXTENSION TRUE)
+endif()
+
 if(TREAT_WARNINGS_AS_ERRORS)
   message("Treating warnings as errors.")
 endif()
