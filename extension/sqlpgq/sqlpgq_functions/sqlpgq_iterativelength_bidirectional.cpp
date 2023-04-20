@@ -41,11 +41,17 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (IterativeLengthFunctionData &)*func_expr.bind_info;
 
-	// get csr info (TODO: do not store in context -- make global map in module that is indexed by id+&context)
-	D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
+	auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == info.context.registered_state.end()) {
+		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+		throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+
+	D_ASSERT(sqlpgq_state->csr_list[info.csr_id]);
 	int64_t v_size = args.data[1].GetValue(0).GetValue<int64_t>();
-	int64_t *v = (int64_t *)info.context.client_data->csr_list[info.csr_id]->v;
-	vector<int64_t> &e = info.context.client_data->csr_list[info.csr_id]->e;
+	int64_t *v = (int64_t *)sqlpgq_state->csr_list[info.csr_id]->v;
+	vector<int64_t> &e = sqlpgq_state->csr_list[info.csr_id]->e;
 
 	// get src and dst vectors for searches
 	auto &src = args.data[2];
@@ -114,13 +120,10 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 
 		// make passes while a lane is still active
 		for (int64_t iter = 0; active; iter++) {
-			if (!IterativeLengthBidirectional(v_size, v, e, (iter & 1) ? dst_seen : src_seen,
-			                                  (iter & 2)   ? (iter & 1) ? dst_visit2 : src_visit2
-			                                  : (iter & 1) ? dst_visit1
-			                                               : src_visit1,
-			                                  (iter & 2)   ? (iter & 1) ? dst_visit1 : src_visit1
-			                                  : (iter & 1) ? dst_visit2
-			                                               : src_visit2)) {
+            if (!IterativeLengthBidirectional(
+                    v_size, v, e, (iter & 1) ? dst_seen : src_seen,
+                    (iter & 2) ? (iter & 1) ? dst_visit2 : src_visit2 : (iter & 1) ? dst_visit1 : src_visit1,
+                    (iter & 2) ? (iter & 1) ? dst_visit1 : src_visit1 : (iter & 1) ? dst_visit2 : src_visit2)) {
 				break;
 			}
 			std::bitset<LANE_LIMIT> done = InterSectFronteers(v_size, src_seen, dst_seen);
@@ -146,7 +149,7 @@ static void IterativeLengthBidirectionalFunction(DataChunk &args, ExpressionStat
 			}
 		}
 	}
-	info.context.client_data->csr_list.erase(info.csr_id);
+	sqlpgq_state->csr_to_delete.insert(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetIterativeLengthBidirectionalFunction() {

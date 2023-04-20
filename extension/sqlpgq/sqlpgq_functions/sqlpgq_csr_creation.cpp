@@ -5,17 +5,16 @@
 #include "sqlpgq_common.hpp"
 #include "sqlpgq_functions.hpp"
 
-#include <chrono>
 #include <math.h>
 #include <mutex>
 
 namespace duckdb {
 
-static void CsrInitializeVertex(ClientContext &context, int32_t id, int64_t v_size) {
-	lock_guard<mutex> csr_init_lock(context.client_data->csr_lock);
+static void CsrInitializeVertex(SQLPGQContext &context, int32_t id, int64_t v_size) {
+	lock_guard<mutex> csr_init_lock(context.csr_lock);
 
-	auto csr_entry = context.client_data->csr_list.find(id);
-	if (csr_entry != context.client_data->csr_list.end()) {
+	auto csr_entry = context.csr_list.find(id);
+	if (csr_entry != context.csr_list.end()) {
 		if (csr_entry->second->initialized_v) {
 			return;
 		}
@@ -31,25 +30,18 @@ static void CsrInitializeVertex(ClientContext &context, int32_t id, int64_t v_si
 			csr->v[i] = 0;
 		}
 		csr->initialized_v = true;
-
-		if (csr_entry != context.client_data->csr_list.end()) {
-			context.client_data->csr_list[id] = std::move(csr);
-		} else {
-			//            auto pair = std::pair<int32_t, unique_ptr<CSR>>(id, std::move(csr));
-			context.client_data->csr_list[id] = std::move(csr);
-		}
-
+		context.csr_list[id] = std::move(csr);
 	} catch (std::bad_alloc const &) {
-		throw Exception("Unable to initialise vector of size for csr vertex table representation");
+		throw Exception("Unable to initialize vector of size for csr vertex table representation");
 	}
 
 	return;
 }
 
-static void CsrInitializeEdge(ClientContext &context, int32_t id, int64_t v_size, int64_t e_size) {
-	const lock_guard<mutex> csr_init_lock(context.client_data->csr_lock);
+static void CsrInitializeEdge(SQLPGQContext &context, int32_t id, int64_t v_size, int64_t e_size) {
+	const lock_guard<mutex> csr_init_lock(context.csr_lock);
 
-	auto csr_entry = context.client_data->csr_list.find(id);
+	auto csr_entry = context.csr_list.find(id);
 	if (csr_entry->second->initialized_e) {
 		return;
 	}
@@ -57,7 +49,7 @@ static void CsrInitializeEdge(ClientContext &context, int32_t id, int64_t v_size
 		csr_entry->second->e.resize(e_size, 0);
 		csr_entry->second->edge_ids.resize(e_size, 0);
 	} catch (std::bad_alloc const &) {
-		throw Exception("Unable to initialise vector of size for csr edge table representation");
+		throw Exception("Unable to initialize vector of size for csr edge table representation");
 	}
 	for (auto i = 1; i < v_size + 2; i++) {
 		csr_entry->second->v[i] += csr_entry->second->v[i - 1];
@@ -66,9 +58,9 @@ static void CsrInitializeEdge(ClientContext &context, int32_t id, int64_t v_size
 	return;
 }
 
-static void CsrInitializeWeight(ClientContext &context, int32_t id, int64_t e_size, PhysicalType weight_type) {
-	const lock_guard<mutex> csr_init_lock(context.client_data->csr_lock);
-	auto csr_entry = context.client_data->csr_list.find(id);
+static void CsrInitializeWeight(SQLPGQContext &context, int32_t id, int64_t e_size, PhysicalType weight_type) {
+	const lock_guard<mutex> csr_init_lock(context.csr_lock);
+	auto csr_entry = context.csr_list.find(id);
 
 	if (csr_entry->second->initialized_w) {
 		return;
@@ -82,7 +74,7 @@ static void CsrInitializeWeight(ClientContext &context, int32_t id, int64_t e_si
 			throw NotImplementedException("Unrecognized weight type detected.");
 		}
 	} catch (std::bad_alloc const &) {
-		throw Exception("Unable to initialise vector of size for csr weight table representation");
+		throw Exception("Unable to initialize vector of size for csr weight table representation");
 	}
 
 	csr_entry->second->initialized_w = true;
@@ -93,15 +85,22 @@ static void CreateCsrVertexFunction(DataChunk &args, ExpressionState &state, Vec
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (CSRFunctionData &)*func_expr.bind_info;
 
-	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
-	auto csr_entry = info.context.client_data->csr_list.find(info.id);
+	auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == info.context.registered_state.end()) {
+		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+		throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
 
-	if (csr_entry == info.context.client_data->csr_list.end()) {
-		CsrInitializeVertex(info.context, info.id, input_size);
-		csr_entry = info.context.client_data->csr_list.find(info.id);
+	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
+	auto csr_entry = sqlpgq_state->csr_list.find(info.id);
+
+	if (csr_entry == sqlpgq_state->csr_list.end()) {
+		CsrInitializeVertex(*sqlpgq_state, info.id, input_size);
+		csr_entry = sqlpgq_state->csr_list.find(info.id);
 	} else {
 		if (!csr_entry->second->initialized_v) {
-			CsrInitializeVertex(info.context, info.id, input_size);
+			CsrInitializeVertex(*sqlpgq_state, info.id, input_size);
 		}
 	}
 
@@ -120,12 +119,19 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (CSRFunctionData &)*func_expr.bind_info;
 
+	auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == info.context.registered_state.end()) {
+		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+		throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+
 	int64_t vertex_size = args.data[1].GetValue(0).GetValue<int64_t>();
 	int64_t edge_size = args.data[2].GetValue(0).GetValue<int64_t>();
 
-	auto csr_entry = info.context.client_data->csr_list.find(info.id);
+	auto csr_entry = sqlpgq_state->csr_list.find(info.id);
 	if (!csr_entry->second->initialized_e) {
-		CsrInitializeEdge(info.context, info.id, vertex_size, edge_size);
+		CsrInitializeEdge(*sqlpgq_state, info.id, vertex_size, edge_size);
 	}
 	if (info.weight_type == LogicalType::SQLNULL) {
 		TernaryExecutor::Execute<int64_t, int64_t, int64_t, int32_t>(
@@ -140,7 +146,7 @@ static void CreateCsrEdgeFunction(DataChunk &args, ExpressionState &state, Vecto
 	}
 	auto weight_type = args.data[6].GetType().InternalType();
 	if (!csr_entry->second->initialized_w) {
-		CsrInitializeWeight(info.context, info.id, edge_size, weight_type);
+		CsrInitializeWeight(*sqlpgq_state, info.id, edge_size, weight_type);
 	}
 	if (weight_type == PhysicalType::INT64) {
 		QuaternaryExecutor::Execute<int64_t, int64_t, int64_t, int64_t, int32_t>(

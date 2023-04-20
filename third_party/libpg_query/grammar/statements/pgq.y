@@ -235,15 +235,15 @@ GraphTableWhereOptional:
 		;
 
 GraphTableStmt:
-		'(' PGQ_IDENT ',' MATCH PathPatternList KeepOptional GraphTableWhereOptional
+		'(' PGQ_IDENT MATCH PathPatternList KeepOptional GraphTableWhereOptional
 		COLUMNS '(' ColumnList ')' ')' qualified_name
 			{
 				PGMatchClause *n = makeNode(PGMatchClause);
 				n->pg_name = $2;
-				n->paths = $5;
-				if ($6) {
+				n->paths = $4;
+				if ($5) {
 					/* we massage away 'keep' functionality immediately */
-					PGPathPattern *keep = (PGPathPattern*) $6;
+					PGPathPattern *keep = (PGPathPattern*) $5;
 					PGListCell *list = list_head(n->paths);
 					while(list) {
 						PGPathPattern *p = (PGPathPattern*) lfirst(list);
@@ -253,9 +253,9 @@ GraphTableStmt:
 						list = lnext(list);
 					}
 				}
-				n->where_clause = $7;
-				n->columns = $10;
-				n->graph_table = $13;
+				n->where_clause = $6;
+				n->columns = $9;
+				n->graph_table = $12;
 				$$ = (PGNode *) n;
 			}
 		;

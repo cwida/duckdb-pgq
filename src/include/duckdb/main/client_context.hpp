@@ -25,7 +25,7 @@
 #include "duckdb/main/client_config.hpp"
 #include "duckdb/main/external_dependencies.hpp"
 #include "duckdb/common/preserved_error.hpp"
-#include "duckdb/common/compressed_sparse_row.h"
+#include "duckdb/common/compressed_sparse_row.hpp"
 
 namespace duckdb {
 class Appender;

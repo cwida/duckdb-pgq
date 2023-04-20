@@ -8,6 +8,8 @@
 #include "duckdb/parser/result_modifier.hpp"
 #include "duckdb/parser/tableref/joinref.hpp"
 
+#include "../../../extension/sqlpgq/include/sqlpgq_common.hpp"
+
 namespace duckdb {
 
 shared_ptr<PropertyGraphTable> FindGraphTable(const string &label, CreatePropertyGraphInfo &pg_table) {
@@ -18,6 +20,29 @@ shared_ptr<PropertyGraphTable> FindGraphTable(const string &label, CreatePropert
 	}
 
 	return graph_table_entry->second;
+}
+
+void CheckInheritance(shared_ptr<PropertyGraphTable> &tableref, PathElement *element,
+                      vector<unique_ptr<ParsedExpression>> &conditions) {
+	if (tableref->main_label == element->label) {
+		return;
+	}
+	auto constant_expression_two = make_unique<ConstantExpression>(Value::INTEGER((int32_t)2));
+	std::vector<string>::iterator itr =
+	    std::find(tableref->sub_labels.begin(), tableref->sub_labels.end(), element->label);
+
+	auto idx_of_element = std::distance(tableref->sub_labels.begin(), itr);
+	auto constant_expression_idx_label = make_unique<ConstantExpression>(Value::INTEGER((int32_t)idx_of_element));
+
+	vector<unique_ptr<ParsedExpression>> power_of_children;
+	power_of_children.push_back(std::move(constant_expression_two));
+	power_of_children.push_back(std::move(constant_expression_idx_label));
+	auto power_of_term = make_unique<FunctionExpression>("power", std::move(power_of_children));
+
+	auto subcategory_colref = make_unique<ColumnRefExpression>(tableref->discriminator, element->variable_binding);
+	auto subset_compare = make_unique<ComparisonExpression>(ExpressionType::COMPARE_EQUAL,
+	                                                        std::move(subcategory_colref), std::move(power_of_term));
+	conditions.push_back(std::move(subset_compare));
 }
 
 void CheckEdgeTableConstraints(const string &src_reference, const string &dst_reference,
@@ -125,24 +150,100 @@ static unique_ptr<JoinRef> GetJoinRef(shared_ptr<PropertyGraphTable> &edge_table
 	return first_join_ref;
 }
 
-unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
-	auto &client_data = ClientData::Get(context);
+unique_ptr<SubqueryRef> CreateCountCTESubquery() {
+	//! BEGIN OF (SELECT count(cte1.temp) * 0 from cte1) __x
 
-	auto pg_table_entry = client_data.registered_property_graphs.find(ref.pg_name);
-	if (pg_table_entry == client_data.registered_property_graphs.end()) {
-		throw BinderException("Property graph %s does not exist", ref.pg_name);
+	auto temp_cte_select_node = make_unique<SelectNode>();
+
+	auto cte_table_ref = make_unique<BaseTableRef>();
+
+	cte_table_ref->table_name = "cte1";
+	temp_cte_select_node->from_table = std::move(cte_table_ref);
+	vector<unique_ptr<ParsedExpression>> children;
+	children.push_back(make_unique<ColumnRefExpression>("temp", "cte1"));
+
+	auto count_function = make_unique<FunctionExpression>("count", std::move(children));
+
+	auto zero = make_unique<ConstantExpression>(Value::INTEGER((int32_t)0));
+
+	vector<unique_ptr<ParsedExpression>> multiply_children;
+
+	multiply_children.push_back(std::move(zero));
+	multiply_children.push_back(std::move(count_function));
+	auto multiply_function = make_unique<FunctionExpression>("multiply", std::move(multiply_children));
+	multiply_function->alias = "temp";
+	temp_cte_select_node->select_list.push_back(std::move(multiply_function));
+	auto temp_cte_select_statement = make_unique<SelectStatement>();
+	temp_cte_select_statement->node = std::move(temp_cte_select_node);
+
+	auto temp_cte_select_subquery = make_unique<SubqueryRef>(std::move(temp_cte_select_statement), "__x");
+	//! END OF (SELECT count(cte1.temp) from cte1) __x
+	return temp_cte_select_subquery;
+}
+
+unique_ptr<SubqueryRef> CreateSrcDstPairsSubquery(vector<unique_ptr<ParsedExpression>> &column_list,
+                                                  const string &prev_binding, const string &next_binding,
+                                                  shared_ptr<PropertyGraphTable> &edge_table,
+                                                  unique_ptr<ParsedExpression> &where_clause) {
+	auto src_dst_pairs_node = make_unique<SelectNode>();
+	//! src.rowid
+	auto src_rowid = make_unique<ColumnRefExpression>("rowid", prev_binding);
+	src_rowid->alias = "__src";
+	src_dst_pairs_node->select_list.push_back(std::move(src_rowid));
+	//! dst.rowid
+	auto dst_rowid = make_unique<ColumnRefExpression>("rowid", next_binding);
+	dst_rowid->alias = "__dst";
+	src_dst_pairs_node->select_list.push_back(std::move(dst_rowid));
+
+	//! Select all columns that we need
+	//! (Needs to be reworked in the future since we maybe don't want to select _all_ columns in this subquery)
+	for (auto &column : column_list) {
+		src_dst_pairs_node->select_list.push_back(std::move(column));
 	}
 
-	auto pg_table = reinterpret_cast<CreatePropertyGraphInfo *>(pg_table_entry->second.get());
+	//! src alias
+	auto src_vertex_ref = make_unique<BaseTableRef>();
+	src_vertex_ref->table_name = edge_table->source_reference;
+	src_vertex_ref->alias = prev_binding;
+
+	//! dst alias
+	auto dst_vertex_ref = make_unique<BaseTableRef>();
+	dst_vertex_ref->table_name = edge_table->destination_reference;
+	dst_vertex_ref->alias = next_binding;
+
+	//! FROM src alias, dst alias (represented as a cross join between the two)
+	auto cross_join_src_dst = make_unique<JoinRef>(JoinRefType::CROSS);
+	cross_join_src_dst->left = std::move(src_vertex_ref);
+	cross_join_src_dst->right = std::move(dst_vertex_ref);
+
+	//! Adding to the from clause
+	src_dst_pairs_node->from_table = std::move(cross_join_src_dst);
+
+	//! Adding the where clause that we filter on
+	src_dst_pairs_node->where_clause = std::move(where_clause);
+
+	auto src_dst_pairs_statement = make_unique<SelectStatement>();
+	src_dst_pairs_statement->node = std::move(src_dst_pairs_node);
+
+	auto src_dst_pairs_subquery = make_unique<SubqueryRef>(std::move(src_dst_pairs_statement), "__p");
+	return src_dst_pairs_subquery;
+}
+
+unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
+
+	auto sqlpgq_state_entry = context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == context.registered_state.end()) {
+		throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+	auto pg_table = sqlpgq_state->GetPropertyGraph(ref.pg_name);
 
 	auto outer_select_statement = make_unique<SelectStatement>();
 	auto cte_select_statement = make_unique<SelectStatement>();
 
 	vector<unique_ptr<ParsedExpression>> conditions;
-	conditions.push_back(std::move(ref.where_clause));
 
 	auto select_node = make_unique<SelectNode>();
-	auto subquery = make_unique<SelectStatement>();
 	unordered_map<string, string> alias_map;
 
 	auto extra_alias_counter = 0;
@@ -153,10 +254,10 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 		PathElement *previous_vertex_element = GetPathElement(path_list->path_elements[0], conditions);
 
 		auto previous_vertex_table = FindGraphTable(previous_vertex_element->label, *pg_table);
+		CheckInheritance(previous_vertex_table, previous_vertex_element, conditions);
 		alias_map[previous_vertex_element->variable_binding] = previous_vertex_table->table_name;
 
 		for (idx_t idx_j = 1; idx_j < ref.path_list[idx_i]->path_elements.size(); idx_j = idx_j + 2) {
-
 			PathElement *edge_element = GetPathElement(path_list->path_elements[idx_j], conditions);
 			PathElement *next_vertex_element = GetPathElement(path_list->path_elements[idx_j + 1], conditions);
 			if (next_vertex_element->match_type != PGQMatchType::MATCH_VERTEX ||
@@ -165,11 +266,32 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 			}
 
 			auto edge_table = FindGraphTable(edge_element->label, *pg_table);
+			CheckInheritance(edge_table, edge_element, conditions);
 			auto next_vertex_table = FindGraphTable(next_vertex_element->label, *pg_table);
+			CheckInheritance(next_vertex_table, next_vertex_element, conditions);
+			if (next_vertex_table->main_label != next_vertex_element->label) {
+				auto constant_expression_two = make_unique<ConstantExpression>(Value::INTEGER((int32_t)2));
+				std::vector<string>::iterator itr =
+				    std::find(next_vertex_table->sub_labels.begin(), next_vertex_table->sub_labels.end(),
+				              next_vertex_element->label);
 
+				auto idx_of_element = std::distance(next_vertex_table->sub_labels.begin(), itr);
+				auto constant_expression_idx_label =
+				    make_unique<ConstantExpression>(Value::INTEGER((int32_t)idx_of_element));
+
+				vector<unique_ptr<ParsedExpression>> power_of_children;
+				power_of_children.push_back(std::move(constant_expression_two));
+				power_of_children.push_back(std::move(constant_expression_idx_label));
+				auto power_of_term = make_unique<FunctionExpression>("power", std::move(power_of_children));
+
+				auto subcategory_colref = make_unique<ColumnRefExpression>(next_vertex_table->discriminator,
+				                                                           next_vertex_element->variable_binding);
+				auto subset_compare = make_unique<ComparisonExpression>(
+				    ExpressionType::COMPARE_EQUAL, std::move(subcategory_colref), std::move(power_of_term));
+				conditions.push_back(std::move(subset_compare));
+			}
 			if (path_list->path_elements[idx_j]->path_reference_type == PGQPathReferenceType::SUBPATH) {
 				SubPath *subpath = reinterpret_cast<SubPath *>(path_list->path_elements[idx_j].get());
-
 				if (subpath->upper > 1) {
 					path_finding = true;
 					auto csr_edge_id_constant = make_unique<ConstantExpression>(Value::INTEGER((int32_t)0));
@@ -291,42 +413,32 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 					auto cte_select_node = make_unique<SelectNode>();
 					cte_select_node->cte_map.map["cte1"] = std::move(info);
-					cte_select_node->modifiers.push_back(make_unique<DistinctModifier>());
+
 					for (auto &col : ref.column_list) {
-						cte_select_node->select_list.push_back(std::move(col));
+						auto col_ref = reinterpret_cast<ColumnRefExpression *>(col.get());
+						auto new_col_ref = make_unique<ColumnRefExpression>(col_ref->alias, "__p");
+						cte_select_node->select_list.push_back(std::move(new_col_ref));
 					}
 
-					auto cte_ref = make_unique<BaseTableRef>();
-					cte_ref->table_name = "cte1";
-					auto cross_ref = make_unique<JoinRef>(JoinRefType::CROSS);
-					cross_ref->left = std::move(cte_ref);
-					auto src_vertex_ref = make_unique<BaseTableRef>();
-					src_vertex_ref->table_name = edge_table->source_reference;
-					src_vertex_ref->alias = previous_vertex_element->variable_binding;
+					//! (SELECT count(cte1.temp) * 0 from cte1) __x
 
-					auto dst_vertex_ref = make_unique<BaseTableRef>();
-					dst_vertex_ref->table_name = edge_table->destination_reference;
-					dst_vertex_ref->alias = next_vertex_element->variable_binding;
+					auto temp_cte_select_subquery = CreateCountCTESubquery();
 
+					//! (SELECT src.rowid as __src, b.rowid as __dst, <...> FROM src_table src, dst_table dst <where
+					//! ...>) __p
+					auto source_destination_pairs_subquery =
+					    CreateSrcDstPairsSubquery(ref.column_list, previous_vertex_element->variable_binding,
+					                              next_vertex_element->variable_binding, edge_table, ref.where_clause);
 					auto cross_join_src_dst = make_unique<JoinRef>(JoinRefType::CROSS);
-					cross_join_src_dst->left = std::move(src_vertex_ref);
-					cross_join_src_dst->right = std::move(dst_vertex_ref);
 
-					cross_ref->right = std::move(cross_join_src_dst);
-					cte_select_node->from_table = std::move(cross_ref);
+					cross_join_src_dst->left = std::move(temp_cte_select_subquery);
+					cross_join_src_dst->right = std::move(source_destination_pairs_subquery);
 
-					auto src_row_id =
-					    make_unique<ColumnRefExpression>("rowid", previous_vertex_element->variable_binding);
-					auto cte_src_row = make_unique<ColumnRefExpression>("src_row", "cte1");
-
-					auto dst_row_id = make_unique<ColumnRefExpression>("rowid", next_vertex_element->variable_binding);
-					auto cte_dst_row = make_unique<ColumnRefExpression>("dst_row", "cte1");
+					cte_select_node->from_table = std::move(cross_join_src_dst);
 
 					vector<unique_ptr<ParsedExpression>> reachability_children;
-					auto cte_where_src_row =
-					    make_unique<ColumnRefExpression>("rowid", previous_vertex_element->variable_binding);
-					auto cte_where_dst_row =
-					    make_unique<ColumnRefExpression>("rowid", next_vertex_element->variable_binding);
+					auto cte_where_src_row = make_unique<ColumnRefExpression>("__src", "__p");
+					auto cte_where_dst_row = make_unique<ColumnRefExpression>("__dst", "__p");
 					auto reachability_subquery_expr = make_unique<SubqueryExpression>();
 					reachability_subquery_expr->subquery =
 					    GetCountTable(edge_table, previous_vertex_element->variable_binding);
@@ -341,18 +453,10 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 
 					auto reachability_function =
 					    make_unique<FunctionExpression>("iterativelength", std::move(reachability_children));
-					auto cte_col_ref = make_unique<ColumnRefExpression>("temp", "cte1");
-
-					auto zero_constant = make_unique<ConstantExpression>(Value::INTEGER((int32_t)0));
-
-					vector<unique_ptr<ParsedExpression>> multiply_children;
-
-					multiply_children.push_back(std::move(zero_constant));
-					multiply_children.push_back(std::move(cte_col_ref));
-					auto multiply_function = make_unique<FunctionExpression>("multiply", std::move(multiply_children));
+					auto cte_col_ref = make_unique<ColumnRefExpression>("temp", "__x");
 
 					vector<unique_ptr<ParsedExpression>> addition_children;
-					addition_children.push_back(std::move(multiply_function));
+					addition_children.push_back(std::move(cte_col_ref));
 					addition_children.push_back(std::move(reachability_function));
 
 					auto addition_function = make_unique<FunctionExpression>("add", std::move(addition_children));
@@ -373,6 +477,9 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 					}
 					cte_select_node->where_clause = std::move(cte_and_expression);
 					cte_select_statement->node = std::move(cte_select_node);
+
+					//                    auto result = make_unique<SubqueryRef>(std::move(cte_select_statement),
+					//                    ref.alias); return Bind(*result);
 				}
 			}
 
@@ -461,7 +568,7 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 				throw InternalException("Unknown match type found");
 			}
 			previous_vertex_element = next_vertex_element;
-            previous_vertex_table = next_vertex_table;
+			previous_vertex_table = next_vertex_table;
 
 			// Check the edge type
 			// If (a)-[b]->(c) 	-> 	b.src = a.id AND b.dst = c.id
@@ -497,6 +604,10 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 	select_node->from_table = std::move(from_clause);
 
 	unique_ptr<ParsedExpression> where_clause;
+	if (ref.where_clause) {
+		conditions.push_back(std::move(ref.where_clause));
+	}
+
 	for (auto &condition : conditions) {
 		if (where_clause) {
 			where_clause = make_unique<ConjunctionExpression>(ExpressionType::CONJUNCTION_AND, std::move(where_clause),
@@ -508,6 +619,8 @@ unique_ptr<BoundTableRef> Binder::Bind(MatchRef &ref) {
 	select_node->where_clause = std::move(where_clause);
 
 	select_node->select_list = std::move(ref.column_list);
+
+	auto subquery = make_unique<SelectStatement>();
 	subquery->node = std::move(select_node);
 
 	auto result = make_unique<SubqueryRef>(std::move(subquery), ref.alias);

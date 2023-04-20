@@ -23,6 +23,7 @@ class CreateStatement;
 class DetachStatement;
 class DeleteStatement;
 class DropStatement;
+class DropPropertyGraphStatement;
 class ExtensionStatement;
 class InsertStatement;
 class SelectStatement;

@@ -1,20 +1,13 @@
-#include "duckdb/execution/expression_executor.hpp"
-#include "duckdb/main/client_context.hpp"
-#include "duckdb/main/client_data.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "sqlpgq_common.hpp"
 #include "sqlpgq_functions.hpp"
 
-#include <chrono>
-using namespace std::chrono;
-
 namespace duckdb {
 
 template <typename T, int16_t lane_limit>
-static int16_t InitialiseBellmanFord(ClientContext &context, const DataChunk &args, int64_t input_size,
-                                     const UnifiedVectorFormat &vdata_src, const int64_t *src_data, idx_t result_size,
-                                     vector<vector<T>> &dists) {
+static int16_t InitialiseBellmanFord(const DataChunk &args, int64_t input_size, const UnifiedVectorFormat &vdata_src,
+                                     const int64_t *src_data, idx_t result_size, vector<vector<T>> &dists) {
 	dists.resize(input_size, std::vector<T>(lane_limit, std::numeric_limits<T>::max() / 2));
 
 	int16_t lanes = 0;
@@ -53,26 +46,22 @@ bool UpdateLanes(vector<vector<T>> &dists, T v, T n, T weight) {
 }
 
 template <typename T, int16_t lane_limit>
-int16_t TemplatedBatchBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args, int64_t input_size,
-                                  Vector &result, UnifiedVectorFormat vdata_src, int64_t *src_data,
-                                  const UnifiedVectorFormat &vdata_target, int64_t *target_data, int32_t id,
+int16_t TemplatedBatchBellmanFord(CSR *csr, DataChunk &args, int64_t input_size, UnifiedVectorFormat vdata_src,
+                                  int64_t *src_data, const UnifiedVectorFormat &vdata_target, int64_t *target_data,
                                   std::vector<T> weight_array, int16_t result_size, T *result_data,
                                   ValidityMask &result_validity) {
 	vector<vector<T>> dists;
 	int16_t curr_batch_size =
-	    InitialiseBellmanFord<T, lane_limit>(info.context, args, input_size, vdata_src, src_data, result_size, dists);
+	    InitialiseBellmanFord<T, lane_limit>(args, input_size, vdata_src, src_data, result_size, dists);
 	bool changed = true;
 	while (changed) {
 		changed = false;
 		//! For every v in the input
 		for (int64_t v = 0; v < input_size; v++) {
 			//! Loop through all the n neighbours of v
-			for (auto index = (int64_t)info.context.client_data->csr_list[id]->v[v];
-			     index < (int64_t)info.context.client_data->csr_list[id]->v[v + 1]; index++) {
+			for (auto index = (int64_t)csr->v[v]; index < (int64_t)csr->v[v + 1]; index++) {
 				//! Get weight of (v,n)
-				changed =
-				    UpdateLanes<T>(dists, v, info.context.client_data->csr_list[id]->e[index], weight_array[index]) |
-				    changed;
+				changed = UpdateLanes<T>(dists, v, csr->e[index], weight_array[index]) | changed;
 			}
 		}
 	}
@@ -96,9 +85,9 @@ int16_t TemplatedBatchBellmanFord(CheapestPathLengthFunctionData &info, DataChun
 }
 
 template <typename T>
-void TemplatedBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args, int64_t input_size, Vector &result,
-                          UnifiedVectorFormat vdata_src, int64_t *src_data, const UnifiedVectorFormat &vdata_target,
-                          int64_t *target_data, int32_t id, std::vector<T> weight_array) {
+void TemplatedBellmanFord(CSR *csr, DataChunk &args, int64_t input_size, Vector &result, UnifiedVectorFormat vdata_src,
+                          int64_t *src_data, const UnifiedVectorFormat &vdata_target, int64_t *target_data,
+                          std::vector<T> weight_array) {
 	idx_t result_size = 0;
 	result.SetVectorType(VectorType::FLAT_VECTOR);
 	auto result_data = FlatVector::GetData<T>(result);
@@ -107,44 +96,37 @@ void TemplatedBellmanFord(CheapestPathLengthFunctionData &info, DataChunk &args,
 
 	while (result_size < args.size()) {
 		if ((args.size() - result_size) / 256 >= 1) {
-			result_size += TemplatedBatchBellmanFord<T, 256>(info, args, input_size, result, vdata_src, src_data,
-			                                                 vdata_target, target_data, id, weight_array, result_size,
-			                                                 result_data, result_validity);
-			;
+			result_size +=
+			    TemplatedBatchBellmanFord<T, 256>(csr, args, input_size, vdata_src, src_data, vdata_target, target_data,
+			                                      weight_array, result_size, result_data, result_validity);
 		} else if ((args.size() - result_size) / 128 >= 1) {
-			result_size += TemplatedBatchBellmanFord<T, 128>(info, args, input_size, result, vdata_src, src_data,
-			                                                 vdata_target, target_data, id, weight_array, result_size,
-			                                                 result_data, result_validity);
-			;
+			result_size +=
+			    TemplatedBatchBellmanFord<T, 128>(csr, args, input_size, vdata_src, src_data, vdata_target, target_data,
+			                                      weight_array, result_size, result_data, result_validity);
 		} else if ((args.size() - result_size) / 64 >= 1) {
-			result_size += TemplatedBatchBellmanFord<T, 64>(info, args, input_size, result, vdata_src, src_data,
-			                                                vdata_target, target_data, id, weight_array, result_size,
-			                                                result_data, result_validity);
-			;
+			result_size +=
+			    TemplatedBatchBellmanFord<T, 64>(csr, args, input_size, vdata_src, src_data, vdata_target, target_data,
+			                                     weight_array, result_size, result_data, result_validity);
 		} else if ((args.size() - result_size) / 16 >= 1) {
-			result_size += TemplatedBatchBellmanFord<T, 16>(info, args, input_size, result, vdata_src, src_data,
-			                                                vdata_target, target_data, id, weight_array, result_size,
-			                                                result_data, result_validity);
+			result_size +=
+			    TemplatedBatchBellmanFord<T, 16>(csr, args, input_size, vdata_src, src_data, vdata_target, target_data,
+			                                     weight_array, result_size, result_data, result_validity);
 		} else if ((args.size() - result_size) / 8 >= 1) {
-			result_size += TemplatedBatchBellmanFord<T, 8>(info, args, input_size, result, vdata_src, src_data,
-			                                               vdata_target, target_data, id, weight_array, result_size,
-			                                               result_data, result_validity);
-			;
+			result_size +=
+			    TemplatedBatchBellmanFord<T, 8>(csr, args, input_size, vdata_src, src_data, vdata_target, target_data,
+			                                    weight_array, result_size, result_data, result_validity);
 		} else if ((args.size() - result_size) / 4 >= 1) {
-			result_size += TemplatedBatchBellmanFord<T, 4>(info, args, input_size, result, vdata_src, src_data,
-			                                               vdata_target, target_data, id, weight_array, result_size,
-			                                               result_data, result_validity);
-			;
+			result_size +=
+			    TemplatedBatchBellmanFord<T, 4>(csr, args, input_size, vdata_src, src_data, vdata_target, target_data,
+			                                    weight_array, result_size, result_data, result_validity);
 		} else if ((args.size() - result_size) / 2 >= 1) {
-			result_size += TemplatedBatchBellmanFord<T, 2>(info, args, input_size, result, vdata_src, src_data,
-			                                               vdata_target, target_data, id, weight_array, result_size,
-			                                               result_data, result_validity);
-			;
+			result_size +=
+			    TemplatedBatchBellmanFord<T, 2>(csr, args, input_size, vdata_src, src_data, vdata_target, target_data,
+			                                    weight_array, result_size, result_data, result_validity);
 		} else {
-			result_size += TemplatedBatchBellmanFord<T, 1>(info, args, input_size, result, vdata_src, src_data,
-			                                               vdata_target, target_data, id, weight_array, result_size,
-			                                               result_data, result_validity);
-			;
+			result_size +=
+			    TemplatedBatchBellmanFord<T, 1>(csr, args, input_size, vdata_src, src_data, vdata_target, target_data,
+			                                    weight_array, result_size, result_data, result_validity);
 		}
 	}
 }
@@ -153,7 +135,14 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 	auto &func_expr = (BoundFunctionExpression &)state.expr;
 	auto &info = (CheapestPathLengthFunctionData &)*func_expr.bind_info;
 	int64_t input_size = args.data[1].GetValue(0).GetValue<int64_t>();
-	D_ASSERT(info.context.client_data->csr_list[info.csr_id]);
+	auto sqlpgq_state_entry = info.context.registered_state.find("sqlpgq");
+	if (sqlpgq_state_entry == info.context.registered_state.end()) {
+		//! Wondering how you can get here if the extension wasn't loaded, but leaving this check in anyways
+		throw MissingExtensionException("The SQL/PGQ extension has not been loaded");
+	}
+	auto sqlpgq_state = reinterpret_cast<SQLPGQContext *>(sqlpgq_state_entry->second.get());
+
+	CSR *csr = sqlpgq_state->GetCSR(info.csr_id);
 	auto &src = args.data[2];
 
 	UnifiedVectorFormat vdata_src, vdata_target;
@@ -164,14 +153,14 @@ static void CheapestPathLengthFunction(DataChunk &args, ExpressionState &state, 
 	auto &target = args.data[3];
 	target.ToUnifiedFormat(args.size(), vdata_target);
 	auto target_data = (int64_t *)vdata_target.data;
-	if (info.context.client_data->csr_list[info.csr_id]->w.empty()) {
-		TemplatedBellmanFord<double_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                               info.csr_id, info.context.client_data->csr_list[info.csr_id]->w_double);
+	if (csr->w.empty()) {
+		TemplatedBellmanFord<double_t>(csr, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
+		                               csr->w_double);
 	} else {
-		TemplatedBellmanFord<int64_t>(info, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
-		                              info.csr_id, info.context.client_data->csr_list[info.csr_id]->w);
+		TemplatedBellmanFord<int64_t>(csr, args, input_size, result, vdata_src, src_data, vdata_target, target_data,
+		                              csr->w);
 	}
-	info.context.client_data->csr_list.erase(info.csr_id);
+	sqlpgq_state->csr_to_delete.insert(info.csr_id);
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetCheapestPathLengthFunction() {

@@ -234,6 +234,7 @@ private:
 	BoundStatement Bind(UpdateStatement &stmt);
 	BoundStatement Bind(CreateStatement &stmt);
 	BoundStatement Bind(DropStatement &stmt);
+	BoundStatement Bind(DropPropertyGraphStatement &stmt);
 	BoundStatement Bind(AlterStatement &stmt);
 	BoundStatement Bind(PrepareStatement &stmt);
 	BoundStatement Bind(ExecuteStatement &stmt);

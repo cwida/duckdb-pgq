@@ -1,12 +1,13 @@
 
 #include "duckdb/parser/tableref/matchref.hpp"
 #include "duckdb/parser/expression/columnref_expression.hpp"
+#include "duckdb/parser/expression/star_expression.hpp"
 
 namespace duckdb {
 
 string MatchRef::ToString() const {
 	string result = "GRAPH_TABLE (";
-	result += pg_name + ", MATCH";
+	result += pg_name + " MATCH";
 
 	for (idx_t i = 0; i < path_list.size(); i++) {
 		(i > 0) ? result += ", " : result;
@@ -32,8 +33,16 @@ string MatchRef::ToString() const {
 
 	result += "\nCOLUMNS (";
 	for (idx_t i = 0; i < column_list.size(); i++) {
-		auto &column = (ColumnRefExpression &)*column_list[i];
-		result += (i > 0 ? ", " : "") + column.ToString() + (column.alias.empty() ? "" : " AS " + column.alias);
+		if (column_list[i]->type == ExpressionType::STAR) {
+			auto &star = (StarExpression &)*column_list[i];
+			result += star.ToString();
+			break;
+		} else if (column_list[i]->type == ExpressionType::COLUMN_REF) {
+			auto &column = (ColumnRefExpression &)*column_list[i];
+			result += (i > 0 ? ", " : "") + column.ToString() + (column.alias.empty() ? "" : " AS " + column.alias);
+		} else {
+			throw ConstraintException("Unhandled type of expression in COLUMNS");
+		}
 	}
 	result += ")\n";
 	result += ")" + alias;

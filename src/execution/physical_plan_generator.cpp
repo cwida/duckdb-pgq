@@ -186,6 +186,7 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::CreatePlan(LogicalOperator &
 	case LogicalOperatorType::LOGICAL_LOAD:
 	case LogicalOperatorType::LOGICAL_ATTACH:
 	case LogicalOperatorType::LOGICAL_DETACH:
+	case LogicalOperatorType::LOGICAL_DROP_PROPERTY_GRAPH:
 		plan = CreatePlan((LogicalSimple &)op);
 		break;
 	case LogicalOperatorType::LOGICAL_RECURSIVE_CTE:
