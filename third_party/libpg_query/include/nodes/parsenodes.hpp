@@ -2106,7 +2106,19 @@ typedef struct PGUseStmt {
 	PGRangeVar *name;    /* variable to be set */
 } PGUseStmt;
 
+/* ----------------------
+ *		Pivot Expression
+ * ----------------------
+ */
 
+typedef struct PGPivotExpr {
+	PGNodeTag type;
+	PGNode *source;      /* the source subtree */
+	PGList *aggrs;       /* The set of aggregations */
+	char *aliasname;     /* The column name to pivot on */
+	PGList *colnames;    /* The set of pivot values */
+	PGAlias *alias;   /* table alias & optional column aliases */
+} PGPivotExpr;
 /* -------------------------------
  * CREATE PROPERTY GRAPH Statement
  * -------------------------------
@@ -2136,7 +2148,7 @@ typedef struct PGPropertyGraphTable {
 	PGRangeVar *discriminator; /* if non-NULL: BIGINT column ident with 64 bits for max 64 sub-label membership */
 
 	bool is_vertex_table;
-	
+
 	/* Fields only used for Edge Tables */
 	PGList *src_fk, *dst_fk;
 	PGList *src_pk, *dst_pk;
@@ -2151,32 +2163,32 @@ typedef enum PGMatchType {
 	PG_MATCH_VERTEX, 		/*   (spec)   */
 	PG_MATCH_EDGE_ANY, 		/*  -[spec]-  or <~[spec]~> */
 	PG_MATCH_EDGE_LEFT, 		/*  -[spec]-> */
-	PG_MATCH_EDGE_RIGHT, 		/* <-[spec]-  */	
+	PG_MATCH_EDGE_RIGHT, 		/* <-[spec]-  */
 	PG_MATCH_EDGE_LEFT_RIGHT, 	/* <-[spec]-> */
 } PGMatchType;
 
 typedef enum PGColumnSpec {
-	PG_COLUMNSPEC_EXPR, 
-	PG_COLUMNSPEC_ELEMENTID, 
-	PG_COLUMNSPEC_COST 
+	PG_COLUMNSPEC_EXPR,
+	PG_COLUMNSPEC_ELEMENTID,
+	PG_COLUMNSPEC_COST
 } PGColumnSpec;
 
 typedef enum PGPathMode {
-	PG_PATHMODE_NONE, 
-	PG_PATHMODE_WALK, 
-	PG_PATHMODE_SIMPLE, 
-	PG_PATHMODE_TRAIL, 
-	PG_PATHMODE_ACYCLIC 
+	PG_PATHMODE_NONE,
+	PG_PATHMODE_WALK,
+	PG_PATHMODE_SIMPLE,
+	PG_PATHMODE_TRAIL,
+	PG_PATHMODE_ACYCLIC
 } PGPathMode;
 
 typedef struct PGMatchClause { /* main structure of pattern matching */
 	PGNodeTag type;
 
 	/* a comma-separated list of PGPathPattern's */
-	PGList *paths; 
+	PGList *paths;
 
 	/* property graph to match patterns in */
-	char *pg_name; 
+	char *pg_name;
 
 	/* a filter condition over all variables in all paths */
 	PGNode *where_clause;
@@ -2191,55 +2203,55 @@ typedef struct PGMatchClause { /* main structure of pattern matching */
 typedef struct PGPathPattern { /* main structure for matching a path */
 	PGNodeTag type;
 
-	/* a list of PGPathElements (or SubPaths or PathUnions) that must be matched */ 
-	PGList *path; 
+	/* a list of PGPathElements (or SubPaths or PathUnions) that must be matched */
+	PGList *path;
 
 	/* path restriction */
-	PGPathMode mode; 
+	PGPathMode mode;
 
-	/* all/shortest spec */ 
-	bool all, shortest, group; 
+	/* all/shortest spec */
+	bool all, shortest, group;
 	int topk;
 } PGPathPattern;
 
 typedef struct PGPathUnion {
-	PGNodeTag type; 
-	PGList *path1, *path2; 
+	PGNodeTag type;
+	PGList *path1, *path2;
 	bool multiset; /* UNION or UNION_ALL */
 } PGPathUnion;
 
 typedef struct PGLabelTest {
 	/* identifier (label) or "%" or operators: "|",  "&" or "!" */
-	char* name; 
+	char* name;
 
 	/* operators can recurse (tree of label test operators with labels or % in leaves) */
-	struct PGLabelTest *left, *right; 
+	struct PGLabelTest *left, *right;
 } PGLabelTest;
 
 typedef struct PGSubPath {
 	PGNodeTag type;
 
 	/* a list of path elements (or further subpaths) */
-	PGList *path; 	 
+	PGList *path;
 
 	/* can have their own mode (possibility of path mode conflict) */
-	PGPathMode mode; 
+	PGPathMode mode;
 
 	/* if non-NULL: bind path variable */
-	const char *path_var;  
+	const char *path_var;
 
 	/* bound variable is a single value (true in absence of Kleene except for ?) */
 	bool single_bind;
 
-	/* path repetition restriction (we encode *,+ with this as well) */ 
-	int lower,upper; 
+	/* path repetition restriction (we encode *,+ with this as well) */
+	int lower,upper;
 
 	/* filter condition over all variables in ths path segment (NULL if absent) */
-	PGNode *where_clause; 
+	PGNode *where_clause;
 
 	/* a numeric cost expression over all variables in ths path segment (NULL if absent) */
-	PGNode *cost_expr; 
-	double default_value; 
+	PGNode *cost_expr;
+	double default_value;
 } PGSubPath;
 
 
@@ -2247,7 +2259,7 @@ typedef struct PGPathElement {
 	PGNodeTag type;
 
 	/* vertex or edge (and what kind of edge) */
-	PGMatchType match_type; 
+	PGMatchType match_type;
 
 	/* variable binding (or NULL if none) */
 	const char *element_var;
@@ -2257,13 +2269,13 @@ typedef struct PGPathElement {
 } PGPathElement;
 
 /* temporary struct to collect stuff
- * it is only used during parsing but is not emitted by parsing 
+ * it is only used during parsing but is not emitted by parsing
  */
 typedef struct PGPathInfo {
-	PGNode *cost_expr; 
-	double default_value; 
+	PGNode *cost_expr;
+	double default_value;
 	const char* var_name;
-	PGPathMode mode; 
+	PGPathMode mode;
 	PGNode *where_clause;
 	PGLabelTest* label_expr;
 	PGList *path, *elements;

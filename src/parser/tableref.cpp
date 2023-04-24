@@ -78,6 +78,9 @@ unique_ptr<TableRef> TableRef::Deserialize(Deserializer &source) {
 	case TableReferenceType::EXPRESSION_LIST:
 		result = ExpressionListRef::Deserialize(reader);
 		break;
+	case TableReferenceType::PIVOT:
+		result = PivotRef::Deserialize(reader);
+		break;
 	case TableReferenceType::MATCH:
 		result = MatchRef::Deserialize(reader);
 		break;

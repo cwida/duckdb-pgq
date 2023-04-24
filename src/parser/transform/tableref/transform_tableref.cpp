@@ -16,6 +16,8 @@ unique_ptr<TableRef> Transformer::TransformTableRefNode(duckdb_libpgquery::PGNod
 		return TransformRangeSubselect(reinterpret_cast<duckdb_libpgquery::PGRangeSubselect *>(n));
 	case duckdb_libpgquery::T_PGRangeFunction:
 		return TransformRangeFunction(reinterpret_cast<duckdb_libpgquery::PGRangeFunction *>(n));
+	case duckdb_libpgquery::T_PGPivotExpr:
+		return TransformPivot(reinterpret_cast<duckdb_libpgquery::PGPivotExpr *>(n));
 	case duckdb_libpgquery::T_PGMatchClause:
 		return TransformMatch(reinterpret_cast<duckdb_libpgquery::PGMatchClause *>(n));
 	default:
