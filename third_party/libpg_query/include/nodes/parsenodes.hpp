@@ -2114,6 +2114,7 @@ typedef struct PGPivot {
 	PGNodeTag type;
 	char *pivot_column;  /* The column name to pivot on */
 	PGList *pivot_value; /* The set of pivot values */
+	char *pivot_enum;    /* The enum to fetch the unique values from */
 } PGPivot;
 
 typedef struct PGPivotExpr {
@@ -2285,5 +2286,13 @@ typedef struct PGPathInfo {
 	PGList *path, *elements;
 } PGPathInfo;
 
+
+typedef struct PGPivotStmt {
+	PGNodeTag type;
+	PGNode *source;      /* The source to pivot */
+	PGNode *aggr;        /* The aggregation to pivot over */
+	PGList *columns;     /* The set of columns to pivot over */
+	PGList *rows;        /* The set of columns to include in the rows to pivot over */
+} PGPivotStmt;
 
 }
