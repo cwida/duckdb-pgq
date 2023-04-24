@@ -961,7 +961,7 @@ table_ref:	relation_expr opt_alias_clause opt_tablesample_clause
                 {
                         $$ = (PGNode *) $2;
                 }
-			| table_ref PIVOT '(' a_expr FOR pivot_value_list ')' opt_alias_clause
+			| table_ref PIVOT '(' func_application FOR pivot_value_list ')' opt_alias_clause
 				{
 					PGPivotExpr *n = makeNode(PGPivotExpr);
 					n->source = $1;
@@ -970,7 +970,7 @@ table_ref:	relation_expr opt_alias_clause opt_tablesample_clause
 					n->alias = $8;
 					$$ = (PGNode *) n;
 				}
-			| table_ref PIVOT '(' a_expr FOR pivot_value_list GROUP_P BY name_list_opt_comma ')' opt_alias_clause
+			| table_ref PIVOT '(' func_application FOR pivot_value_list GROUP_P BY name_list_opt_comma ')' opt_alias_clause
 				{
 					PGPivotExpr *n = makeNode(PGPivotExpr);
 					n->source = $1;
@@ -978,6 +978,15 @@ table_ref:	relation_expr opt_alias_clause opt_tablesample_clause
 					n->pivots = $6;
 					n->groups = $9;
 					n->alias = $11;
+					$$ = (PGNode *) n;
+				}
+			| table_ref UNPIVOT '(' ColIdOrString FOR pivot_value ')' opt_alias_clause
+				{
+					PGPivotExpr *n = makeNode(PGPivotExpr);
+					n->source = $1;
+					n->unpivot = $4;
+					n->pivots = list_make1($6);
+					n->alias = $8;
 					$$ = (PGNode *) n;
 				}
 		;
