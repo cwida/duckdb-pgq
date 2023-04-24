@@ -81,6 +81,7 @@ public:
 	void AddDistinct();
 
 	virtual void FormatSerialize(FormatSerializer &serializer) const;
+	static unique_ptr<QueryNode> FormatDeserialize(FormatDeserializer &deserializer);
 
 protected:
 	//! Copy base QueryNode properties from another expression to this one,

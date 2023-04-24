@@ -164,8 +164,6 @@ unique_ptr<SQLStatement> Transformer::TransformStatementInternal(duckdb_libpgque
 		return TransformUse(stmt);
 	case duckdb_libpgquery::T_PGCreateDatabaseStmt:
 		return TransformCreateDatabase(stmt);
-	case duckdb_libpgquery::T_PGPivotStmt:
-		return TransformPivotStatement(stmt);
 	case duckdb_libpgquery::T_PGCreatePropertyGraphStmt:
 		return TransformCreatePropertyGraph(stmt);
 	case duckdb_libpgquery::T_PGDropPropertyGraphStmt:

@@ -96,8 +96,8 @@ class SubqueryRef;
 class TableFunctionRef;
 class EmptyTableRef;
 class ExpressionListRef;
-class PivotRef;
 class MatchRef;
+class PivotRef;
 
 //===--------------------------------------------------------------------===//
 // Other

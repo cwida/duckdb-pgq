@@ -1002,20 +1002,10 @@ table_ref:	relation_expr opt_alias_clause opt_tablesample_clause
 					$$ = (PGNode *) $2;
 				}
             | GRAPH_TABLE GraphTableStmt
-                {
-                        $$ = (PGNode *) $2;
-                }
+                    {
+                            $$ = (PGNode *) $2;
+                    }
 			| table_ref PIVOT '(' target_list_opt_comma FOR pivot_value_list opt_pivot_group_by ')' opt_alias_clause
-				{
-					PGPivotExpr *n = makeNode(PGPivotExpr);
-					n->source = $1;
-					n->aggrs = $4;
-					n->pivots = $6;
-					n->groups = $7;
-					n->alias = $9;
-					$$ = (PGNode *) n;
-				}
-			| table_ref PIVOT '(' target_list_opt_comma FOR pivot_value_list GROUP_P BY name_list_opt_comma ')' opt_alias_clause
 				{
 					PGPivotExpr *n = makeNode(PGPivotExpr);
 					n->source = $1;

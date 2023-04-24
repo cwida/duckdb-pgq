@@ -137,7 +137,6 @@ void StarExpression::FormatSerialize(FormatSerializer &serializer) const {
 	serializer.WriteProperty("exclude_list", exclude_list);
 	serializer.WriteProperty("replace_list", replace_list);
 	serializer.WriteProperty("columns", columns);
-	serializer.WriteProperty("regex", regex);
 }
 
 unique_ptr<ParsedExpression> StarExpression::FormatDeserialize(ExpressionType type, FormatDeserializer &deserializer) {
@@ -146,7 +145,6 @@ unique_ptr<ParsedExpression> StarExpression::FormatDeserialize(ExpressionType ty
 	deserializer.ReadProperty("exclude_list", result->exclude_list);
 	deserializer.ReadProperty("replace_list", result->replace_list);
 	deserializer.ReadProperty("columns", result->columns);
-	deserializer.ReadProperty("regex", result->regex);
 	return std::move(result);
 }
 
