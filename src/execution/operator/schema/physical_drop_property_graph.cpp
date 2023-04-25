@@ -12,7 +12,7 @@ public:
 };
 
 unique_ptr<GlobalSourceState> PhysicalDropPropertyGraph::GetGlobalSourceState(ClientContext &context) const {
-	return make_unique<DropPropertyGraphSourceState>();
+	return make_uniq<DropPropertyGraphSourceState>();
 }
 
 void PhysicalDropPropertyGraph::GetData(ExecutionContext &context, DataChunk &chunk, GlobalSourceState &gstate,

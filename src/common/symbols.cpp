@@ -173,23 +173,23 @@ INSTANTIATE_VECTOR(vector<JoinCondition>)
 INSTANTIATE_VECTOR(vector<OrderByNode>)
 INSTANTIATE_VECTOR(vector<Expression *>)
 INSTANTIATE_VECTOR(vector<BoundParameterExpression *>)
-INSTANTIATE_VECTOR(vector<unique_ptr<Expression>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<DataChunk>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<SQLStatement>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<PhysicalOperator>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<LogicalOperator>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<Transaction>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<JoinNode>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<Rule>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<Expression>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<DataChunk>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<SQLStatement>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<PhysicalOperator>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<LogicalOperator>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<Transaction>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<JoinNode>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<Rule>>)
 INSTANTIATE_VECTOR(vector<std::shared_ptr<Event>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<Pipeline>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<Pipeline>>)
 INSTANTIATE_VECTOR(vector<std::shared_ptr<Pipeline>>)
 INSTANTIATE_VECTOR(vector<std::weak_ptr<Pipeline>>)
 INSTANTIATE_VECTOR(vector<std::shared_ptr<MetaPipeline>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<JoinHashTable>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<ColumnDataCollection>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<JoinHashTable>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<ColumnDataCollection>>)
 INSTANTIATE_VECTOR(vector<std::shared_ptr<ColumnDataAllocator>>)
-INSTANTIATE_VECTOR(vector<unique_ptr<RowDataBlock>>)
+INSTANTIATE_VECTOR(vector<duckdb::unique_ptr<RowDataBlock>>)
 
 template class std::shared_ptr<Relation>;
 template class std::shared_ptr<Event>;
@@ -218,7 +218,7 @@ INSTANTIATE_UNORDERED_MAP(catalog_map)
 */
 
 template class std::unordered_map<string, uint64_t>;
-template class std::unordered_map<string, vector<string>>;
+template class std::unordered_map<string, duckdb::vector<string>>;
 template class std::unordered_map<string, std::pair<uint64_t, Expression *>>;
 // template class std::unordered_map<string, TableBinding>;
 template class std::unordered_map<string, SelectStatement *>;

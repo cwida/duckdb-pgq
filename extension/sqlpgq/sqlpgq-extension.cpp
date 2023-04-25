@@ -13,7 +13,7 @@ void SQLPGQExtension::Load(DuckDB &db) {
 
 	auto &catalog = Catalog::GetSystemCatalog(*con.context);
 	for (auto &fun : SQLPGQFunctions::GetFunctions()) {
-		catalog.CreateFunction(*con.context, &fun);
+		catalog.CreateFunction(*con.context, fun);
 	}
 	con.Commit();
 }

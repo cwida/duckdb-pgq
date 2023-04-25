@@ -99,7 +99,6 @@ static ConfigurationOption internal_options[] = {DUCKDB_GLOBAL(AccessModeSetting
                                                  DUCKDB_LOCAL(SearchPathSetting),
                                                  DUCKDB_GLOBAL(TempDirectorySetting),
                                                  DUCKDB_GLOBAL(ThreadsSetting),
-                                                 DUCKDB_LOCAL(DeleteCSRSetting),
                                                  DUCKDB_GLOBAL(UsernameSetting),
                                                  DUCKDB_GLOBAL_ALIAS("user", UsernameSetting),
                                                  DUCKDB_GLOBAL_ALIAS("wal_autocheckpoint", CheckpointThresholdSetting),

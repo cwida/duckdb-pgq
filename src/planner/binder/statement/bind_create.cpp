@@ -197,36 +197,31 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 
 	case_insensitive_set_t v_table_names;
 	for (auto &vertex_table : info.vertex_tables) {
-		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
+		auto &table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, vertex_table->table_name);
 
 		// TODO
 		// 	- Create a test case that creates a property graph on non-existing tables
 
-		if (!table) {
-			throw BinderException("Table %s does not exist.", vertex_table->table_name);
-		}
-		CheckPropertyGraphTableColumns(vertex_table, *table);
-		CheckPropertyGraphTableLabels(vertex_table, *table);
+		CheckPropertyGraphTableColumns(vertex_table, table);
+		CheckPropertyGraphTableLabels(vertex_table, table);
 
 		v_table_names.insert(vertex_table->table_name);
 	}
 
 	for (auto &edge_table : info.edge_tables) {
-		auto table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->table_name);
+		auto &table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->table_name);
 
-		CheckPropertyGraphTableColumns(edge_table, *table);
-		CheckPropertyGraphTableLabels(edge_table, *table);
+		CheckPropertyGraphTableColumns(edge_table, table);
+		CheckPropertyGraphTableLabels(edge_table, table);
 
 		if (v_table_names.find(edge_table->source_reference) == v_table_names.end()) {
 			throw BinderException("Referenced vertex table %s does not exist.", edge_table->source_reference);
 		}
 
-		auto pk_source_table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->source_reference);
-		if (!pk_source_table) {
-			throw BinderException("Source reference table %s does not exist", edge_table->source_reference);
-		}
+		auto &pk_source_table = catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->source_reference);
+
 		for (auto &pk : edge_table->source_pk) {
-			if (!pk_source_table->ColumnExists(pk)) {
+			if (!pk_source_table.ColumnExists(pk)) {
 				throw BinderException("Primary key %s does not exist in table %s", pk, edge_table->source_reference);
 			}
 		}
@@ -235,26 +230,24 @@ void Binder::BindCreatePropertyGraphInfo(CreatePropertyGraphInfo &info) {
 			throw BinderException("Referenced vertex table %s does not exist.", edge_table->source_reference);
 		}
 
-		auto pk_destination_table =
+		auto &pk_destination_table =
 		    catalog.GetEntry<TableCatalogEntry>(context, info.schema, edge_table->destination_reference);
-		if (!pk_destination_table) {
-			throw BinderException("Destination reference table %s does not exist", edge_table->destination_reference);
-		}
+
 		for (auto &pk : edge_table->destination_pk) {
-			if (!pk_destination_table->ColumnExists(pk)) {
+			if (!pk_destination_table.ColumnExists(pk)) {
 				throw BinderException("Primary key %s does not exist in table %s", pk,
 				                      edge_table->destination_reference);
 			}
 		}
 
 		for (auto &fk : edge_table->source_fk) {
-			if (!table->ColumnExists(fk)) {
+			if (!table.ColumnExists(fk)) {
 				throw BinderException("Foreign key %s does not exist in table %s", fk, edge_table->table_name);
 			}
 		}
 
 		for (auto &fk : edge_table->destination_fk) {
-			if (!table->ColumnExists(fk)) {
+			if (!table.ColumnExists(fk)) {
 				throw BinderException("Foreign key %s does not exist in table %s", fk, edge_table->table_name);
 			}
 		}
@@ -803,11 +796,11 @@ BoundStatement Binder::Bind(CreateStatement &stmt) {
 	case CatalogType::PROPERTY_GRAPH_ENTRY: {
 		auto &create_pg_info = (CreatePropertyGraphInfo &)*stmt.info;
 
-		auto schema = BindSchema(*stmt.info);
+		auto &schema = BindSchema(*stmt.info);
 		BindCreatePropertyGraphInfo(create_pg_info);
 
-		result.plan = make_unique<LogicalCreate>(LogicalOperatorType::LOGICAL_CREATE_PROPERTY_GRAPH,
-		                                         std::move(stmt.info), schema);
+		result.plan = make_uniq<LogicalCreate>(LogicalOperatorType::LOGICAL_CREATE_PROPERTY_GRAPH,
+		                                         std::move(stmt.info), &schema);
 		break;
 	}
 
