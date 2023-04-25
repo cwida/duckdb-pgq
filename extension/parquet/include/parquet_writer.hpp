@@ -14,7 +14,7 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/mutex.hpp"
 #include "duckdb/common/serializer/buffered_file_writer.hpp"
-#include "duckdb/common/types/column_data_collection.hpp"
+#include "duckdb/common/types/column/column_data_collection.hpp"
 #endif
 
 #include "parquet_types.h"
@@ -56,12 +56,12 @@ private:
 	vector<string> column_names;
 	duckdb_parquet::format::CompressionCodec::type codec;
 
-	unique_ptr<BufferedFileWriter> writer;
+	duckdb::unique_ptr<BufferedFileWriter> writer;
 	shared_ptr<duckdb_apache::thrift::protocol::TProtocol> protocol;
 	duckdb_parquet::format::FileMetaData file_meta_data;
 	std::mutex lock;
 
-	vector<unique_ptr<ColumnWriter>> column_writers;
+	vector<duckdb::unique_ptr<ColumnWriter>> column_writers;
 };
 
 } // namespace duckdb

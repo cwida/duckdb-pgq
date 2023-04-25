@@ -61,6 +61,8 @@ string PhysicalOperatorToString(PhysicalOperatorType type) {
 		return "PIECEWISE_MERGE_JOIN";
 	case PhysicalOperatorType::IE_JOIN:
 		return "IE_JOIN";
+	case PhysicalOperatorType::ASOF_JOIN:
+		return "ASOF_JOIN";
 	case PhysicalOperatorType::CROSS_PRODUCT:
 		return "CROSS_PRODUCT";
 	case PhysicalOperatorType::POSITIONAL_JOIN:
@@ -141,6 +143,8 @@ string PhysicalOperatorToString(PhysicalOperatorType type) {
 		return "RESULT_COLLECTOR";
 	case PhysicalOperatorType::EXTENSION:
 		return "EXTENSION";
+	case PhysicalOperatorType::PIVOT:
+		return "PIVOT";
 	case PhysicalOperatorType::DROP_PROPERTY_GRAPH:
 		return "DROP_PROPERTY_GRAPH";
 	case PhysicalOperatorType::INVALID:

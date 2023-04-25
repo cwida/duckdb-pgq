@@ -58,10 +58,10 @@ class build_ext(CompilerLauncherMixin, _build_ext):
 
 lib_name = 'duckdb'
 
-extensions = ['parquet', 'icu', 'fts', 'tpch', 'tpcds', 'visualizer', 'json', 'excel', 'sqlpgq']
+extensions = ['parquet', 'icu', 'fts', 'tpch', 'tpcds', 'json']
 
 if platform.system() == 'Windows':
-    extensions = ['parquet', 'icu', 'fts', 'tpch', 'json', 'excel']
+    extensions = ['parquet', 'icu', 'fts', 'tpch', 'json']
 
 if platform.system() == 'Linux' and platform.architecture()[0] == '64bit' and not hasattr(sys, 'getandroidapilevel'):
     extensions.append('jemalloc')
@@ -144,8 +144,6 @@ if 'BUILD_HTTPFS' in os.environ:
 
 for ext in extensions:
     toolchain_args.extend(['-DBUILD_{}_EXTENSION'.format(ext.upper())])
-
-toolchain_args.extend(['-DEXTENSION_STATIC_BUILD'])
 
 class get_pybind_include(object):
     def __init__(self, user=False):
@@ -288,8 +286,7 @@ setup(
     license='MIT',
     data_files = data_files,
     packages=[
-		'pyduckdb',
-        'duckdb_query_graph',
+        'pyduckdb',
         'duckdb-stubs'
     ],
     include_package_data=True,
