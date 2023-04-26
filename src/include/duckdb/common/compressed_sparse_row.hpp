@@ -1,4 +1,4 @@
-
+#if 0
 
 #pragma once
 
@@ -35,3 +35,4 @@ public:
 };
 
 } // namespace duckdb
+#endif
