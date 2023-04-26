@@ -80,21 +80,21 @@ SELECT  CREATE_CSR_EDGE(
     JOIN student c on c.id = k.dst;
 
 query I
-SELECT delete_csr(0) as flag;
+SELECT sqlpgq_delete_csr(0) as flag;
 ----
 true
 
 query I
-SELECT delete_csr(1) as flag;
+SELECT sqlpgq_delete_csr(1) as flag;
 ----
 true
 
 query I
-SELECT delete_csr(0) as flag;
+SELECT sqlpgq_delete_csr(0) as flag;
 ----
 false
 
 query I
-SELECT delete_csr(3) as flag;
+SELECT sqlpgq_delete_csr(3) as flag;
 ----
 false

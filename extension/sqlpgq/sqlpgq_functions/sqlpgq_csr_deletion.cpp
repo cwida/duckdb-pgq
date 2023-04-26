@@ -28,9 +28,9 @@ static void DeleteCsrFunction(DataChunk &args, ExpressionState &state, Vector &r
 }
 
 CreateScalarFunctionInfo SQLPGQFunctions::GetDeleteCsrFunction() {
-	ScalarFunctionSet set("delete_csr");
+	ScalarFunctionSet set("sqlpgq_delete_csr");
 
-	set.AddFunction(ScalarFunction("delete_csr", {LogicalType::INTEGER}, LogicalType::BOOLEAN, DeleteCsrFunction,
+	set.AddFunction(ScalarFunction("sqlpgq_delete_csr", {LogicalType::INTEGER}, LogicalType::BOOLEAN, DeleteCsrFunction,
 	                               CSRFunctionData::CSRBind));
 
 	return CreateScalarFunctionInfo(set);
