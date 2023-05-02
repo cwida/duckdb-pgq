@@ -136,4 +136,4 @@ unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
 	return std::move(result);
 }
 
-} // namespace duckdb
+} // namespace duckd

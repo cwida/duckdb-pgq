@@ -86,7 +86,7 @@ shared_ptr<PropertyGraphTable> PropertyGraphTable::Deserialize(Deserializer &sou
 		source.ReadStringVector(pg_table->destination_fk);
 		pg_table->destination_reference = source.Read<string>();
 	}
-	return pg_table;
+	return std::move(pg_table);
 }
 
 shared_ptr<PropertyGraphTable> PropertyGraphTable::Copy() {

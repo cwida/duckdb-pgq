@@ -11,7 +11,7 @@ unique_ptr<SQLStatement> Transformer::TransformDropPropertyGraph(duckdb_libpgque
 
 	info.name = pg_tableref.name;
 	info.type = CatalogType::PROPERTY_GRAPH_ENTRY;
-	return result;
+	return std::move(result);
 }
 
 } // namespace duckdb

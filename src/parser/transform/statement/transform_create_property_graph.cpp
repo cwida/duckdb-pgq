@@ -103,7 +103,7 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 		}
 	}
 
-	return pg_table;
+	return std::move(pg_table);
 }
 
 unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_libpgquery::PGNode *root) {
