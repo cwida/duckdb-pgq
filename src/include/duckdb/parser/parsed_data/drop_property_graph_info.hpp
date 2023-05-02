@@ -32,7 +32,7 @@ public:
 
 	static unique_ptr<ParseInfo> Deserialize(Deserializer &deserializer) {
 		FieldReader reader(deserializer);
-		auto drop_pg_info = make_uniq<DropInfo>();
+		auto drop_pg_info = make_uniq<DropPropertyGraphInfo>();
 		drop_pg_info->type = reader.ReadRequired<CatalogType>();
 		drop_pg_info->name = reader.ReadRequired<string>();
 		return drop_pg_info;
