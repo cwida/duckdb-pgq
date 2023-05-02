@@ -103,7 +103,7 @@ unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPatt
 		}
 	}
 
-	return result;
+	return std::move(result);
 }
 
 unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClause *root) {
@@ -131,7 +131,7 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 		auto res_target = TransformResTarget(target);
 		result->column_list.push_back(std::move(res_target));
 	}
-	return result;
+	return std::move(result);
 }
 
 } // namespace duckdb
