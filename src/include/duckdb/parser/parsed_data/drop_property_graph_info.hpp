@@ -35,7 +35,7 @@ public:
 		auto drop_pg_info = make_uniq<DropPropertyGraphInfo>();
 		drop_pg_info->type = reader.ReadRequired<CatalogType>();
 		drop_pg_info->name = reader.ReadRequired<string>();
-		return drop_pg_info;
+		return std::move(drop_pg_info);
 	}
 };
 } // namespace duckdb
