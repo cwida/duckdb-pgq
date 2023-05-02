@@ -133,7 +133,7 @@ unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
 	result->path_list = reader.ReadRequiredSerializableList<PathPattern>();
 	result->column_list = reader.ReadRequiredSerializableList<ParsedExpression>();
 	result->where_clause = reader.ReadOptional<ParsedExpression>(nullptr);
-	return result;
+	return std::move(result);
 }
 
 } // namespace duckdb
