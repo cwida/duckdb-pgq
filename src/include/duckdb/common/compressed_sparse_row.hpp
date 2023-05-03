@@ -1,5 +1,3 @@
-#if 0
-
 #pragma once
 
 #include "duckdb/common/atomic.hpp"
@@ -35,4 +33,3 @@ public:
 };
 
 } // namespace duckdb
-#endif
