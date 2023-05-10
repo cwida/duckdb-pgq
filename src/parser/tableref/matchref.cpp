@@ -100,7 +100,7 @@ bool MatchRef::Equals(const TableRef *other_p) const {
 }
 
 unique_ptr<TableRef> MatchRef::Copy() {
-	auto copy = make_unique<MatchRef>();
+	auto copy = make_uniq<MatchRef>();
 	copy->pg_name = pg_name;
 	copy->alias = alias;
 
@@ -126,14 +126,14 @@ void MatchRef::Serialize(FieldWriter &writer) const {
 }
 
 unique_ptr<TableRef> MatchRef::Deserialize(FieldReader &reader) {
-	auto result = make_unique<MatchRef>();
+	auto result = make_uniq<MatchRef>();
 
 	result->pg_name = reader.ReadRequired<string>();
 	result->alias = reader.ReadRequired<string>();
 	result->path_list = reader.ReadRequiredSerializableList<PathPattern>();
 	result->column_list = reader.ReadRequiredSerializableList<ParsedExpression>();
 	result->where_clause = reader.ReadOptional<ParsedExpression>(nullptr);
-	return result;
+	return std::move(result);
 }
 
-} // namespace duckdb
+} // namespace duckd

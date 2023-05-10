@@ -62,7 +62,7 @@ struct ICUTableRange {
 		}
 
 		unique_ptr<FunctionData> Copy() const override {
-			return make_unique<BindData>(*this);
+			return make_uniq<BindData>(*this);
 		}
 
 		bool Finished(timestamp_t current_value) {
@@ -85,7 +85,7 @@ struct ICUTableRange {
 	template <bool GENERATE_SERIES>
 	static unique_ptr<FunctionData> Bind(ClientContext &context, TableFunctionBindInput &input,
 	                                     vector<LogicalType> &return_types, vector<string> &names) {
-		auto result = make_unique<BindData>(context);
+		auto result = make_uniq<BindData>(context);
 
 		auto &inputs = input.inputs;
 		D_ASSERT(inputs.size() == 3);
@@ -140,7 +140,7 @@ struct ICUTableRange {
 
 	static unique_ptr<GlobalTableFunctionState> Init(ClientContext &context, TableFunctionInitInput &input) {
 		auto &bind_data = (BindData &)*input.bind_data;
-		return make_unique<State>(bind_data.start);
+		return make_uniq<State>(bind_data.start);
 	}
 
 	static void ICUTableRangeFunction(ClientContext &context, TableFunctionInput &data_p, DataChunk &output) {
@@ -175,7 +175,7 @@ struct ICUTableRange {
 		range.AddFunction(TableFunction({LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
 		                                ICUTableRangeFunction, Bind<false>, Init));
 		CreateTableFunctionInfo range_func_info(range);
-		catalog.AddFunction(context, &range_func_info);
+		catalog.AddFunction(context, range_func_info);
 
 		// generate_series: similar to range, but inclusive instead of exclusive bounds on the RHS
 		TableFunctionSet generate_series("generate_series");
@@ -183,7 +183,7 @@ struct ICUTableRange {
 		    TableFunction({LogicalType::TIMESTAMP_TZ, LogicalType::TIMESTAMP_TZ, LogicalType::INTERVAL},
 		                  ICUTableRangeFunction, Bind<true>, Init));
 		CreateTableFunctionInfo generate_series_func_info(generate_series);
-		catalog.AddFunction(context, &generate_series_func_info);
+		catalog.AddFunction(context, generate_series_func_info);
 	}
 };
 

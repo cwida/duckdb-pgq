@@ -1,7 +1,6 @@
 #include "duckdb/common/bitpacking.hpp"
 
 #include "duckdb/common/limits.hpp"
-#include "duckdb/common/types/null_value.hpp"
 #include "duckdb/function/compression/compression.hpp"
 #include "duckdb/function/compression_function.hpp"
 #include "duckdb/main/config.hpp"
@@ -11,6 +10,7 @@
 #include "duckdb/storage/table/column_segment.hpp"
 #include "duckdb/common/operator/subtract.hpp"
 #include "duckdb/storage/compression/bitpacking.hpp"
+#include "duckdb/storage/table/scan_state.hpp"
 
 #include <functional>
 
@@ -312,7 +312,7 @@ template <class T>
 unique_ptr<AnalyzeState> BitpackingInitAnalyze(ColumnData &col_data, PhysicalType type) {
 	auto &config = DBConfig::GetConfig(col_data.GetDatabase());
 
-	auto state = make_unique<BitpackingAnalyzeState<T>>();
+	auto state = make_uniq<BitpackingAnalyzeState<T>>();
 	state->state.mode = config.options.force_bitpacking_mode;
 
 	return std::move(state);
@@ -350,20 +350,19 @@ idx_t BitpackingFinalAnalyze(AnalyzeState &state) {
 template <class T, bool WRITE_STATISTICS, class T_S = typename std::make_signed<T>::type>
 struct BitpackingCompressState : public CompressionState {
 public:
-	explicit BitpackingCompressState(ColumnDataCheckpointer &checkpointer) : checkpointer(checkpointer) {
-		auto &db = checkpointer.GetDatabase();
-		auto &type = checkpointer.GetType();
-		auto &config = DBConfig::GetConfig(db);
-		function = config.GetCompressionFunction(CompressionType::COMPRESSION_BITPACKING, type.InternalType());
+	explicit BitpackingCompressState(ColumnDataCheckpointer &checkpointer)
+	    : checkpointer(checkpointer),
+	      function(checkpointer.GetCompressionFunction(CompressionType::COMPRESSION_BITPACKING)) {
 		CreateEmptySegment(checkpointer.GetRowGroup().start);
 
 		state.data_ptr = (void *)this;
 
+		auto &config = DBConfig::GetConfig(checkpointer.GetDatabase());
 		state.mode = config.options.force_bitpacking_mode;
 	}
 
 	ColumnDataCheckpointer &checkpointer;
-	CompressionFunction *function;
+	CompressionFunction &function;
 	unique_ptr<ColumnSegment> current_segment;
 	BufferHandle handle;
 
@@ -533,7 +532,7 @@ public:
 template <class T, bool WRITE_STATISTICS>
 unique_ptr<CompressionState> BitpackingInitCompression(ColumnDataCheckpointer &checkpointer,
                                                        unique_ptr<AnalyzeState> state) {
-	return make_unique<BitpackingCompressState<T, WRITE_STATISTICS>>(checkpointer);
+	return make_uniq<BitpackingCompressState<T, WRITE_STATISTICS>>(checkpointer);
 }
 
 template <class T, bool WRITE_STATISTICS>
@@ -728,7 +727,7 @@ public:
 
 template <class T>
 unique_ptr<SegmentScanState> BitpackingInitScan(ColumnSegment &segment) {
-	auto result = make_unique<BitpackingScanState<T>>(segment);
+	auto result = make_uniq<BitpackingScanState<T>>(segment);
 	return std::move(result);
 }
 

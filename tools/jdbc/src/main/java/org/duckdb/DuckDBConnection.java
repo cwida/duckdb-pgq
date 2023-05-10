@@ -105,6 +105,16 @@ public final class DuckDBConnection implements java.sql.Connection {
 		}
 	}
 
+	/**
+	 * This function calls the underlying C++ interrupt function which aborts all pending queries.
+	 * It is not safe to call this function when the connection is already closed.
+	 */
+	public synchronized void interrupt() throws SQLException {
+		if (conn_ref != null) {
+			DuckDBNative.duckdb_jdbc_interrupt(conn_ref);
+		}
+	}
+
 	protected void finalize() throws Throwable {
 		close();
 	}
@@ -196,7 +206,7 @@ public final class DuckDBConnection implements java.sql.Connection {
 	}
 
 	public void setCatalog(String catalog) throws SQLException {
-		// not supported => no-op
+		DuckDBNative.duckdb_jdbc_set_catalog(conn_ref, catalog);
 	}
 
 	public String getCatalog() throws SQLException {
@@ -204,11 +214,21 @@ public final class DuckDBConnection implements java.sql.Connection {
 	}
 
 	public void setSchema(String schema) throws SQLException {
-		throw new SQLFeatureNotSupportedException("setSchema");
+		DuckDBNative.duckdb_jdbc_set_schema(conn_ref, schema);
 	}
 
 	public String getSchema() throws SQLException {
 		return DuckDBNative.duckdb_jdbc_get_schema(conn_ref);
+	}
+
+	@Override
+	public <T> T unwrap(Class<T> iface) throws SQLException {
+		return JdbcUtils.unwrap(this, iface);
+	}
+
+	@Override
+	public boolean isWrapperFor(Class<?> iface) {
+		return iface.isInstance(this);
 	}
 
 	public void abort(Executor executor) throws SQLException {
@@ -224,14 +244,6 @@ public final class DuckDBConnection implements java.sql.Connection {
 	}
 
 	// less likely to implement this stuff
-
-	public <T> T unwrap(Class<T> iface) throws SQLException {
-		throw new SQLFeatureNotSupportedException("unwrap");
-	}
-
-	public boolean isWrapperFor(Class<?> iface) throws SQLException {
-		throw new SQLFeatureNotSupportedException("isWrapperFor");
-	}
 
 	public CallableStatement prepareCall(String sql) throws SQLException {
 		throw new SQLFeatureNotSupportedException("prepareCall");

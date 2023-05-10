@@ -1,5 +1,3 @@
-
-
 #pragma once
 
 #include "duckdb/common/atomic.hpp"

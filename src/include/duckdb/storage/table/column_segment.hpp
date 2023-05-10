@@ -14,9 +14,9 @@
 #include "duckdb/storage/buffer_manager.hpp"
 #include "duckdb/storage/statistics/segment_statistics.hpp"
 #include "duckdb/storage/storage_lock.hpp"
-#include "duckdb/storage/table/scan_state.hpp"
 #include "duckdb/function/compression_function.hpp"
 #include "duckdb/storage/table/segment_base.hpp"
+#include "duckdb/storage/buffer/block_handle.hpp"
 
 namespace duckdb {
 class ColumnSegment;
@@ -39,8 +39,6 @@ class ColumnSegment : public SegmentBase<ColumnSegment> {
 public:
 	~ColumnSegment();
 
-	//! The index within the segment tree
-	idx_t index;
 	//! The database instance
 	DatabaseInstance &db;
 	//! The type stored in the column
@@ -50,7 +48,7 @@ public:
 	//! The column segment type (transient or persistent)
 	ColumnSegmentType segment_type;
 	//! The compression function
-	CompressionFunction *function;
+	reference<CompressionFunction> function;
 	//! The statistics for the segment
 	SegmentStatistics stats;
 	//! The block that this segment relates to
@@ -126,7 +124,7 @@ public:
 
 public:
 	ColumnSegment(DatabaseInstance &db, shared_ptr<BlockHandle> block, LogicalType type, ColumnSegmentType segment_type,
-	              idx_t start, idx_t count, CompressionFunction *function, BaseStatistics statistics,
+	              idx_t start, idx_t count, CompressionFunction &function, BaseStatistics statistics,
 	              block_id_t block_id, idx_t offset, idx_t segment_size);
 	ColumnSegment(ColumnSegment &other, idx_t start);
 

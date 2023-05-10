@@ -7,6 +7,8 @@ namespace duckdb {
 
 class DropPropertyGraphStatement : public SQLStatement {
 public:
+    static constexpr const StatementType TYPE = StatementType::DROP_PROPERTY_GRAPH_STATEMENT;
+public:
 	DropPropertyGraphStatement();
 
 	unique_ptr<DropPropertyGraphInfo> info;

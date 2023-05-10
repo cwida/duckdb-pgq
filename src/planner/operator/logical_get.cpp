@@ -20,7 +20,7 @@ string LogicalGet::GetName() const {
 	return StringUtil::Upper(function.name);
 }
 
-TableCatalogEntry *LogicalGet::GetTable() const {
+optional_ptr<TableCatalogEntry> LogicalGet::GetTable() const {
 	return TableScanFunction::GetTableEntry(function, bind_data.get());
 }
 
@@ -185,7 +185,7 @@ unique_ptr<LogicalOperator> LogicalGet::Deserialize(LogicalDeserializationState 
 	vector<column_t> projected_input;
 	reader.ReadList<column_t>(projected_input);
 
-	auto result = make_unique<LogicalGet>(table_index, function, std::move(bind_data), returned_types, returned_names);
+	auto result = make_uniq<LogicalGet>(table_index, function, std::move(bind_data), returned_types, returned_names);
 	result->column_ids = std::move(column_ids);
 	result->projection_ids = std::move(projection_ids);
 	result->table_filters = std::move(*table_filters);

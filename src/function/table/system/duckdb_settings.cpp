@@ -38,7 +38,7 @@ static unique_ptr<FunctionData> DuckDBSettingsBind(ClientContext &context, Table
 }
 
 unique_ptr<GlobalTableFunctionState> DuckDBSettingsInit(ClientContext &context, TableFunctionInitInput &input) {
-	auto result = make_unique<DuckDBSettingsData>();
+	auto result = make_uniq<DuckDBSettingsData>();
 
 	auto &config = DBConfig::GetConfig(context);
 	auto options_count = DBConfig::GetOptionCount();
@@ -71,7 +71,7 @@ unique_ptr<GlobalTableFunctionState> DuckDBSettingsInit(ClientContext &context, 
 }
 
 void DuckDBSettingsFunction(ClientContext &context, TableFunctionInput &data_p, DataChunk &output) {
-	auto &data = (DuckDBSettingsData &)*data_p.global_state;
+	auto &data = data_p.global_state->Cast<DuckDBSettingsData>();
 	if (data.offset >= data.settings.size()) {
 		// finished returning values
 		return;

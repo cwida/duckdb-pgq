@@ -19,7 +19,7 @@ BoundStatement Binder::Bind(DropPropertyGraphStatement &stmt) {
 		throw BinderException("The property graph %s does not exist", base.name);
 	}
 
-	result.plan = make_unique<LogicalSimple>(LogicalOperatorType::LOGICAL_DROP_PROPERTY_GRAPH, std::move(stmt.info));
+	result.plan = make_uniq<LogicalSimple>(LogicalOperatorType::LOGICAL_DROP_PROPERTY_GRAPH, std::move(stmt.info));
 	result.names = {"Success"};
 	result.types = {LogicalType::BOOLEAN};
 	properties.allow_stream_result = false;

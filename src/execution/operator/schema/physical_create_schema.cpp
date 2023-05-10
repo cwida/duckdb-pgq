@@ -15,12 +15,12 @@ public:
 };
 
 unique_ptr<GlobalSourceState> PhysicalCreateSchema::GetGlobalSourceState(ClientContext &context) const {
-	return make_unique<CreateSchemaSourceState>();
+	return make_uniq<CreateSchemaSourceState>();
 }
 
 void PhysicalCreateSchema::GetData(ExecutionContext &context, DataChunk &chunk, GlobalSourceState &gstate,
                                    LocalSourceState &lstate) const {
-	auto &state = (CreateSchemaSourceState &)gstate;
+	auto &state = gstate.Cast<CreateSchemaSourceState>();
 	if (state.finished) {
 		return;
 	}
@@ -28,7 +28,7 @@ void PhysicalCreateSchema::GetData(ExecutionContext &context, DataChunk &chunk, 
 	if (catalog.IsSystemCatalog()) {
 		throw BinderException("Cannot create schema in system catalog");
 	}
-	catalog.CreateSchema(context.client, info.get());
+	catalog.CreateSchema(context.client, *info);
 	state.finished = true;
 }
 

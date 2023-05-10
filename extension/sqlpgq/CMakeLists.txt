@@ -18,6 +18,7 @@ set(SQLPGQ_EXTENSION_FILES
     sqlpgq_functions/sqlpgq_iterativelength_bidirectional.cpp
     sqlpgq_functions/sqlpgq_csr_deletion.cpp
     sqlpgq_functions/sqlpgq_scan.cpp
+    sqlpgq_functions/sqlpgq_csr_get_w_type.cpp
     sqlpgq_common.cpp)
 
 add_library(sqlpgq_extension STATIC ${SQLPGQ_EXTENSION_FILES})

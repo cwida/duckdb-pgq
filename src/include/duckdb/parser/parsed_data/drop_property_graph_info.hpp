@@ -16,7 +16,7 @@ struct DropPropertyGraphInfo : public ParseInfo {
 
 public:
 	unique_ptr<DropPropertyGraphInfo> Copy() const {
-		auto result = make_unique<DropPropertyGraphInfo>();
+		auto result = make_uniq<DropPropertyGraphInfo>();
 		result->type = type;
 		result->name = name;
 
@@ -32,10 +32,10 @@ public:
 
 	static unique_ptr<ParseInfo> Deserialize(Deserializer &deserializer) {
 		FieldReader reader(deserializer);
-		auto drop_pg_info = make_unique<DropInfo>();
+		auto drop_pg_info = make_uniq<DropPropertyGraphInfo>();
 		drop_pg_info->type = reader.ReadRequired<CatalogType>();
 		drop_pg_info->name = reader.ReadRequired<string>();
-		return drop_pg_info;
+		return std::move(drop_pg_info);
 	}
 };
 } // namespace duckdb

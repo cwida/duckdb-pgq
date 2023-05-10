@@ -15,7 +15,7 @@ struct CurrentSettingBindData : public FunctionData {
 
 public:
 	unique_ptr<FunctionData> Copy() const override {
-		return make_unique<CurrentSettingBindData>(value);
+		return make_uniq<CurrentSettingBindData>(value);
 	}
 
 	bool Equals(const FunctionData &other_p) const override {
@@ -25,8 +25,8 @@ public:
 };
 
 static void CurrentSettingFunction(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &func_expr = (BoundFunctionExpression &)state.expr;
-	auto &info = (CurrentSettingBindData &)*func_expr.bind_info;
+	auto &func_expr = state.expr.Cast<BoundFunctionExpression>();
+	auto &info = func_expr.bind_info->Cast<CurrentSettingBindData>();
 	result.Reference(info.value);
 }
 
@@ -41,7 +41,7 @@ unique_ptr<FunctionData> CurrentSettingBind(ClientContext &context, ScalarFuncti
 	    key_child->return_type.id() != LogicalTypeId::VARCHAR || !key_child->IsFoldable()) {
 		throw ParserException("Key name for current_setting needs to be a constant string");
 	}
-	Value key_val = ExpressionExecutor::EvaluateScalar(context, *key_child.get());
+	Value key_val = ExpressionExecutor::EvaluateScalar(context, *key_child);
 	D_ASSERT(key_val.type().id() == LogicalTypeId::VARCHAR);
 	auto &key_str = StringValue::Get(key_val);
 	if (key_val.IsNull() || key_str.empty()) {
@@ -55,7 +55,7 @@ unique_ptr<FunctionData> CurrentSettingBind(ClientContext &context, ScalarFuncti
 	}
 
 	bound_function.return_type = val.type();
-	return make_unique<CurrentSettingBindData>(val);
+	return make_uniq<CurrentSettingBindData>(val);
 }
 
 void CurrentSettingFun::RegisterFunction(BuiltinFunctions &set) {

@@ -11,13 +11,13 @@
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
+#include "duckdb/common/compressed_sparse_row.hpp"
 
 namespace duckdb {
 
 class SQLPGQContext : public ClientContextState {
 public:
-	explicit SQLPGQContext() {
-	}
+	explicit SQLPGQContext() = default;
 
 	CreatePropertyGraphInfo *GetPropertyGraph(const string &pg_name) {
 		auto pg_table_entry = registered_property_graphs.find(pg_name);
@@ -30,7 +30,7 @@ public:
 	CSR *GetCSR(int32_t id) {
 		auto csr_entry = csr_list.find(id);
 		if (csr_entry == csr_list.end()) {
-			throw InternalException("CSR not found with ID %d", id);
+			throw ConstraintException("CSR not found with ID %d", id);
 		}
 		return csr_entry->second.get();
 	}

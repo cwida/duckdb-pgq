@@ -21,7 +21,7 @@ PhysicalCreatePropertyGraph::PhysicalCreatePropertyGraph(unique_ptr<CreateProper
 }
 
 unique_ptr<GlobalSourceState> PhysicalCreatePropertyGraph::GetGlobalSourceState(ClientContext &context) const {
-	return make_unique<CreatePropertyGraphSourceState>();
+	return make_uniq<CreatePropertyGraphSourceState>();
 }
 
 void PhysicalCreatePropertyGraph::GetData(ExecutionContext &context, DataChunk &chunk, GlobalSourceState &gstate,

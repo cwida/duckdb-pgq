@@ -4,7 +4,7 @@ namespace duckdb {
 
 unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGPathElement *element) {
 	//! Vertex or edge pattern
-	auto result = make_unique<PathElement>(PGQPathReferenceType::PATH_ELEMENT);
+	auto result = make_uniq<PathElement>(PGQPathReferenceType::PATH_ELEMENT);
 	switch (element->match_type) {
 	case duckdb_libpgquery::PG_MATCH_VERTEX:
 		result->match_type = PGQMatchType::MATCH_VERTEX;
@@ -38,7 +38,7 @@ unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGP
 }
 
 unique_ptr<SubPath> Transformer::TransformSubPathElement(duckdb_libpgquery::PGSubPath *root) {
-	auto result = make_unique<SubPath>(PGQPathReferenceType::SUBPATH);
+	auto result = make_uniq<SubPath>(PGQPathReferenceType::SUBPATH);
 
 	result->where_clause = TransformExpression(root->where_clause);
 	if (root->lower > root->upper) {
@@ -86,7 +86,7 @@ unique_ptr<SubPath> Transformer::TransformSubPathElement(duckdb_libpgquery::PGSu
 }
 
 unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPattern *root) {
-	auto result = make_unique<PathPattern>();
+	auto result = make_uniq<PathPattern>();
 
 	//! Path sequence
 	for (auto node = root->path->head; node != nullptr; node = lnext(node)) {
@@ -103,12 +103,12 @@ unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPatt
 		}
 	}
 
-	return result;
+	return std::move(result);
 }
 
 unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClause *root) {
 
-	auto result = make_unique<MatchRef>();
+	auto result = make_uniq<MatchRef>();
 
 	result->pg_name = root->pg_name; // Name of the property graph to bind to
 
@@ -131,7 +131,7 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 		auto res_target = TransformResTarget(target);
 		result->column_list.push_back(std::move(res_target));
 	}
-	return result;
+	return std::move(result);
 }
 
 } // namespace duckdb

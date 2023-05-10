@@ -29,8 +29,8 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 				all_columns = true;
 				continue;
 			}
-			auto column_alias __attribute__((unused)) =
-			    reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->next->data.ptr_value);
+			// auto column_alias __attribute__((unused)) =
+			//     reinterpret_cast<duckdb_libpgquery::PGColumnDef *>(column_optional_as->head->next->data.ptr_value);
 			// TODO
 			//  	- 	Change this to support the optional as
 			// 		  	Looking at the next element of column_optional_as, which is a linked list
@@ -56,7 +56,7 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 	}
 
 	unique_ptr<PropertyGraphTable> pg_table =
-	    make_unique<PropertyGraphTable>(graph_table_name.name, table_name_alias, column_names, label_names);
+	    make_uniq<PropertyGraphTable>(graph_table_name.name, table_name_alias, column_names, label_names);
 
 	pg_table->is_vertex_table = graph_table->is_vertex_table;
 	pg_table->except_columns = std::move(except_list);
@@ -103,14 +103,14 @@ Transformer::TransformPropertyGraphTable(duckdb_libpgquery::PGPropertyGraphTable
 		}
 	}
 
-	return pg_table;
+	return std::move(pg_table);
 }
 
 unique_ptr<CreateStatement> Transformer::TransformCreatePropertyGraph(duckdb_libpgquery::PGNode *root) {
 	auto stmt = reinterpret_cast<duckdb_libpgquery::PGCreatePropertyGraphStmt *>(root);
 	D_ASSERT(stmt);
-	auto result = make_unique<CreateStatement>();
-	auto info = make_unique<CreatePropertyGraphInfo>();
+	auto result = make_uniq<CreateStatement>();
+	auto info = make_uniq<CreatePropertyGraphInfo>();
 
 	case_insensitive_set_t global_label_set;
 

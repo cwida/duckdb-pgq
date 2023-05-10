@@ -27,20 +27,20 @@ void PathElement::Serialize(FieldWriter &writer) const {
 }
 
 unique_ptr<PathReference> PathElement::Deserialize(FieldReader &reader) {
-	auto result = make_unique<PathElement>(PGQPathReferenceType::PATH_ELEMENT);
+	auto result = make_uniq<PathElement>(PGQPathReferenceType::PATH_ELEMENT);
 	result->match_type = reader.ReadRequired<PGQMatchType>();
 	result->label = reader.ReadRequired<string>();
 	result->variable_binding = reader.ReadRequired<string>();
-	return result;
+	return std::move(result);
 }
 
 unique_ptr<PathReference> PathElement::Copy() {
-	auto result = make_unique<PathElement>(PGQPathReferenceType::PATH_ELEMENT);
+	auto result = make_uniq<PathElement>(PGQPathReferenceType::PATH_ELEMENT);
 	result->path_reference_type = path_reference_type;
 	result->match_type = match_type;
 	result->label = label;
 	result->variable_binding = variable_binding;
-	return result;
+	return std::move(result);
 }
 string PathElement::ToString() const {
 	string result = "";

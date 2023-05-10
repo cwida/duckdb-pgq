@@ -29,9 +29,9 @@ struct DBGenFunctionData : public TableFunctionData {
 	int step = -1;
 };
 
-static unique_ptr<FunctionData> DbgenBind(ClientContext &context, TableFunctionBindInput &input,
-                                          vector<LogicalType> &return_types, vector<string> &names) {
-	auto result = make_unique<DBGenFunctionData>();
+static duckdb::unique_ptr<FunctionData> DbgenBind(ClientContext &context, TableFunctionBindInput &input,
+                                                  vector<LogicalType> &return_types, vector<string> &names) {
+	auto result = make_uniq<DBGenFunctionData>();
 	for (auto &kv : input.named_parameters) {
 		if (kv.first == "sf") {
 			result->sf = DoubleValue::Get(kv.second);
@@ -74,12 +74,12 @@ struct TPCHData : public GlobalTableFunctionState {
 };
 
 unique_ptr<GlobalTableFunctionState> TPCHInit(ClientContext &context, TableFunctionInitInput &input) {
-	auto result = make_unique<TPCHData>();
+	auto result = make_uniq<TPCHData>();
 	return std::move(result);
 }
 
-static unique_ptr<FunctionData> TPCHQueryBind(ClientContext &context, TableFunctionBindInput &input,
-                                              vector<LogicalType> &return_types, vector<string> &names) {
+static duckdb::unique_ptr<FunctionData> TPCHQueryBind(ClientContext &context, TableFunctionBindInput &input,
+                                                      vector<LogicalType> &return_types, vector<string> &names) {
 	names.emplace_back("query_nr");
 	return_types.emplace_back(LogicalType::INTEGER);
 
@@ -109,8 +109,8 @@ static void TPCHQueryFunction(ClientContext &context, TableFunctionInput &data_p
 	output.SetCardinality(chunk_count);
 }
 
-static unique_ptr<FunctionData> TPCHQueryAnswerBind(ClientContext &context, TableFunctionBindInput &input,
-                                                    vector<LogicalType> &return_types, vector<string> &names) {
+static duckdb::unique_ptr<FunctionData> TPCHQueryAnswerBind(ClientContext &context, TableFunctionBindInput &input,
+                                                            vector<LogicalType> &return_types, vector<string> &names) {
 	names.emplace_back("query_nr");
 	return_types.emplace_back(LogicalType::INTEGER);
 
@@ -169,22 +169,22 @@ void TPCHExtension::Load(DuckDB &db) {
 	CreateTableFunctionInfo dbgen_info(dbgen_func);
 
 	// create the dbgen function
-	catalog.CreateTableFunction(*con.context, &dbgen_info);
+	catalog.CreateTableFunction(*con.context, dbgen_info);
 
 	// create the TPCH pragma that allows us to run the query
 	auto tpch_func = PragmaFunction::PragmaCall("tpch", PragmaTpchQuery, {LogicalType::BIGINT});
 	CreatePragmaFunctionInfo info(tpch_func);
-	catalog.CreatePragmaFunction(*con.context, &info);
+	catalog.CreatePragmaFunction(*con.context, info);
 
 	// create the TPCH_QUERIES function that returns the query
 	TableFunction tpch_query_func("tpch_queries", {}, TPCHQueryFunction, TPCHQueryBind, TPCHInit);
 	CreateTableFunctionInfo tpch_query_info(tpch_query_func);
-	catalog.CreateTableFunction(*con.context, &tpch_query_info);
+	catalog.CreateTableFunction(*con.context, tpch_query_info);
 
 	// create the TPCH_ANSWERS that returns the query result
 	TableFunction tpch_query_answer_func("tpch_answers", {}, TPCHQueryAnswerFunction, TPCHQueryAnswerBind, TPCHInit);
 	CreateTableFunctionInfo tpch_query_asnwer_info(tpch_query_answer_func);
-	catalog.CreateTableFunction(*con.context, &tpch_query_asnwer_info);
+	catalog.CreateTableFunction(*con.context, tpch_query_asnwer_info);
 
 	con.Commit();
 }

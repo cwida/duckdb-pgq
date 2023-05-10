@@ -27,9 +27,9 @@ struct SQLSmithFunctionData : public TableFunctionData {
 	bool finished = false;
 };
 
-static unique_ptr<FunctionData> SQLSmithBind(ClientContext &context, TableFunctionBindInput &input,
-                                             vector<LogicalType> &return_types, vector<string> &names) {
-	auto result = make_unique<SQLSmithFunctionData>();
+static duckdb::unique_ptr<FunctionData> SQLSmithBind(ClientContext &context, TableFunctionBindInput &input,
+                                                     vector<LogicalType> &return_types, vector<string> &names) {
+	auto result = make_uniq<SQLSmithFunctionData>();
 	for (auto &kv : input.named_parameters) {
 		if (kv.first == "seed") {
 			result->seed = IntegerValue::Get(kv.second);
@@ -82,12 +82,12 @@ struct ReduceSQLFunctionData : public TableFunctionData {
 	idx_t offset = 0;
 };
 
-static unique_ptr<FunctionData> ReduceSQLBind(ClientContext &context, TableFunctionBindInput &input,
-                                              vector<LogicalType> &return_types, vector<string> &names) {
+static duckdb::unique_ptr<FunctionData> ReduceSQLBind(ClientContext &context, TableFunctionBindInput &input,
+                                                      vector<LogicalType> &return_types, vector<string> &names) {
 	return_types.emplace_back(LogicalType::VARCHAR);
 	names.emplace_back("sql");
 
-	auto result = make_unique<ReduceSQLFunctionData>();
+	auto result = make_uniq<ReduceSQLFunctionData>();
 	auto sql = input.inputs[0].ToString();
 	Parser parser;
 	parser.ParseQuery(sql);
@@ -97,7 +97,7 @@ static unique_ptr<FunctionData> ReduceSQLBind(ClientContext &context, TableFunct
 	auto &statement = *parser.statements[0];
 	StatementSimplifier simplifier(statement, result->statements);
 	simplifier.Simplify(statement);
-	return result;
+	return std::move(result);
 }
 
 static void ReduceSQLFunction(ClientContext &context, TableFunctionInput &data_p, DataChunk &output) {
@@ -132,11 +132,11 @@ void SQLSmithExtension::Load(DuckDB &db) {
 	sqlsmith_func.named_parameters["complete_log"] = LogicalType::VARCHAR;
 	sqlsmith_func.named_parameters["log"] = LogicalType::VARCHAR;
 	CreateTableFunctionInfo sqlsmith_info(sqlsmith_func);
-	catalog.CreateTableFunction(*con.context, &sqlsmith_info);
+	catalog.CreateTableFunction(*con.context, sqlsmith_info);
 
 	TableFunction reduce_sql_function("reduce_sql_statement", {LogicalType::VARCHAR}, ReduceSQLFunction, ReduceSQLBind);
 	CreateTableFunctionInfo reduce_sql_info(reduce_sql_function);
-	catalog.CreateTableFunction(*con.context, &reduce_sql_info);
+	catalog.CreateTableFunction(*con.context, reduce_sql_info);
 
 	con.Commit();
 }
