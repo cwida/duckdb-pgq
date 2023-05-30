@@ -45,10 +45,21 @@ EDGE TABLES (
             LABEL StudyAt
     );
 
-query I
+query II
 FROM GRAPH_TABLE (pg
     MATCH
     ANY SHORTEST (a:Person)-[s:StudyAt]->(b:School)
     WHERE a.name = 'Daniel'
     COLUMNS (a.name as name, b.name as school)
     ) study;
+----
+Daniel	VU
+
+query II
+FROM GRAPH_TABLE (pg
+    MATCH
+    ANY SHORTEST (a:Person)-[k:knows]->{0,0}(b:Person)
+    WHERE a.name = 'Daniel'
+    COLUMNS (a.name as name, b.name as school)
+    ) study;
+----
