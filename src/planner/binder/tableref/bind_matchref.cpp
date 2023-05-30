@@ -38,10 +38,18 @@ void CheckInheritance(shared_ptr<PropertyGraphTable> &tableref, PathElement *ele
 	power_of_children.push_back(std::move(constant_expression_two));
 	power_of_children.push_back(std::move(constant_expression_idx_label));
 	auto power_of_term = make_unique<FunctionExpression>("power", std::move(power_of_children));
-
+    auto bigint_cast = make_unique<CastExpression>(LogicalType::BIGINT, std::move(power_of_term));
 	auto subcategory_colref = make_unique<ColumnRefExpression>(tableref->discriminator, element->variable_binding);
-	auto subset_compare = make_unique<ComparisonExpression>(ExpressionType::COMPARE_EQUAL,
-	                                                        std::move(subcategory_colref), std::move(power_of_term));
+	vector<unique_ptr<ParsedExpression>> and_children;
+    and_children.push_back(std::move(subcategory_colref));
+    and_children.push_back(std::move(bigint_cast));
+
+    auto and_expression = make_unique<FunctionExpression>("&", std::move(and_children));
+
+    auto constant_expression_idx_label_comparison = make_unique<ConstantExpression>(Value::INTEGER((int32_t)idx_of_element + 1));
+
+    auto subset_compare = make_unique<ComparisonExpression>(ExpressionType::COMPARE_EQUAL,
+	                                                        std::move(and_expression), std::move(constant_expression_idx_label_comparison));
 	conditions.push_back(std::move(subset_compare));
 }
 
