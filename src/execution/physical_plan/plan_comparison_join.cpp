@@ -260,6 +260,8 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::PlanComparisonJoin(LogicalCo
 
 	bool has_equality = false;
 	size_t has_range = 0;
+	bool do_pathfinding = false;
+
 	for (size_t c = 0; c < op.conditions.size(); ++c) {
 		auto &cond = op.conditions[c];
 		switch (cond.comparison) {
@@ -272,6 +274,7 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::PlanComparisonJoin(LogicalCo
 		case ExpressionType::COMPARE_LESSTHANOREQUALTO:
 		case ExpressionType::COMPARE_GREATERTHANOREQUALTO:
 			++has_range;
+			do_pathfinding = true;
 			break;
 		case ExpressionType::COMPARE_NOTEQUAL:
 		case ExpressionType::COMPARE_DISTINCT_FROM:
@@ -311,6 +314,9 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::PlanComparisonJoin(LogicalCo
 		                                   std::move(op.mark_types), op.estimated_cardinality, perfect_join_stats);
 
 	} else {
+		if (do_pathfinding) {
+			plan = make_uniq<PhysicalPathFindingOperator>(op, std::move(left), std::move(right))
+		}
 		static constexpr const idx_t NESTED_LOOP_JOIN_THRESHOLD = 5;
 		if (left->estimated_cardinality <= NESTED_LOOP_JOIN_THRESHOLD ||
 		    right->estimated_cardinality <= NESTED_LOOP_JOIN_THRESHOLD) {
