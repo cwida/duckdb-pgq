@@ -18,15 +18,13 @@ namespace duckdb {
 		class PhysicalPathFinding : public CachingPhysicalOperator {
 		public:
 				static constexpr const PhysicalOperatorType TYPE = PhysicalOperatorType::PATH_FINDING;
-
-
 		public:
 				PhysicalPathFinding(LogicalComparisonJoin &op, unique_ptr<PhysicalOperator> left,
 														unique_ptr<PhysicalOperator> right);
 
-				vector<LogicalType> join_key_types;
-				vector<vector<BoundOrderByNode>> lhs_orders;
-				vector<vector<BoundOrderByNode>> rhs_orders;
+				// vector<LogicalType> join_key_types;
+				// vector<vector<BoundOrderByNode>> lhs_orders;
+				// vector<vector<BoundOrderByNode>> rhs_orders;
 
 		public:
 				// CachingOperator Interface
@@ -68,7 +66,7 @@ namespace duckdb {
 
 		private:
 				// resolve joins that can potentially output N*M elements (INNER, LEFT, FULL)
-				void ResolveComplexJoin(ExecutionContext &context, DataChunk &result, LocalSourceState &state) const;
+				// void ResolveComplexJoin(ExecutionContext &context, DataChunk &result, LocalSourceState &state) const;
 		};
 
 } // namespace duckdb

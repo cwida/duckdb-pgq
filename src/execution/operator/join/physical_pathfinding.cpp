@@ -29,10 +29,12 @@ namespace duckdb {
 			// TODO Add something to the local sink state
 				// using LocalSortedTable = PhysicalRangeJoin::LocalSortedTable;
 
-				// PathFindingLocalState(ClientContext &context, const PhysicalPathFinding &op, const idx_t child)
-				// 				: table(context, op, child) {
-				// }
-
+				PathFindingLocalState(ClientContext &context, const PhysicalPathFinding &op, const idx_t child)
+								: context(context), op(op), child(child) {
+				}
+				ClientContext &context;
+				const PhysicalPathFinding &op;
+				const idx_t child;
 				//! The local sort state
 				// LocalSortedTable table;
 		};
@@ -87,13 +89,13 @@ namespace duckdb {
 		unique_ptr<LocalSinkState> PhysicalPathFinding::GetLocalSinkState(ExecutionContext &context) const {
 			idx_t sink_child = 0;
 			if (sink_state) {
-				const auto &ie_sink = sink_state->Cast<PathFindingGlobalState>();
+				// const auto &ie_sink = sink_state->Cast<PathFindingGlobalState>();
 				// sink_child = ie_sink.child;
 			}
 			return make_uniq<PathFindingLocalState>(context.client, *this, sink_child);
 		}
 
-		SinkResultType PhysicalIEJoin::Sink(ExecutionContext &context, DataChunk &chunk, OperatorSinkInput &input) const {
+		SinkResultType PhysicalPathFinding::Sink(ExecutionContext &context, DataChunk &chunk, OperatorSinkInput &input) const {
 			auto &gstate = input.global_state.Cast<PathFindingGlobalState>();
 			auto &lstate = input.local_state.Cast<PathFindingLocalState>();
 
@@ -103,8 +105,8 @@ namespace duckdb {
 		}
 
 		SinkCombineResultType PhysicalPathFinding::Combine(ExecutionContext &context, OperatorSinkCombineInput &input) const {
-			auto &gstate = input.global_state.Cast<PathFindingGlobalState>();
-			auto &lstate = input.local_state.Cast<PathFindingLocalState>();
+			// auto &gstate = input.global_state.Cast<PathFindingGlobalState>();
+			// auto &lstate = input.local_state.Cast<PathFindingLocalState>();
 			// gstate.tables[gstate.child]->Combine(lstate.table);
 			auto &client_profiler = QueryProfiler::Get(context.client);
 
@@ -144,7 +146,7 @@ namespace duckdb {
 //===--------------------------------------------------------------------===//
 // Operator
 //===--------------------------------------------------------------------===//
-		OperatorResultType PhysicalIEJoin::ExecuteInternal(ExecutionContext &context, DataChunk &input, DataChunk &chunk,
+		OperatorResultType PhysicalPathFinding::ExecuteInternal(ExecutionContext &context, DataChunk &input, DataChunk &chunk,
 																											 GlobalOperatorState &gstate, OperatorState &state) const {
 			return OperatorResultType::FINISHED;
 		}
@@ -982,10 +984,10 @@ namespace duckdb {
 //===--------------------------------------------------------------------===//
 // Pipeline Construction
 //===--------------------------------------------------------------------===//
-		void PhysicalIEJoin::BuildPipelines(Pipeline &current, MetaPipeline &meta_pipeline) {
+		void PhysicalPathFinding::BuildPipelines(Pipeline &current, MetaPipeline &meta_pipeline) {
 			D_ASSERT(children.size() == 2);
 			if (meta_pipeline.HasRecursiveCTE()) {
-				throw NotImplementedException("IEJoins are not supported in recursive CTEs yet");
+				throw NotImplementedException("Path Finding is not supported in recursive CTEs yet");
 			}
 
 			// becomes a source after both children fully sink their data

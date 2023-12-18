@@ -1,3 +1,5 @@
+#include <duckdb/execution/operator/join/physical_pathfinding.hpp>
+
 #include "duckdb/execution/operator/join/perfect_hash_join_executor.hpp"
 #include "duckdb/execution/operator/join/physical_cross_product.hpp"
 #include "duckdb/execution/operator/join/physical_hash_join.hpp"
@@ -312,11 +314,9 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::PlanComparisonJoin(LogicalCo
 		plan = make_uniq<PhysicalHashJoin>(op, std::move(left), std::move(right), std::move(op.conditions),
 		                                   op.join_type, op.left_projection_map, op.right_projection_map,
 		                                   std::move(op.mark_types), op.estimated_cardinality, perfect_join_stats);
-
+	} else if (do_pathfinding) {
+		return make_uniq<PhysicalPathFinding>(op, std::move(left), std::move(right));
 	} else {
-		if (do_pathfinding) {
-			plan = make_uniq<PhysicalPathFindingOperator>(op, std::move(left), std::move(right))
-		}
 		static constexpr const idx_t NESTED_LOOP_JOIN_THRESHOLD = 5;
 		if (left->estimated_cardinality <= NESTED_LOOP_JOIN_THRESHOLD ||
 		    right->estimated_cardinality <= NESTED_LOOP_JOIN_THRESHOLD) {

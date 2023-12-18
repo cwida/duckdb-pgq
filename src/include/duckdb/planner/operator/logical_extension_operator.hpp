@@ -15,7 +15,7 @@ namespace duckdb {
 
 class ColumnBindingResolver;
 
-struct LogicalExtensionOperator : public LogicalOperator {
+struct LogicalExtensionOperator : LogicalOperator {
 public:
 	static constexpr const LogicalOperatorType TYPE = LogicalOperatorType::LOGICAL_EXTENSION_OPERATOR;
 
