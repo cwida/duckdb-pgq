@@ -1,5 +1,3 @@
-#include <duckdb/execution/operator/join/physical_pathfinding.hpp>
-
 #include "duckdb/execution/operator/join/perfect_hash_join_executor.hpp"
 #include "duckdb/execution/operator/join/physical_cross_product.hpp"
 #include "duckdb/execution/operator/join/physical_hash_join.hpp"
