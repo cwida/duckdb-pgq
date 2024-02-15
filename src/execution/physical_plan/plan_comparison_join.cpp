@@ -18,6 +18,7 @@
 #include "duckdb/catalog/catalog_entry/duck_table_entry.hpp"
 
 namespace duckdb {
+class PhysicalPathFinding;
 
 static bool CanPlanIndexJoin(ClientContext &context, TableScanBindData &bind_data, PhysicalTableScan &scan) {
 	auto &table = bind_data.table;
@@ -252,6 +253,7 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::PlanComparisonJoin(LogicalCo
 	left->estimated_cardinality = lhs_cardinality;
 	right->estimated_cardinality = rhs_cardinality;
 	D_ASSERT(left && right);
+	bool do_pathfinding = true;
 
 	if (op.conditions.empty()) {
 		// no conditions: insert a cross product
@@ -311,9 +313,11 @@ unique_ptr<PhysicalOperator> PhysicalPlanGenerator::PlanComparisonJoin(LogicalCo
 		                                   op.join_type, op.left_projection_map, op.right_projection_map,
 		                                   std::move(op.mark_types), op.estimated_cardinality, perfect_join_stats);
 	}
-	// else if (do_pathfinding) {
-	// 	return make_uniq<PhysicalPathFinding>(op, std::move(left), std::move(right));
-	// }
+	else if (do_pathfinding) {
+		return make_uniq<PhysicalPathFinding>(op, std::move(left), std::move(right), std::move(op.conditions), op.join_type, op.estimated_cardinality);
+		// plan = make_uniq<PhysicalIEJoin>(op, std::move(left), std::move(right), std::move(op.conditions),
+		// 						 op.join_type, op.estimated_cardinality);
+	}
 	else {
 		static constexpr const idx_t NESTED_LOOP_JOIN_THRESHOLD = 5;
 		if (left->estimated_cardinality <= NESTED_LOOP_JOIN_THRESHOLD ||

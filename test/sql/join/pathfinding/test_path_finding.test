@@ -42,7 +42,7 @@ EDGE TABLES (knows SOURCE KEY (src) REFERENCES foo (i)
                label knows)
 
 query II
--SELECT *
+SELECT *
 FROM pairs AS p
 WHERE p.src BETWEEN (select csr_id from (SELECT
             0 as csr_id,
