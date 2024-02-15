@@ -36,10 +36,19 @@ create table foo(i bigint);
 
 statement ok
 -CREATE PROPERTY GRAPH pg
-VERTEX TABLES (foo LABEL foo)
-EDGE TABLES (knows SOURCE KEY (src) REFERENCES foo (i)
-                   DESTINATION KEY (dst) references foo (i)
-               label knows)
+VERTEX TABLES (
+foo
+)
+EDGE TABLES (
+knows   SOURCE KEY (src) REFERENCES foo (i)
+        DESTINATION KEY (dst) references foo (i)
+)
+
+statement ok
+-FROM GRAPH_TABLE(pg
+    MATCH (f:foo)-[k:knows]->{0,3}(f2:foo)
+    COLUMNS (*)
+    );
 
 query II
 SELECT *

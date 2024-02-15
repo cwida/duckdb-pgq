@@ -48,7 +48,7 @@ public:
 	//! The types returned by this physical operator
 	vector<LogicalType> types;
 	//! The estimated cardinality of this physical operator
-	idx_t estimated_cardinality;
+	idx_t estimated_cardinality = 0;
 
 	//! The global sink state of this operator
 	unique_ptr<GlobalSinkState> sink_state;
