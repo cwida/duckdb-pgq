@@ -830,7 +830,58 @@ EdgePattern:
 					$$ = list_make1(p);
 				}
 			}
-		;
+    |
+        operator   {
+                    PGPathElement *n = makeNode(PGPathElement);
+                    int lower = 1;
+                    int upper = 1;
+                    char* op = $1;
+                    switch (op) {
+                    case "->*":
+                        n->match_type = (PGMatchType)PG_MATCH_EDGE_RIGHT
+                        lower = 0;
+                        upper = (1<<30);
+                    case "->+":
+                        n->match_type = (PGMatchType)PG_MATCH_EDGE_RIGHT
+                        lower = 1;
+                        upper = (1<<30);
+                    case "<->*":
+                        n->match_type = (PGMatchType)PG_MATCH_EDGE_LEFT_RIGHT
+                        lower = 0;
+                        upper = (1<<30);
+                    case "<->+":
+                        n->match_type = (PGMatchType)PG_MATCH_EDGE_LEFT_RIGHT
+                        op = "<->";
+                        lower = 1;
+                        upper = (1<<30);
+                    case "<-+":
+                        n->match_type = (PGMatchType)PG_MATCH_EDGE_LEFT
+                        lower = 1;
+                        upper = (1<<30);
+                    case "<-*":
+                        n->match_type = (PGMatchType)PG_MATCH_EDGE_LEFT
+                        lower = 0;
+                        upper = (1<<30);
+                    default:
+                        parser_yyerror("Illegal operator %s", op);
+                    }
+
+                    n->label_expr = NULL;
+                    n->element_var = NULL;
+                    $$ = list_make1(n);
+                    if (lower != 1 || upper != 1) {
+                        PGSubPath *p = makeNode(PGSubPath);
+                        p->single_bind = 0;
+                        p->lower = lower;
+                        p->upper = upper;
+                        /* return a subpath consisting of one edge (element) */
+                        p->path = n;
+                        p->path_var = NULL;
+
+                        $$ = list_make1(p);
+                    }
+                }
+    ;
 
 VertexPattern:
         '(' FullElementSpec')'
