@@ -1,0 +1,6 @@
+# name: benchmark/pathfinding/operator.benchmark
+# description: Run UDF Query For Pathfinding Benchmark
+# group: [pathfinding]
+
+template benchmark/pathfinding/pathfinding.benchmark.in
+QUERY_NAME=udf

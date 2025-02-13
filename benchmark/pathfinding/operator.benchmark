@@ -1,7 +1,6 @@
 # name: benchmark/pathfinding/operator.benchmark
-# description: Run UDF Query For Pathfinding Benchmark
+# description: Run Operator Query For Pathfinding Benchmark
 # group: [pathfinding]
 
 template benchmark/pathfinding/pathfinding.benchmark.in
-QUERY_NUMBER=1
-QUERY_NUMBER_PADDED=01
+QUERY_NAME=operator
