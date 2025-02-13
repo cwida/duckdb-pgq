@@ -1,0 +1,14 @@
+# name: ${FILE_PATH}
+# description: ${DESCRIPTION}
+# group: [pathfinding]
+
+name Q${QUERY_NUMBER_PADDED}
+group pathfinding
+
+require duckpgq
+
+load benchmark/pathfinding/load.sql
+
+run benchmark/pathfinding/queries/q${QUERY_NUMBER_PADDED}.sql
+
+result benchmark/pathfinding/result/q${QUERY_NUMBER_PADDED}.csv
