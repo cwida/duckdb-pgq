@@ -1,5 +1,3 @@
-require duckpgq
-
 attach '/Users/dljtw/git/duckpgq/test-pathfinding.duckdb';
 use 'test-pathfinding';
 set experimental_path_finding_operator=true;
