@@ -1,6 +1,0 @@
-# name: benchmark/pathfinding/operator.benchmark
-# description: Run Operator Query For Pathfinding Benchmark
-# group: [pathfinding]
-
-template benchmark/pathfinding/pathfinding.benchmark.in
-QUERY_NAME=operator
