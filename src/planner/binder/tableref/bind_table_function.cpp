@@ -23,7 +23,7 @@
 
 namespace duckdb {
 
-enum class TableFunctionBindType { STANDARD_TABLE_FUNCTION, TABLE_IN_OUT_FUNCTION, TABLE_PARAMETER_FUNCTION };
+enum class TableFunctionBindType { STANDARD_TABLE_FUNCTION, TABLE_IN_OUT_FUNCTION, TABLE_PARAMETER_FUNCTION, BIND_REPLACE_FUNCTION };
 
 static TableFunctionBindType GetTableFunctionBindType(TableFunctionCatalogEntry &table_function,
                                                       vector<unique_ptr<ParsedExpression>> &expressions) {
@@ -43,6 +43,7 @@ static TableFunctionBindType GetTableFunctionBindType(TableFunctionCatalogEntry 
 	// if a function does not have an in_out_function defined, we need to bind as a standard table function regardless
 	bool has_in_out_function = false;
 	bool has_standard_table_function = false;
+	bool has_bind_replace = false;
 	bool has_table_parameter = false;
 	for (idx_t function_idx = 0; function_idx < table_function.functions.Size(); function_idx++) {
 		const auto &function = table_function.functions.GetFunctionReferenceByOffset(function_idx);
@@ -53,9 +54,12 @@ static TableFunctionBindType GetTableFunctionBindType(TableFunctionCatalogEntry 
 		}
 		if (function.in_out_function) {
 			has_in_out_function = true;
-		} else if (function.function || function.bind_replace) {
+		} else if (function.function) {
 			has_standard_table_function = true;
-		} else {
+		} else if (function.bind_replace) {
+			has_bind_replace = true;
+		}
+		else {
 			throw InternalException("Function \"%s\" has neither in_out_function nor function defined",
 			                        table_function.name);
 		}
@@ -71,8 +75,16 @@ static TableFunctionBindType GetTableFunctionBindType(TableFunctionCatalogEntry 
 	if (has_in_out_function && has_standard_table_function) {
 		throw InternalException("Function \"%s\" is both an in_out_function and a table function", table_function.name);
 	}
-	return has_in_out_function ? TableFunctionBindType::TABLE_IN_OUT_FUNCTION
-	                           : TableFunctionBindType::STANDARD_TABLE_FUNCTION;
+	if (has_in_out_function) {
+		return TableFunctionBindType::TABLE_IN_OUT_FUNCTION;
+	}
+	if (has_standard_table_function) {
+		return TableFunctionBindType::STANDARD_TABLE_FUNCTION;
+	}
+	if (has_bind_replace) {
+		return TableFunctionBindType::BIND_REPLACE_FUNCTION;
+	}
+	throw InternalException("Function \"%s\" has neither in_out_function nor function nor bind_replace defined", table_function.name);
 }
 
 void Binder::BindTableInTableOutFunction(vector<unique_ptr<ParsedExpression>> &expressions,
@@ -90,6 +102,15 @@ void Binder::BindTableInTableOutFunction(vector<unique_ptr<ParsedExpression>> &e
 	MoveCorrelatedExpressions(*subquery->binder);
 }
 
+// void Binder::BindReplaceFunction(TableFunctionCatalogEntry &table_function,
+// 								unique_ptr<BoundSubqueryRef> &subquery) {
+// 	auto binder = Binder::CreateBinder(this->context, this);
+// 	unique_ptr<QueryNode> subquery_node;
+//
+// 	auto new_plan = table_function.bind_replace(context, bind_input);
+//
+// }
+
 bool Binder::BindTableFunctionParameters(TableFunctionCatalogEntry &table_function,
                                          vector<unique_ptr<ParsedExpression>> &expressions,
                                          vector<LogicalType> &arguments, vector<Value> &parameters,
@@ -104,6 +125,12 @@ bool Binder::BindTableFunctionParameters(TableFunctionCatalogEntry &table_functi
 		return true;
 	}
 	bool seen_subquery = false;
+	// if (bind_type == TableFunctionBindType::BIND_REPLACE_FUNCTION) {
+	// 	BindReplaceFunction(table_function, subquery);
+	// 	// fetch the arguments from the subquery
+	// 	arguments = subquery->subquery->types;
+	// 	return true;
+	// }
 	for (auto &child : expressions) {
 		string parameter_name;
 
