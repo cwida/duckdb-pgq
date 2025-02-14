@@ -49,6 +49,11 @@ string MatchExpression::ToString() const {
 	return result;
 }
 
+bool MatchExpression::IsScalar() const {
+	return false;
+}
+
+
 bool MatchExpression::Equals(const BaseExpression &other_p) const {
 	if (!ParsedExpression::Equals(other_p)) {
 		return false;

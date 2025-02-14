@@ -26,6 +26,8 @@ public:
 public:
 	string ToString() const override;
 	bool Equals(const BaseExpression &other_p) const override;
+	bool IsScalar() const override;
+
 
 	unique_ptr<ParsedExpression> Copy() const override;
 
