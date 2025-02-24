@@ -3,7 +3,7 @@
 # Define versions, sources, and scale factors
 versions=("operator" "udf")
 sources=(512 1024 2048 16384 32768 65536)
-scale_factors=(1 3 10 30)
+scale_factors=(1 3 10 30 100 300)
 threads=(2 4 8)
 
 
