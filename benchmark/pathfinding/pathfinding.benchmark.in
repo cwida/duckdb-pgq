@@ -8,9 +8,9 @@ group pathfinding
 require duckpgq
 
 load
+attach 'benchmark/pathfinding/data/snb-bi-sf${SCALE_FACTOR}.duckdb';
+use 'snb-bi-sf${SCALE_FACTOR}';
 set experimental_path_finding_operator=true;
-create table person as select * from read_csv_auto('/Users/dljtw/git/duckpgq/duckdb/benchmark/pathfinding/data/snb-bi-sf${SCALE_FACTOR}.v',header=FALSE, sep=' ', columns={'id':'bigint'});
-create table person_knows_person as select * from read_csv_auto('/Users/dljtw/git/duckpgq/duckdb/benchmark/pathfinding/data/snb-bi-sf${SCALE_FACTOR}.e',header=FALSE, sep=' ', columns={'person1id':'bigint','person2id':'bigint','weight':'bigint'});
 create or replace table snb_pairs as (
    select src, dst
    from (select a.rowid as src from person a),
