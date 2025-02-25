@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define versions, sources, and scale factors
-versions=("operator")
-sources=(512 1024 2048 16384 32768 65536)
+versions=("operator" "udf")
+sources=(512 1024 2048 16384 32768 65536 131072)
 scale_factors=(30 100 300)
-threads=(1)
+threads=(1 2 4 8)
 
 # Loop over versions, sources, and scale factors
 for version in "${versions[@]}"; do
