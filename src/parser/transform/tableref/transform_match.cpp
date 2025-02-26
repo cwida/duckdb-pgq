@@ -4,7 +4,7 @@
 
 namespace duckdb {
 
-unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGPathElement *element) {
+unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGPathElement *element, case_insensitive_map_t<idx_t>& anonymous_variable_map) {
 	//! Vertex or edge pattern
 	auto result = make_uniq<PathElement>(PGQPathReferenceType::PATH_ELEMENT);
 	switch (element->match_type) {
@@ -33,14 +33,32 @@ unique_ptr<PathElement> Transformer::TransformPathElement(duckdb_libpgquery::PGP
 	std::string label_name = StringUtil::Lower(label_expression->name);
 	result->label = label_name;
 	if (!element->element_var) {
-		throw ConstraintException("All patterns must bind to a variable, %s is missing a variable", result->label);
+		// Case: Anonymous node with label `:N`
+		if (anonymous_variable_map.find(label_name) != anonymous_variable_map.end()) {
+			throw ConstraintException("Ambiguous anonymous variable pattern detected for label '" + label_name + "'. "
+									  "Please provide an explicit variable name.");
+		}
+		anonymous_variable_map[label_name] = 1;
+		result->variable_binding = label_name;
+	} else {
+		// Case: Explicitly named node (e.g., `n:N`)
+		std::string variable_name = element->element_var;
+		// Check if this label was already used as an anonymous variable
+		if (anonymous_variable_map.find(variable_name) != anonymous_variable_map.end() &&
+			anonymous_variable_map[variable_name] == 1) {
+			throw ConstraintException("Conflicting variable bindings: anonymous node with variable '" + variable_name +
+									  "' was already assigned. Provide explicit variable names for all occurrences.");
+			}
+		anonymous_variable_map[variable_name] = 1;
+
+		// Register this explicitly named variable
+		result->variable_binding = variable_name;
 	}
-	result->variable_binding = element->element_var;
 	return result;
 }
 
 unique_ptr<SubPath> Transformer::TransformSubPathElement(duckdb_libpgquery::PGSubPath *root,
-                                                         unique_ptr<PathPattern> &path_pattern) {
+                                                         unique_ptr<PathPattern> &path_pattern, case_insensitive_map_t<idx_t>& anonymous_variable_map) {
 	auto result = make_uniq<SubPath>(PGQPathReferenceType::SUBPATH);
 
 	result->where_clause = TransformExpression(root->where_clause);
@@ -85,18 +103,18 @@ unique_ptr<SubPath> Transformer::TransformSubPathElement(duckdb_libpgquery::PGSu
 		auto path_node = reinterpret_cast<duckdb_libpgquery::PGNode *>(node->data.ptr_value);
 		if (path_node->type == duckdb_libpgquery::T_PGPathElement) {
 			auto element = reinterpret_cast<duckdb_libpgquery::PGPathElement *>(path_node);
-			auto path_element = TransformPathElement(element);
+			auto path_element = TransformPathElement(element, anonymous_variable_map);
 			result->path_list.push_back(std::move(path_element));
 		} else if (path_node->type == duckdb_libpgquery::T_PGSubPath) {
 			auto subpath = reinterpret_cast<duckdb_libpgquery::PGSubPath *>(path_node);
-			auto subpath_element = TransformSubPathElement(subpath, path_pattern);
+			auto subpath_element = TransformSubPathElement(subpath, path_pattern, anonymous_variable_map);
 			result->path_list.push_back(std::move(subpath_element));
 		}
 	}
 	return result;
 }
 
-unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPattern *root) {
+unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPattern *root, case_insensitive_map_t<idx_t>& anonymous_variable_map) {
 	auto result = make_uniq<PathPattern>();
 	result->all = root->all;
 	result->shortest = root->shortest;
@@ -117,11 +135,11 @@ unique_ptr<PathPattern> Transformer::TransformPath(duckdb_libpgquery::PGPathPatt
 		auto path_node = reinterpret_cast<duckdb_libpgquery::PGNode *>(node->data.ptr_value);
 		if (path_node->type == duckdb_libpgquery::T_PGPathElement) {
 			auto element = reinterpret_cast<duckdb_libpgquery::PGPathElement *>(path_node);
-			auto path_element = TransformPathElement(element);
+			auto path_element = TransformPathElement(element, anonymous_variable_map);
 			result->path_elements.push_back(std::move(path_element));
 		} else if (path_node->type == duckdb_libpgquery::T_PGSubPath) {
 			auto subpath = reinterpret_cast<duckdb_libpgquery::PGSubPath *>(path_node);
-			auto subpath_element = TransformSubPathElement(subpath, result);
+			auto subpath_element = TransformSubPathElement(subpath, result, anonymous_variable_map);
 			result->path_elements.push_back(std::move(subpath_element));
 		} else {
 			throw NotImplementedException("Path node type " + NodetypeToString(path_node->type) + " not recognized");
@@ -135,6 +153,7 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 	auto match_info = make_uniq<MatchExpression>();
 	match_info->pg_name = root.pg_name; // Name of the property graph to bind to
 	string alias_name;
+	case_insensitive_map_t<idx_t> anonymous_variable_map; // Map of anonymous variables to their bound names
 	if (root.graph_table) {
 		alias_name = TransformQualifiedName(*root.graph_table).name;
 	}
@@ -146,7 +165,7 @@ unique_ptr<TableRef> Transformer::TransformMatch(duckdb_libpgquery::PGMatchClaus
 
 	for (auto node = root.paths->head; node != nullptr; node = lnext(node)) {
 		auto path = reinterpret_cast<duckdb_libpgquery::PGPathPattern *>(node->data.ptr_value);
-		auto transformed_path = TransformPath(path);
+		auto transformed_path = TransformPath(path, anonymous_variable_map);
 		match_info->path_patterns.push_back(std::move(transformed_path));
 	}
 

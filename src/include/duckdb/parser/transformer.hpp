@@ -339,12 +339,12 @@ private:
 	                                                           case_insensitive_set_t &global_label_set,
 	                                                           case_insensitive_map_t<string> &table_alias_map);
 	//! Transform a path pattern (SQL/PGQ)
-	unique_ptr<PathPattern> TransformPath(duckdb_libpgquery::PGPathPattern *root);
+	unique_ptr<PathPattern> TransformPath(duckdb_libpgquery::PGPathPattern *root, case_insensitive_map_t<idx_t>& anonymous_variable_map);
 	//! Transform a path element (SQL/PGQ)
-	static unique_ptr<PathElement> TransformPathElement(duckdb_libpgquery::PGPathElement *element);
+	static unique_ptr<PathElement> TransformPathElement(duckdb_libpgquery::PGPathElement *element, case_insensitive_map_t<idx_t>& anonymous_variable_map);
 	//! Transform a subpath (SQL/PGQ)
 	unique_ptr<SubPath> TransformSubPathElement(duckdb_libpgquery::PGSubPath *element,
-	                                            unique_ptr<PathPattern> &path_pattern);
+	                                            unique_ptr<PathPattern> &path_pattern, case_insensitive_map_t<idx_t>& anonymous_variable_map);
 
 	//! Transform a Postgres duckdb_libpgquery::T_PGDropPropertyGraphStmt node into a Drop[Table,Schema]Statement
 	unique_ptr<SQLStatement> TransformDropPropertyGraph(duckdb_libpgquery::PGDropPropertyGraphStmt &node);
