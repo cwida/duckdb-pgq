@@ -2,10 +2,10 @@
 
 # Define versions, sources, and scale factors
 versions=("operator")
-sources=(16384 32768 65536)
+sources=(16384)
 scale_factors=(1 3 10)
 threads=(1 2 4 8)
-partition_multipliers=(1 2 4 8 16)
+partition_multipliers=(1 2 4)
 
 # Loop over versions, sources, and scale factors
 for version in "${versions[@]}"; do
