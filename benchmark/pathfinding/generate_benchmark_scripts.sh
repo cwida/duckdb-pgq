@@ -3,7 +3,7 @@
 # Define versions, sources, and scale factors
 versions=("operator")
 sources=(16384)
-scale_factors=(1 3 10)
+scale_factors=(1 3 10 30 100 300)
 threads=(1 2 4 8)
 partition_multipliers=(1 2 4)
 
