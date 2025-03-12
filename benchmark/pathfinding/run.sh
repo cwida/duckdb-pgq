@@ -8,7 +8,7 @@ cd "$( cd "$( dirname "${BASH_SOURCE[0]:-${(%):-%x}}" )" >/dev/null 2>&1 && pwd 
 
 ./get-small-data.sh
 
-rm benchmarks/*
+find benchmarks/ f -not -name ".gitignore" -delete 
 ./generate_benchmark_scripts.sh
 cd ../../../
 BUILD_BENCHMARK=1 make GEN=ninja
