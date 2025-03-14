@@ -5,7 +5,6 @@ versions=("operator")
 sources=(16384)
 scale_factors=(1 3 10 30 100 300)
 threads=(1 2 4 8)
-partition_multipliers=(1 2 4)
 
 # Loop over versions, sources, and scale factors
 for version in "${versions[@]}"; do
@@ -13,12 +12,11 @@ for version in "${versions[@]}"; do
     for scale in "${scale_factors[@]}"; do
       for thread in "${threads[@]}"; do
 
-        for partition_multiplier in "${partition_multipliers[@]}"; do
-          # Define the file name
-          filename="benchmarks/${version}_sf${scale}_src${source}_t${thread}_p${partition_multiplier}.benchmark"
+        # Define the file name
+        filename="benchmarks/${version}_sf${scale}_src${source}_t${thread}.benchmark"
 
-          # Write content to the file
-         cat <<EOL > "$filename"
+        # Write content to the file
+       cat <<EOL > "$filename"
 # name: benchmark/pathfinding/${version}.benchmark
 # description: Run ${version} Query For Pathfinding Benchmark
 # group: [pathfinding]
@@ -28,11 +26,9 @@ QUERY_NAME=${version}
 NUMBER_OF_SOURCES=${source}
 SCALE_FACTOR=${scale}
 THREADS=${thread}
-PARTITION_MULTIPLIER=${partition_multiplier}
 EOL
 
         echo "Generated: $filename"
-        done
       done
     done
   done
