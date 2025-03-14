@@ -19,4 +19,5 @@ create or replace table snb_pairs as (
 );
 set threads=${THREADS};
 set experimental_path_finding_operator_partition_size=${PARTITION_SIZE};
+
 run benchmark/pathfinding/queries/${QUERY_NAME}.sql
