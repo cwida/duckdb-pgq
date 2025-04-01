@@ -28,7 +28,7 @@ struct BenchmarkState {
 //! The base Benchmark class is a base class that is used to create and register
 //! new benchmarks
 class Benchmark {
-	constexpr static size_t DEFAULT_NRUNS = 1;
+	constexpr static size_t DEFAULT_NRUNS = 5;
 	Benchmark(Benchmark &) = delete;
 
 public:
