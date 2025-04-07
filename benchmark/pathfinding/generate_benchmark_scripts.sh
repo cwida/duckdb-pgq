@@ -3,9 +3,9 @@
 # Define versions, sources, and scale factors
 versions=("operator-bottom-up")
 sources=(16384)
-scale_factors=(30)
-threads=(2)
-bottom_up_thresholds=(0.8 0.9 1.0)
+scale_factors=(1 3 10 30 100 300)
+threads=(1 2 4 8)
+bottom_up_thresholds=(0.01 0.05 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
 
 # Loop over versions, sources, and scale factors
 for version in "${versions[@]}"; do
