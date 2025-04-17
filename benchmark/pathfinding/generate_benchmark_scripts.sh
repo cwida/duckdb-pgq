@@ -1,18 +1,16 @@
 #!/bin/bash
 
 # Define versions, sources, and scale factors
-versions=("operator-bottom-up")
+versions=("operator")
 sources=(16384)
 scale_factors=(1 3 10 30 100 300)
-threads=(1 2 4 8)
-bottom_up_thresholds=(0.01 0.05 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
+threads=(8)
 
 # Loop over versions, sources, and scale factors
 for version in "${versions[@]}"; do
   for source in "${sources[@]}"; do
     for scale in "${scale_factors[@]}"; do
       for thread in "${threads[@]}"; do
-        for bottom_up_threshold in "${bottom_up_thresholds[@]}"; do
           # Define the file name
           filename="benchmarks/${version}_sf${scale}_src${source}_t${thread}_b${bottom_up_threshold}.benchmark"
 
@@ -27,10 +25,8 @@ QUERY_NAME=${version}
 NUMBER_OF_SOURCES=${source}
 SCALE_FACTOR=${scale}
 THREADS=${thread}
-BOTTOM_UP_THRESHOLD=${bottom_up_threshold}
 EOL
         echo "Generated: $filename"
-        done
       done
     done
   done

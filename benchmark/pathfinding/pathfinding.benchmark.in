@@ -18,6 +18,5 @@ create or replace table snb_pairs as (
    using sample reservoir(${NUMBER_OF_SOURCES} rows) repeatable (300)
 );
 set threads=${THREADS};
-set experimental_path_finding_operator_bottom_up_threshold = ${BOTTOM_UP_THRESHOLD};
 
 run benchmark/pathfinding/queries/${QUERY_NAME}.sql
