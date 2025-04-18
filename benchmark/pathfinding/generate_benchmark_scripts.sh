@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define versions, sources, and scale factors
-versions=("operator")
+versions=("operator-bottom-up")
 sources=(16384)
 scale_factors=(1 3 10 30 100 300)
 threads=(8)
