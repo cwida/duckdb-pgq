@@ -15,13 +15,14 @@ VariableShowStmt:
 				$$ = (PGNode *) n;
 			}
 		 | SUMMARIZE qualified_name
-			{
-				PGVariableShowStmt *n = makeNode(PGVariableShowStmt);
-				n->relation = $2;
-				n->is_summary = 1;
-				$$ = (PGNode *) n;
-			}
-		 | show_or_describe qualified_name
+            {
+                PGVariableShowStmt *n = makeNode(PGVariableShowStmt);
+                n->relation = $2;
+                n->is_summary = 1;
+                $$ = (PGNode *) n;
+            }
+         |
+           show_or_describe qualified_name
 			{
 				PGVariableShowStmt *n = makeNode(PGVariableShowStmt);
 				n->relation = $2;
@@ -63,6 +64,13 @@ VariableShowStmt:
 				n->relation = $4;
 				n->is_summary = 0;
 				$$ = (PGNode *) n;
+            }
+        | SUMMARIZE PROPERTY GRAPH qualified_name {
+                PGVariableShowStmt *n = makeNode(PGVariableShowStmt);
+                n->set = (char*) "property_graph";
+                n->relation = $4;
+                n->is_summary = 1;
+                $$ = (PGNode *) n;
             }
 		;
 
