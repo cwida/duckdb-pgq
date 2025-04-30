@@ -16,7 +16,8 @@ unique_ptr<QueryNode> Transformer::TransformShow(duckdb_libpgquery::PGVariableSh
 	auto showref = make_uniq<ShowRef>();
 	if (stmt.set) {
 		if (stmt.set == std::string("property_graph")) {
-			showref->table_name = stmt.relation->relname;
+			string property_graph = stmt.relation->schemaname;
+			showref->table_name = (property_graph.empty() ? "" : property_graph + ".") + stmt.relation->relname;
 		} else {
 			showref->table_name = stmt.set;
 		}

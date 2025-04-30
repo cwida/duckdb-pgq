@@ -65,13 +65,6 @@ VariableShowStmt:
 				n->is_summary = 0;
 				$$ = (PGNode *) n;
             }
-        | SUMMARIZE PROPERTY GRAPH qualified_name {
-                PGVariableShowStmt *n = makeNode(PGVariableShowStmt);
-                n->set = (char*) "property_graph";
-                n->relation = $4;
-                n->is_summary = 1;
-                $$ = (PGNode *) n;
-            }
 		;
 
 describe_or_desc: DESCRIBE | DESC_P
