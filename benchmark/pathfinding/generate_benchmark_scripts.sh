@@ -12,7 +12,7 @@ for version in "${versions[@]}"; do
     for scale in "${scale_factors[@]}"; do
       for thread in "${threads[@]}"; do
           # Define the file name
-          filename="benchmarks/${version}_sf${scale}_src${source}_t${thread}_b${bottom_up_threshold}.benchmark"
+          filename="benchmarks/${version}_sf${scale}_src${source}_t${thread}.benchmark"
 
           # Write content to the file
           cat <<EOL > "$filename"
