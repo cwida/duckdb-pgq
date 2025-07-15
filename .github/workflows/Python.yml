@@ -143,8 +143,6 @@ jobs:
         exclude:
           # Speed things up a bit for non-releases
           - isRelease: false
-            python_build: 'cp39-*'
-          - isRelease: false
             python_build: 'cp310-*'
           - isRelease: false
             python_build: 'cp311-*'
@@ -378,7 +376,7 @@ jobs:
           ./scripts/upload-assets-to-staging.sh twine_upload tools/pythonpkg/wheelhouse/*.whl
 
   linux-release-cleanup:
-     if: github.ref == 'refs/heads/v1.2-histrionicus' || github.ref == 'refs/heads/main'
+     if: github.ref == 'refs/heads/v1.3-ossivalis' || github.ref == 'refs/heads/main'
      name: PyPi Release Cleanup
      needs: twine-upload
      runs-on: ubuntu-22.04
