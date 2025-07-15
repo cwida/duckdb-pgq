@@ -79,6 +79,11 @@ if (EXTENSION_STATIC_BUILD AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   endif()
 endif()
 
+option(SHADOW_FORBIDDEN_FUNCTIONS "Compile time test on usage of deprecated functions" FALSE)
+if (SHADOW_FORBIDDEN_FUNCTIONS)
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include 'duckdb/common/shadow_forbidden_functions.hpp'")
+endif()
+
 option(DISABLE_UNITY "Disable unity builds." FALSE)
 option(USE_WASM_THREADS "Should threads be used" FALSE)
 if (${USE_WASM_THREADS})
@@ -102,6 +107,11 @@ endif()
 
 if (DUCKDB_EXPLICIT_PLATFORM)
     add_definitions(-DDUCKDB_CUSTOM_PLATFORM=${DUCKDB_EXPLICIT_PLATFORM})
+endif()
+
+option (BUILD_COMPLETE_EXTENSION_SET "Whether we need to actually build the complete set" TRUE)
+if (DEFINED ENV{BUILD_COMPLETE_EXTENSION_SET})
+     set(BUILD_COMPLETE_EXTENSION_SET "$ENV{BUILD_COMPLETE_EXTENSION_SET}")
 endif()
 
 option (WASM_ENABLED "Are DuckDB-Wasm extensions build enabled" FALSE)
@@ -241,13 +251,15 @@ endif()
 
 set(VERSIONING_TAG_MATCH "v*.*.*")
 ######
+# MAIN_BRANCH_VERSIONING default should be 'TRUE' for main branch and feature branches
+# MAIN_BRANCH_VERSIONING default should be 'FALSE' for release branches
 # MAIN_BRANCH_VERSIONING default value needs to keep in sync between:
 # - CMakeLists.txt
 # - scripts/amalgamation.py
 # - scripts/package_build.py
 # - tools/pythonpkg/setup.py
 ######
-option(MAIN_BRANCH_VERSIONING "Versioning scheme for main branch" TRUE)
+option(MAIN_BRANCH_VERSIONING "Versioning scheme for main branch" FALSE)
 if(${MAIN_BRANCH_VERSIONING})
   set(VERSIONING_TAG_MATCH "v*.*.0")
 endif()
