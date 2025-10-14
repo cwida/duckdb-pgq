@@ -29,6 +29,7 @@ IndexStmt
 InsertStmt
 GraphTableStmt
 LoadStmt
+MergeIntoStmt
 PragmaStmt
 PrepareStmt
 RenameStmt

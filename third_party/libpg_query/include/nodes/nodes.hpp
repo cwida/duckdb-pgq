@@ -333,6 +333,7 @@ typedef enum PGNodeTag {
 	T_PGTruncateStmt,
 	T_PGCommentStmt,
 	T_PGCommentOnStmt,
+	T_PGMergeIntoStmt,
 	T_PGFetchStmt,
 	T_PGIndexStmt,
 	T_PGFunctionDefinition,
@@ -497,14 +498,16 @@ typedef enum PGNodeTag {
 	T_PGSampleOptions,
 	T_PGLimitPercent,
 	T_PGPositionalReference,
-    T_PGPropertyGraphTable,   /* SQL/PGQ extension */
-    T_PGMatchClause,/* SQL/PGQ extension */
-    T_PGPathPattern,/* SQL/PGQ extension */
-    T_PGSubPath,    /* SQL/PGQ extension */
-    T_PGPathUnion,  /* SQL/PGQ extension */
-    T_PGPathInfo,   /* SQL/PGQ extension */
-    T_PGLabelTest,  /* SQL/PGQ extension */
-    T_PGPathElement,/* SQL/PGQ extension */
+	T_PGMatchEntry,
+	T_PGMatchAction,
+	T_PGPropertyGraphTable,   /* SQL/PGQ extension */
+	T_PGMatchClause,/* SQL/PGQ extension */
+	T_PGPathPattern,/* SQL/PGQ extension */
+	T_PGSubPath,    /* SQL/PGQ extension */
+	T_PGPathUnion,  /* SQL/PGQ extension */
+	T_PGPathInfo,   /* SQL/PGQ extension */
+	T_PGLabelTest,  /* SQL/PGQ extension */
+	T_PGPathElement,/* SQL/PGQ extension */
 	T_PGKeyReference, /* SQL/PGQ extension */
 
 	/*
