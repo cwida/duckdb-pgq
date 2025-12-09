@@ -1,6 +1,6 @@
 duckdb_extension_load(httpfs
-    LOAD_TESTS
+    LOAD TESTS
     GIT_URL https://github.com/duckdb/duckdb-httpfs
-    GIT_TAG 8356a9017444f54018159718c8017ff7db4ea756
+    GIT_TAG 9c7d34977b10346d0b4cbbde5df807d1dab0b2bf
     INCLUDE_DIR src/include
 )
