@@ -10,6 +10,7 @@
 #include "duckdb/storage/storage_manager.hpp"
 #include "duckdb/transaction/duck_transaction.hpp"
 #include "duckdb/transaction/duck_transaction_manager.hpp"
+#include "duckdb/parser/parsed_data/alter_database_info.hpp"
 
 namespace duckdb {
 
@@ -83,22 +84,44 @@ shared_ptr<AttachedDatabase> DatabaseManager::GetDatabaseInternal(const lock_gua
 
 shared_ptr<AttachedDatabase> DatabaseManager::AttachDatabase(ClientContext &context, AttachInfo &info,
                                                              AttachOptions &options) {
-	auto &config = DBConfig::GetConfig(context);
+	string extension = "";
+	if (FileSystem::IsRemoteFile(info.path, extension)) {
+		if (options.access_mode == AccessMode::AUTOMATIC) {
+			// Attaching of remote files gets bumped to READ_ONLY
+			// This is due to the fact that on most (all?) remote files writes to DB are not available
+			// and having this raised later is not super helpful
+			options.access_mode = AccessMode::READ_ONLY;
+		}
+	}
+
 	if (options.db_type.empty() || StringUtil::CIEquals(options.db_type, "duckdb")) {
+		// Start timing the ATTACH-delay step.
+		auto profiler = context.client_data->profiler->StartTimer(MetricType::WAITING_TO_ATTACH_LATENCY);
+
 		while (InsertDatabasePath(info, options) == InsertDatabasePathResult::ALREADY_EXISTS) {
 			// database with this name and path already exists
+			// first check if it exists within this transaction
+			auto &meta_transaction = MetaTransaction::Get(context);
+			auto existing_db = meta_transaction.GetReferencedDatabaseOwning(info.name);
+			if (existing_db) {
+				// it does! return it
+				return existing_db;
+			}
+
 			// ... but it might not be done attaching yet!
 			// verify the database has actually finished attaching prior to returning
 			lock_guard<mutex> guard(databases_lock);
-			if (databases.find(info.name) != databases.end()) {
-				// database ACTUALLY exists - return
-				return nullptr;
+			auto entry = databases.find(info.name);
+			if (entry != databases.end()) {
+				// The database ACTUALLY exists, so we return it.
+				return entry->second;
 			}
 			if (context.interrupted) {
 				throw InterruptException();
 			}
 		}
 	}
+	auto &config = DBConfig::GetConfig(context);
 	GetDatabaseType(context, info, config, options);
 	if (!options.db_type.empty()) {
 		// we only need to prevent duplicate opening of DuckDB files
@@ -108,23 +131,30 @@ shared_ptr<AttachedDatabase> DatabaseManager::AttachDatabase(ClientContext &cont
 	if (AttachedDatabase::NameIsReserved(info.name)) {
 		throw BinderException("Attached database name \"%s\" cannot be used because it is a reserved name", info.name);
 	}
-	string extension = "";
-	if (FileSystem::IsRemoteFile(info.path, extension)) {
+	if (!extension.empty()) {
 		if (!ExtensionHelper::TryAutoLoadExtension(context, extension)) {
 			throw MissingExtensionException("Attaching path '%s' requires extension '%s' to be loaded", info.path,
 			                                extension);
-		}
-		if (options.access_mode == AccessMode::AUTOMATIC) {
-			// Attaching of remote files gets bumped to READ_ONLY
-			// This is due to the fact that on most (all?) remote files writes to DB are not available
-			// and having this raised later is not super helpful
-			options.access_mode = AccessMode::READ_ONLY;
 		}
 	}
 
 	// now create the attached database
 	auto &db = DatabaseInstance::GetDatabase(context);
 	auto attached_db = db.CreateAttachedDatabase(context, info, options);
+
+	//! Initialize the database.
+	if (options.is_main_database) {
+		attached_db->SetInitialDatabase();
+		attached_db->Initialize(context);
+	} else {
+		attached_db->Initialize(context);
+		if (!options.default_table.name.empty()) {
+			attached_db->GetCatalog().SetDefaultTable(options.default_table.schema, options.default_table.name);
+		}
+		attached_db->FinalizeLoad(context);
+	}
+
+	FinalizeAttach(context, info, attached_db);
 	return attached_db;
 }
 
@@ -180,6 +210,54 @@ void DatabaseManager::DetachDatabase(ClientContext &context, const string &name,
 	attached_db->OnDetach(context);
 }
 
+void DatabaseManager::Alter(ClientContext &context, AlterInfo &info) {
+	auto &db_info = info.Cast<AlterDatabaseInfo>();
+
+	switch (db_info.alter_database_type) {
+	case AlterDatabaseType::RENAME_DATABASE: {
+		auto &rename_info = db_info.Cast<RenameDatabaseInfo>();
+		RenameDatabase(context, db_info.catalog, rename_info.new_name, db_info.if_not_found);
+		break;
+	}
+	default:
+		throw InternalException("Unsupported ALTER DATABASE operation");
+	}
+}
+
+void DatabaseManager::RenameDatabase(ClientContext &context, const string &old_name, const string &new_name,
+                                     OnEntryNotFound if_not_found) {
+	if (AttachedDatabase::NameIsReserved(new_name)) {
+		throw BinderException("Database name \"%s\" cannot be used because it is a reserved name", new_name);
+	}
+
+	shared_ptr<AttachedDatabase> attached_db;
+	{
+		lock_guard<mutex> guard(databases_lock);
+		auto old_entry = databases.find(old_name);
+		if (old_entry == databases.end()) {
+			if (if_not_found == OnEntryNotFound::THROW_EXCEPTION) {
+				throw BinderException("Failed to rename database \"%s\": database not found", old_name);
+			}
+			return;
+		}
+
+		auto new_entry = databases.find(new_name);
+		if (new_entry != databases.end()) {
+			throw BinderException("Failed to rename database \"%s\" to \"%s\": database with new name already exists",
+			                      old_name, new_name);
+		}
+
+		attached_db = old_entry->second;
+		databases.erase(old_entry);
+		attached_db->SetName(new_name);
+		databases[new_name] = attached_db;
+	}
+
+	if (default_database == old_name) {
+		default_database = new_name;
+	}
+}
+
 shared_ptr<AttachedDatabase> DatabaseManager::DetachInternal(const string &name) {
 	shared_ptr<AttachedDatabase> attached_db;
 	{
@@ -222,7 +300,6 @@ vector<string> DatabaseManager::GetAttachedDatabasePaths() {
 
 void DatabaseManager::GetDatabaseType(ClientContext &context, AttachInfo &info, const DBConfig &config,
                                       AttachOptions &options) {
-
 	// Test if the database is a DuckDB database file.
 	if (StringUtil::CIEquals(options.db_type, "duckdb")) {
 		options.db_type = "";
@@ -232,14 +309,15 @@ void DatabaseManager::GetDatabaseType(ClientContext &context, AttachInfo &info, 
 	// Try to extract the database type from the path.
 	if (options.db_type.empty()) {
 		auto &fs = FileSystem::GetFileSystem(context);
-		DBPathAndType::CheckMagicBytes(QueryContext(context), fs, info.path, options.db_type);
+		DBPathAndType::CheckMagicBytes(context, fs, info.path, options.db_type);
 	}
 
 	if (options.db_type.empty()) {
 		return;
 	}
 
-	if (config.storage_extensions.find(options.db_type) != config.storage_extensions.end()) {
+	auto extension_name = ExtensionHelper::ApplyExtensionAlias(options.db_type);
+	if (config.storage_extensions.find(extension_name) != config.storage_extensions.end()) {
 		// If the database type is already registered, we don't need to load it again.
 		return;
 	}
