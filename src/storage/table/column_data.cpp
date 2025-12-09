@@ -495,10 +495,10 @@ void ColumnData::InitializeAppend(ColumnAppendState &state) {
 void ColumnData::AppendData(BaseStatistics &append_stats, ColumnAppendState &state, UnifiedVectorFormat &vdata,
                             idx_t append_count) {
 	idx_t offset = 0;
-	this->count += append_count;
 	while (true) {
 		// append the data from the vector
 		idx_t copied_elements = state.current->Append(state, vdata, offset, append_count);
+		this->count += copied_elements;
 		append_stats.Merge(state.current->stats.statistics);
 		if (copied_elements == append_count) {
 			// finished copying everything
@@ -536,6 +536,11 @@ void ColumnData::RevertAppend(row_t start_row_p) {
 	if (segment->start == start_row) {
 		// we are truncating exactly this segment - erase it entirely
 		data.EraseSegments(l, segment_index);
+		if (segment_index > 0) {
+			// if we have a previous segment, we need to update the next pointer
+			auto previous_segment = data.GetSegmentByIndex(l, UnsafeNumericCast<int64_t>(segment_index - 1));
+			previous_segment->next = nullptr;
+		}
 	} else {
 		// we need to truncate within the segment
 		// remove any segments AFTER this segment: they should be deleted entirely
@@ -583,7 +588,6 @@ void ColumnData::Update(TransactionData transaction, DataTable &data_table, idx_
 	Vector base_vector(type);
 	ColumnScanState state;
 	FetchUpdateData(state, row_ids, base_vector);
-
 	UpdateInternal(transaction, data_table, column_index, update_vector, row_ids, update_count, base_vector);
 }
 
@@ -868,7 +872,8 @@ bool PersistentCollectionData::HasUpdates() const {
 }
 
 PersistentColumnData ColumnData::Serialize() {
-	PersistentColumnData result(type.InternalType(), GetDataPointers());
+	auto result = count ? PersistentColumnData(type.InternalType(), GetDataPointers())
+	                    : PersistentColumnData(type.InternalType());
 	result.has_updates = HasUpdates();
 	return result;
 }
