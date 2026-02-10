@@ -364,7 +364,6 @@ void TestConfiguration::LoadConfig(const string &config_path) {
 		auto path = TestJoinPath(cwd, path_value.ToString());
 		TestConfiguration inherit_config;
 		inherit_config.LoadConfig(path);
-
 		tests_to_be_skipped.insert(inherit_config.tests_to_be_skipped.begin(),
 		                           inherit_config.tests_to_be_skipped.end());
 	}
@@ -468,7 +467,8 @@ vector<ConfigSetting> TestConfiguration::GetConfigSettings() {
 }
 
 string TestConfiguration::GetTestEnv(const string &key, const string &default_value) {
-	if (test_env.empty() && options.find("test_env") != options.end()) {
+	if (!test_env_from_config_loaded && options.find("test_env") != options.end()) {
+		test_env_from_config_loaded = true;
 		auto entry = options["test_env"];
 		auto list_children = ListValue::GetChildren(entry);
 		for (const auto &value : list_children) {
