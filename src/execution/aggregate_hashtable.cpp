@@ -75,8 +75,8 @@ void GroupedAggregateHashTable::InitializePartitionedData() {
 	if (!partitioned_data ||
 	    RadixPartitioning::RadixBitsOfPowerOfTwo(partitioned_data->PartitionCount()) != radix_bits) {
 		D_ASSERT(!partitioned_data || partitioned_data->Count() == 0);
-		partitioned_data =
-		    make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, radix_bits, layout_ptr->ColumnCount() - 1);
+		partitioned_data = make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, MemoryTag::HASH_TABLE,
+		                                                        radix_bits, layout_ptr->ColumnCount() - 1);
 	} else {
 		partitioned_data->Reset();
 	}
@@ -92,8 +92,8 @@ void GroupedAggregateHashTable::InitializePartitionedData() {
 void GroupedAggregateHashTable::InitializeUnpartitionedData() {
 	D_ASSERT(radix_bits >= UNPARTITIONED_RADIX_BITS_THRESHOLD);
 	if (!unpartitioned_data) {
-		unpartitioned_data =
-		    make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, 0ULL, layout_ptr->ColumnCount() - 1);
+		unpartitioned_data = make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, MemoryTag::HASH_TABLE,
+		                                                          0ULL, layout_ptr->ColumnCount() - 1);
 	} else {
 		unpartitioned_data->Reset();
 	}
@@ -106,10 +106,6 @@ const PartitionedTupleData &GroupedAggregateHashTable::GetPartitionedData() cons
 }
 
 unique_ptr<PartitionedTupleData> GroupedAggregateHashTable::AcquirePartitionedData() {
-	// Flush/unpin partitioned data
-	partitioned_data->FlushAppendState(state.partitioned_append_state);
-	partitioned_data->Unpin();
-
 	if (radix_bits >= UNPARTITIONED_RADIX_BITS_THRESHOLD) {
 		// Flush/unpin unpartitioned data and append to partitioned data
 		if (unpartitioned_data) {
@@ -119,6 +115,10 @@ unique_ptr<PartitionedTupleData> GroupedAggregateHashTable::AcquirePartitionedDa
 		}
 		InitializeUnpartitionedData();
 	}
+
+	// Flush/unpin partitioned data
+	partitioned_data->FlushAppendState(state.partitioned_append_state);
+	partitioned_data->Unpin();
 
 	// Return and re-initialize
 	auto result = std::move(partitioned_data);

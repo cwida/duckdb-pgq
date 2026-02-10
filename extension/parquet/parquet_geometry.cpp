@@ -5,12 +5,17 @@
 #include "duckdb/catalog/catalog_entry/scalar_function_catalog_entry.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/function/scalar_function.hpp"
+#include "duckdb/function/scalar/geometry_functions.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 #include "duckdb/planner/expression/bound_reference_expression.hpp"
 #include "duckdb/main/extension_helper.hpp"
 #include "reader/expression_column_reader.hpp"
 #include "parquet_reader.hpp"
 #include "yyjson.hpp"
+#include "duckdb/common/types/geometry_crs.hpp"
+#include "duckdb/planner/expression/bound_cast_expression.hpp"
+#include "re2/re2.h"
+#include "reader/string_column_reader.hpp"
 
 namespace duckdb {
 
@@ -19,9 +24,8 @@ using namespace duckdb_yyjson; // NOLINT
 //------------------------------------------------------------------------------
 // GeoParquetFileMetadata
 //------------------------------------------------------------------------------
-
 unique_ptr<GeoParquetFileMetadata> GeoParquetFileMetadata::TryRead(const duckdb_parquet::FileMetaData &file_meta_data,
-                                                                   const ClientContext &context) {
+                                                                   ClientContext &context) {
 	// Conversion not enabled, or spatial is not loaded!
 	if (!IsGeoParquetConversionEnabled(context)) {
 		return nullptr;
@@ -106,7 +110,30 @@ unique_ptr<GeoParquetFileMetadata> GeoParquetFileMetadata::TryRead(const duckdb_
 					if (!yyjson_is_arr(geometry_types_val)) {
 						throw InvalidInputException("Geoparquet column '%s' does not have geometry types", column_name);
 					}
-					// We dont care about the geometry types for now.
+
+					// Parse the CRS
+					const auto crs_val = yyjson_obj_get(column_val, "crs");
+					if (crs_val) {
+						// Parse the CRS
+						if (!yyjson_is_obj(crs_val)) {
+							throw InvalidInputException("Geoparquet column '%s' has invalid CRS", column_name);
+						}
+
+						// Move the CRS as a JSON string
+						size_t crs_json_len = 0;
+						const auto crs_json = yyjson_val_write(crs_val, 0, &crs_json_len);
+						column.projjson = string(crs_json, crs_json_len);
+
+						// Free the temporary CRS JSON string
+						free(crs_json);
+					} else {
+						// Otherwise, default to OGC:CRS84
+						auto crs = CoordinateReferenceSystem::TryConvert(context, "OGC:CRS84",
+						                                                 CoordinateReferenceSystemType::PROJJSON);
+						if (crs) {
+							column.projjson = crs->GetDefinition();
+						}
+					}
 
 					// TODO: Parse the bounding box, other metadata that might be useful.
 					// (Only encoding and geometry types are required to be present)
@@ -127,17 +154,58 @@ unique_ptr<GeoParquetFileMetadata> GeoParquetFileMetadata::TryRead(const duckdb_
 	return nullptr;
 }
 
-void GeoParquetFileMetadata::AddGeoParquetStats(const string &column_name, const LogicalType &type,
-                                                const GeometryStatsData &stats) {
+static void ConvertCRS(ClientContext &context, GeoParquetColumnMetadata &column, const string &column_name,
+                       const CoordinateReferenceSystem &crs, GeoParquetVersion version) {
+	// This is the default in GeoParquet
+	if (StringUtil::CIEquals("OGC:CRS84", crs.GetIdentifier())) {
+		// Dont write the default
+		return;
+	}
+
+	if (crs.GetType() == CoordinateReferenceSystemType::PROJJSON) {
+		// If already PROJJSON, just write it directly
+		column.projjson = crs.GetDefinition();
+		return;
+	}
+
+	const auto lookup = CoordinateReferenceSystem::TryConvert(context, crs, CoordinateReferenceSystemType::PROJJSON);
+
+	if (lookup) {
+		// Successfully converted to PROJJSON
+		column.projjson = lookup->GetDefinition();
+		return;
+	}
+
+	if (version != GeoParquetVersion::V2) {
+		throw InvalidInputException("Cannot write GeoParquet V1 metadata for column '%s': GeoParquet V1 only "
+		                            "supports PROJJSON CRS definitions",
+		                            column_name);
+	}
+
+	// Fall back to writing the original CRS definition
+	column.projjson = crs.GetDefinition();
+}
+
+void GeoParquetFileMetadata::AddGeoParquetStats(ClientContext &context, const string &column_name,
+                                                const LogicalType &type, const GeometryStatsData &stats,
+                                                GeoParquetVersion version) {
 	// Lock the metadata
 	lock_guard<mutex> glock(write_lock);
 
-	auto it = geometry_columns.find(column_name);
+	const auto it = geometry_columns.find(column_name);
 	if (it == geometry_columns.end()) {
+		// Add a new column to the metadata
 		auto &column = geometry_columns[column_name];
 
+		// Attempt to convert the CRS to PROJJSON
+		if (GeoType::HasCRS(type)) {
+			ConvertCRS(context, column, column_name, GeoType::GetCRS(type), version);
+		}
+
+		// Merge the stats
 		column.stats.Merge(stats);
 		column.insertion_index = geometry_columns.size() - 1;
+
 	} else {
 		it->second.stats.Merge(stats);
 	}
@@ -230,15 +298,19 @@ void GeoParquetFileMetadata::Write(duckdb_parquet::FileMetaData &file_meta_data)
 		// If the CRS is present, add it
 		if (!column.second.projjson.empty()) {
 			const auto crs_doc = yyjson_read(column.second.projjson.c_str(), column.second.projjson.size(), 0);
-			if (!crs_doc) {
-				yyjson_mut_doc_free(doc);
-				throw InvalidInputException("Failed to parse CRS JSON");
+			if (crs_doc) {
+				const auto crs_root = yyjson_doc_get_root(crs_doc);
+				const auto crs_val = yyjson_val_mut_copy(doc, crs_root);
+				const auto crs_key = yyjson_mut_strcpy(doc, "crs");
+				yyjson_mut_obj_add(column_json, crs_key, crs_val);
+				yyjson_doc_free(crs_doc);
+			} else {
+				// Failed to parse the CRS JSON. If this is geoparquet v2, we support other CRS formats
+				if (version != GeoParquetVersion::V2) {
+					// Skip adding the CRS
+					throw SerializationException("Failed to parse CRS PROJJSON for column '%s'", column.first.c_str());
+				}
 			}
-			const auto crs_root = yyjson_doc_get_root(crs_doc);
-			const auto crs_val = yyjson_val_mut_copy(doc, crs_root);
-			const auto crs_key = yyjson_mut_strcpy(doc, "projjson");
-			yyjson_mut_obj_add(column_json, crs_key, crs_val);
-			yyjson_doc_free(crs_doc);
 		}
 	}
 
@@ -283,34 +355,33 @@ const unordered_map<string, GeoParquetColumnMetadata> &GeoParquetFileMetadata::G
 	return geometry_columns;
 }
 
-unique_ptr<ColumnReader> GeoParquetFileMetadata::CreateColumnReader(ParquetReader &reader,
-                                                                    const ParquetColumnSchema &schema,
-                                                                    ClientContext &context) {
-	// Get the catalog
-	auto &catalog = Catalog::GetSystemCatalog(context);
-
-	// WKB encoding
-	if (schema.children[0].type.id() == LogicalTypeId::BLOB) {
-		// Look for a conversion function in the catalog
-		auto &conversion_func_set =
-		    catalog.GetEntry<ScalarFunctionCatalogEntry>(context, DEFAULT_SCHEMA, "st_geomfromwkb");
-		auto conversion_func = conversion_func_set.functions.GetFunctionByArguments(context, {LogicalType::BLOB});
-
-		// Create a bound function call expression
-		auto args = vector<unique_ptr<Expression>>();
-		args.push_back(std::move(make_uniq<BoundReferenceExpression>(LogicalType::BLOB, 0)));
-		auto expr =
-		    make_uniq<BoundFunctionExpression>(conversion_func.return_type, conversion_func, std::move(args), nullptr);
-
-		// Create a child reader
-		auto child_reader = ColumnReader::CreateReader(reader, schema.children[0]);
-
-		// Create an expression reader that applies the conversion function to the child reader
-		return make_uniq<ExpressionColumnReader>(context, std::move(child_reader), std::move(expr), schema);
+optional_ptr<const GeoParquetColumnMetadata> GeoParquetFileMetadata::GetColumnMeta(const string &column_name) const {
+	const auto it = geometry_columns.find(column_name);
+	if (it == geometry_columns.end()) {
+		return nullptr;
 	}
+	return &it->second;
+}
 
-	// Otherwise, unrecognized encoding
-	throw NotImplementedException("Unsupported geometry encoding");
+unique_ptr<ColumnReader> GeometryColumnReader::Create(ParquetReader &reader, const ParquetColumnSchema &schema,
+                                                      ClientContext &context) {
+	D_ASSERT(schema.type.id() == LogicalTypeId::GEOMETRY);
+	D_ASSERT(schema.children.size() == 1 && schema.children[0].type.id() == LogicalTypeId::BLOB);
+
+	// Make a string reader for the underlying WKB data
+	auto string_reader = make_uniq<StringColumnReader>(reader, schema.children[0]);
+
+	// Wrap the string reader in a geometry reader
+	auto args = vector<unique_ptr<Expression>>();
+	auto ref = make_uniq_base<Expression, BoundReferenceExpression>(LogicalTypeId::BLOB, 0);
+	args.push_back(std::move(ref));
+
+	// TODO: Pass the actual target type here so we get the CRS information too
+	auto func = StGeomfromwkbFun::GetFunction();
+	func.name = "ST_GeomFromWKB";
+	auto read_expr = make_uniq_base<Expression, BoundFunctionExpression>(schema.type, func, std::move(args), nullptr);
+	auto type_expr = BoundCastExpression::AddDefaultCastToType(std::move(read_expr), schema.type);
+	return make_uniq<ExpressionColumnReader>(context, std::move(string_reader), std::move(type_expr), schema);
 }
 
 } // namespace duckdb

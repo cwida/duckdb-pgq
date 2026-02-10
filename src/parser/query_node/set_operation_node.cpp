@@ -1,7 +1,5 @@
 #include "duckdb/parser/query_node/set_operation_node.hpp"
-
 #include "duckdb/common/serializer/serializer.hpp"
-#include "duckdb/common/serializer/deserializer.hpp"
 
 namespace duckdb {
 
@@ -129,7 +127,7 @@ unique_ptr<QueryNode> SetOperationNode::SerializeChildNode(Serializer &serialize
 }
 
 bool SetOperationNode::SerializeChildList(Serializer &serializer) const {
-	return serializer.ShouldSerialize(6);
+	return serializer.ShouldSerialize(7);
 }
 
 } // namespace duckdb

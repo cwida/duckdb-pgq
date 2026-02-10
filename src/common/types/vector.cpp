@@ -1,11 +1,8 @@
 #include "duckdb/common/types/vector.hpp"
 
-#include "duckdb/common/algorithm.hpp"
 #include "duckdb/common/assert.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/fsst.hpp"
-#include "duckdb/common/operator/comparison_operators.hpp"
-#include "duckdb/common/pair.hpp"
 #include "duckdb/common/printer.hpp"
 #include "duckdb/common/serializer/deserializer.hpp"
 #include "duckdb/common/serializer/serializer.hpp"
@@ -20,11 +17,8 @@
 #include "duckdb/common/types/vector_cache.hpp"
 #include "duckdb/common/uhugeint.hpp"
 #include "duckdb/common/vector_operations/vector_operations.hpp"
-#include "duckdb/function/scalar/nested_functions.hpp"
 #include "duckdb/storage/buffer/buffer_handle.hpp"
-#include "duckdb/storage/string_uncompressed.hpp"
 #include "duckdb/common/types/uuid.hpp"
-#include "fsst.h"
 
 #include <cstring> // strlen() on Solaris
 namespace duckdb {
@@ -32,7 +26,8 @@ namespace duckdb {
 UnifiedVectorFormat::UnifiedVectorFormat() : sel(nullptr), data(nullptr), physical_type(PhysicalType::INVALID) {
 }
 
-UnifiedVectorFormat::UnifiedVectorFormat(UnifiedVectorFormat &&other) noexcept : sel(nullptr), data(nullptr) {
+UnifiedVectorFormat::UnifiedVectorFormat(UnifiedVectorFormat &&other) noexcept
+    : sel(nullptr), data(nullptr), physical_type(PhysicalType::INVALID) {
 	bool refers_to_self = other.sel == &other.owned_sel;
 	std::swap(sel, other.sel);
 	std::swap(data, other.data);
@@ -735,6 +730,9 @@ Value Vector::GetValueInternal(const Vector &v_p, idx_t index_p) {
 	}
 	case LogicalTypeId::GEOMETRY: {
 		auto str = reinterpret_cast<string_t *>(data)[index];
+		if (GeoType::HasCRS(type)) {
+			return Value::GEOMETRY(const_data_ptr_cast(str.GetData()), str.GetSize(), GeoType::GetCRS(type));
+		}
 		return Value::GEOMETRY(const_data_ptr_cast(str.GetData()), str.GetSize());
 	}
 	case LogicalTypeId::AGGREGATE_STATE: {
@@ -744,6 +742,9 @@ Value Vector::GetValueInternal(const Vector &v_p, idx_t index_p) {
 	case LogicalTypeId::BIT: {
 		auto str = reinterpret_cast<string_t *>(data)[index];
 		return Value::BIT(const_data_ptr_cast(str.GetData()), str.GetSize());
+	}
+	case LogicalTypeId::SQLNULL: {
+		return Value();
 	}
 	case LogicalTypeId::MAP: {
 		auto offlen = reinterpret_cast<list_entry_t *>(data)[index];
@@ -802,6 +803,10 @@ Value Vector::GetValueInternal(const Vector &v_p, idx_t index_p) {
 			children.push_back(child_vec.GetValue(i));
 		}
 		return Value::ARRAY(ArrayType::GetChildType(type), std::move(children));
+	}
+	case LogicalTypeId::TYPE: {
+		auto blob = reinterpret_cast<string_t *>(data)[index];
+		return Value::TYPE(blob);
 	}
 	default:
 		throw InternalException("Unimplemented type for value access");
@@ -920,7 +925,6 @@ idx_t Vector::GetAllocationSize(idx_t cardinality) const {
 	}
 	default:
 		throw NotImplementedException("Vector::GetAllocationSize not implemented for type: %s", type.ToString());
-		break;
 	}
 }
 

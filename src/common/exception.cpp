@@ -4,6 +4,7 @@
 #include "duckdb/common/types.hpp"
 #include "duckdb/common/exception/list.hpp"
 #include "duckdb/parser/tableref.hpp"
+#include "duckdb/parser/parsed_expression.hpp"
 #include "duckdb/planner/expression.hpp"
 
 #ifdef DUCKDB_CRASH_ON_ASSERT
@@ -32,7 +33,7 @@ string Exception::ToJSON(ExceptionType type, const string &message) {
 string Exception::ToJSON(const unordered_map<string, string> &extra_info, ExceptionType type, const string &message) {
 #ifndef DUCKDB_DEBUG_STACKTRACE
 	// by default we only enable stack traces for internal exceptions
-	if (type == ExceptionType::INTERNAL || type == ExceptionType::FATAL)
+	if (type == ExceptionType::INTERNAL)
 #endif
 	{
 		auto extended_extra_info = extra_info;
@@ -333,9 +334,11 @@ InterruptException::InterruptException() : Exception(ExceptionType::INTERRUPT, "
 }
 
 FatalException::FatalException(ExceptionType type, const string &msg) : Exception(type, msg) {
+	// FIXME: Make any log context available to add error logging.
 }
 
 InternalException::InternalException(const string &msg) : Exception(ExceptionType::INTERNAL, msg) {
+	// FIXME: Make any log context available to add error logging.
 #ifdef DUCKDB_CRASH_ON_ASSERT
 	Printer::Print("ABORT THROWN BY INTERNAL EXCEPTION: " + msg + "\n" + StackTrace::GetStackTrace());
 	abort();

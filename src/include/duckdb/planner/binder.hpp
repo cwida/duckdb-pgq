@@ -72,7 +72,7 @@ struct CopyInfo;
 struct CopyOption;
 struct BoundSetOpChild;
 struct BoundCTEData;
-
+enum class CopyToType : uint8_t;
 template <class T, class INDEX_TYPE>
 class IndexVector;
 
@@ -244,6 +244,11 @@ public:
 
 	void SetCatalogLookupCallback(catalog_entry_callback_t callback);
 	void BindCreateViewInfo(CreateViewInfo &base);
+	static void BindView(ClientContext &context, const SelectStatement &stmt, const string &catalog_name,
+	                     const string &schema_name, optional_ptr<LogicalDependencyList> dependencies,
+	                     const vector<string> &aliases, vector<LogicalType> &result_types,
+	                     vector<string> &result_names);
+
 	void SearchSchema(CreateInfo &info);
 	SchemaCatalogEntry &BindSchema(CreateInfo &info);
 	SchemaCatalogEntry &BindCreateFunctionInfo(CreateInfo &info);
@@ -281,17 +286,19 @@ public:
 
 	unique_ptr<LogicalOperator> BindUpdateSet(LogicalOperator &op, unique_ptr<LogicalOperator> root,
 	                                          UpdateSetInfo &set_info, TableCatalogEntry &table,
-	                                          vector<PhysicalIndex> &columns);
+	                                          vector<PhysicalIndex> &columns,
+	                                          bool prioritize_table_when_binding = false);
 	void BindUpdateSet(idx_t proj_index, unique_ptr<LogicalOperator> &root, UpdateSetInfo &set_info,
 	                   TableCatalogEntry &table, vector<PhysicalIndex> &columns,
 	                   vector<unique_ptr<Expression>> &update_expressions,
-	                   vector<unique_ptr<Expression>> &projection_expressions);
+	                   vector<unique_ptr<Expression>> &projection_expressions,
+	                   bool prioritize_table_when_binding = false);
 
 	void BindVacuumTable(LogicalVacuum &vacuum, unique_ptr<LogicalOperator> &root);
 
 	static void BindSchemaOrCatalog(ClientContext &context, string &catalog, string &schema);
-	void BindLogicalType(LogicalType &type, optional_ptr<Catalog> catalog = nullptr,
-	                     const string &schema = INVALID_SCHEMA);
+
+	void BindLogicalType(LogicalType &type);
 
 	optional_ptr<Binding> GetMatchingBinding(const string &table_name, const string &column_name, ErrorData &error);
 	optional_ptr<Binding> GetMatchingBinding(const string &schema_name, const string &table_name,
@@ -322,6 +329,8 @@ public:
 	                                  optional_ptr<duckdb_re2::RE2> regex);
 
 	unique_ptr<LogicalOperator> UnionOperators(vector<unique_ptr<LogicalOperator>> nodes);
+
+	void SetSearchPath(Catalog &catalog, const string &schema);
 
 private:
 	//! The parent binder (if any)
@@ -507,7 +516,7 @@ private:
 
 	vector<CatalogSearchEntry> GetSearchPath(Catalog &catalog, const string &schema_name);
 
-	LogicalType BindLogicalTypeInternal(const LogicalType &type, optional_ptr<Catalog> catalog, const string &schema);
+	LogicalType BindLogicalTypeInternal(const unique_ptr<ParsedExpression> &type_expr);
 
 	BoundStatement BindSelectNode(SelectNode &statement, BoundStatement from_table);
 
@@ -539,6 +548,8 @@ private:
 
 	BoundCTEData PrepareCTE(const string &ctename, CommonTableExpressionInfo &statement);
 	BoundStatement FinishCTE(BoundCTEData &bound_cte, BoundStatement child_data);
+
+	shared_ptr<Binder> CreateBinderWithSearchPath(const string &catalog_name, const string &schema_name);
 
 private:
 	Binder(ClientContext &context, shared_ptr<Binder> parent, BinderType binder_type);

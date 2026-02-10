@@ -32,6 +32,10 @@ public:
 		return key;
 	}
 
+	data_ptr_t GetData() {
+		return key;
+	}
+
 public:
 	static void LockEncryptionKey(data_ptr_t key, idx_t key_len = MainHeader::DEFAULT_ENCRYPTION_KEY_LENGTH);
 	static void UnlockEncryptionKey(data_ptr_t key, idx_t key_len = MainHeader::DEFAULT_ENCRYPTION_KEY_LENGTH);
@@ -50,11 +54,16 @@ public:
 	void AddKey(const string &key_name, data_ptr_t key);
 	bool HasKey(const string &key_name) const;
 	void DeleteKey(const string &key_name);
+	void ClearKey(const string &key_name);
+	void EraseKey(const string &key_name);
 	const_data_ptr_t GetKey(const string &key_name) const;
 
 public:
 	static string ObjectType();
 	string GetObjectType() override;
+	optional_idx GetEstimatedCacheMemory() const override {
+		return optional_idx {};
+	}
 
 public:
 public:
@@ -64,6 +73,8 @@ public:
 	static void KeyDerivationFunctionSHA256(data_ptr_t user_key, idx_t user_key_size, data_ptr_t salt,
 	                                        data_ptr_t derived_key);
 	static string Base64Decode(const string &key);
+
+	//! Generate a (non-cryptographically secure) random key ID
 	static string GenerateRandomKeyID();
 
 public:
@@ -72,6 +83,7 @@ public:
 	static constexpr idx_t DERIVED_KEY_LENGTH = 32;
 
 private:
+	mutable mutex lock;
 	std::unordered_map<std::string, EncryptionKey> derived_keys;
 };
 

@@ -1,13 +1,14 @@
 #include "duckdb/execution/join_hashtable.hpp"
 
+#include "duckdb/common/enums/join_type.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/radix_partitioning.hpp"
 #include "duckdb/common/vector_operations/vector_operations.hpp"
 #include "duckdb/execution/ht_entry.hpp"
-#include "duckdb/main/client_context.hpp"
-#include "duckdb/storage/buffer_manager.hpp"
-#include "duckdb/main/settings.hpp"
 #include "duckdb/logging/log_manager.hpp"
+#include "duckdb/main/client_context.hpp"
+#include "duckdb/main/settings.hpp"
+#include "duckdb/storage/buffer_manager.hpp"
 
 namespace duckdb {
 
@@ -101,15 +102,15 @@ JoinHashTable::JoinHashTable(ClientContext &context_p, const PhysicalOperator &o
 	pointer_offset = offsets.back();
 	entry_size = layout_ptr->GetRowWidth();
 
-	data_collection = make_uniq<TupleDataCollection>(buffer_manager, layout_ptr);
-	sink_collection =
-	    make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, radix_bits, layout_ptr->ColumnCount() - 1);
+	data_collection = make_uniq<TupleDataCollection>(buffer_manager, layout_ptr, MemoryTag::HASH_TABLE);
+	sink_collection = make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, MemoryTag::HASH_TABLE,
+	                                                       radix_bits, layout_ptr->ColumnCount() - 1);
 
 	dead_end = make_unsafe_uniq_array_uninitialized<data_t>(layout_ptr->GetRowWidth());
 	memset(dead_end.get(), 0, layout_ptr->GetRowWidth());
 
 	if (join_type == JoinType::SINGLE) {
-		single_join_error_on_multiple_rows = DBConfig::GetSetting<ScalarSubqueryErrorOnMultipleRowsSetting>(context);
+		single_join_error_on_multiple_rows = Settings::Get<ScalarSubqueryErrorOnMultipleRowsSetting>(context);
 	}
 
 	if (conditions.size() == 1 &&
@@ -715,6 +716,10 @@ static void InsertHashesLoop(atomic<ht_entry_t> entries[], Vector &row_locations
 
 void JoinHashTable::InsertHashes(Vector &hashes_v, const idx_t count, TupleDataChunkState &chunk_state,
                                  InsertState &insert_state, bool parallel) {
+	// Insert Hashes into the BF
+	if (bloom_filter.IsInitialized()) {
+		bloom_filter.InsertHashes(hashes_v, count);
+	}
 	auto atomic_entries = reinterpret_cast<atomic<ht_entry_t> *>(this->entries);
 	auto row_locations = chunk_state.row_locations;
 	if (parallel) {
@@ -731,6 +736,10 @@ void JoinHashTable::AllocatePointerTable() {
 	constexpr uint64_t MAX_HASHTABLE_CAPACITY = (1ULL << 48) - 1;
 	if (capacity >= MAX_HASHTABLE_CAPACITY) {
 		throw InternalException("Hashtable capacity exceeds 48-bit limit (2^48 - 1)");
+	}
+
+	if (should_build_bloom_filter) {
+		bloom_filter.Initialize(context, Count());
 	}
 
 	if (hash_map.get()) {
@@ -887,6 +896,7 @@ idx_t ScanStructure::ResolvePredicates(DataChunk &keys, SelectionVector &match_s
 	}
 
 	// If there is a matcher for the probing side because of non-equality predicates, use it
+	idx_t result_count;
 	if (ht.needs_chain_matcher) {
 		idx_t no_match_count = 0;
 		auto &matcher = no_match_sel ? ht.row_matcher_probe_no_match_sel : ht.row_matcher_probe;
@@ -894,12 +904,17 @@ idx_t ScanStructure::ResolvePredicates(DataChunk &keys, SelectionVector &match_s
 
 		// we need to only use the vectors with the indices of the columns that are used in the probe phase, namely
 		// the non-equality columns
-		return matcher->Match(keys, key_state.vector_data, match_sel, this->count, pointers, no_match_sel,
-		                      no_match_count);
+		result_count =
+		    matcher->Match(keys, key_state.vector_data, match_sel, this->count, pointers, no_match_sel, no_match_count);
 	} else {
 		// no match sel is the opposite of match sel
-		return this->count;
+		result_count = this->count;
 	}
+
+	// Update total probe match count
+	ht.total_probe_matches.fetch_add(result_count, std::memory_order_relaxed);
+
+	return result_count;
 }
 
 idx_t ScanStructure::ScanInnerJoin(DataChunk &keys, SelectionVector &result_vector) {
@@ -1122,25 +1137,35 @@ void ScanStructure::NextRightSemiOrAntiJoin(DataChunk &keys) {
 		// resolve the equality_predicates for this set of keys
 		idx_t result_count = ResolvePredicates(keys, chain_match_sel_vector, nullptr);
 
-		// for each match, fully follow the chain
-		for (idx_t i = 0; i < result_count; i++) {
-			const auto idx = chain_match_sel_vector.get_index(i);
-			auto &ptr = ptrs[idx];
-			if (Load<bool>(ptr + ht.tuple_size)) { // Early out: chain has been fully marked as found before
-				ptr = ht.dead_end.get();
-				continue;
-			}
-
-			// Fully mark chain as found
-			while (true) {
-				// NOTE: threadsan reports this as a data race because this can be set concurrently by separate threads
-				// Technically it is, but it does not matter, since the only value that can be written is "true"
-				Store<bool>(true, ptr + ht.tuple_size);
-				auto next_ptr = LoadPointer(ptr + ht.pointer_offset);
-				if (!next_ptr) {
-					break;
+		if (ht.non_equality_predicates.empty()) {
+			// we only have equality predicates - the match is found for the entire chain
+			for (idx_t i = 0; i < result_count; i++) {
+				const auto idx = chain_match_sel_vector.get_index(i);
+				auto &ptr = ptrs[idx];
+				if (Load<bool>(ptr + ht.tuple_size)) { // Early out: chain has been fully marked as found before
+					ptr = ht.dead_end.get();
+					continue;
 				}
-				ptr = next_ptr;
+
+				// Fully mark chain as found
+				while (true) {
+					// NOTE: threadsan reports this as a data race because this can be set concurrently by separate
+					// threads Technically it is, but it does not matter, since the only value that can be written is
+					// "true"
+					Store<bool>(true, ptr + ht.tuple_size);
+					auto next_ptr = LoadPointer(ptr + ht.pointer_offset);
+					if (!next_ptr) {
+						break;
+					}
+					ptr = next_ptr;
+				}
+			}
+		} else {
+			// we have non-equality predicates - we need to evaluate the join condition for every row
+			// for each match found in the current pass - mark the match as found
+			for (idx_t i = 0; i < result_count; i++) {
+				auto idx = chain_match_sel_vector.get_index(i);
+				Store<bool>(true, ptrs[idx] + ht.tuple_size);
 			}
 		}
 
@@ -1446,6 +1471,23 @@ idx_t JoinHashTable::FillWithHTOffsets(JoinHTScanState &state, Vector &addresses
 	return key_count;
 }
 
+idx_t JoinHashTable::ScanKeyColumn(Vector &addresses, Vector &result, idx_t column_index) const {
+	// nothing to scan if the build side is empty
+	if (data_collection->ChunkCount() == 0) {
+		return 0;
+	}
+	D_ASSERT(result.GetType() == layout_ptr->GetTypes()[column_index]);
+	JoinHTScanState join_ht_state(*data_collection, 0, data_collection->ChunkCount(),
+	                              TupleDataPinProperties::KEEP_EVERYTHING_PINNED);
+	auto key_count = FillWithHTOffsets(join_ht_state, addresses);
+	if (key_count == 0) {
+		return 0;
+	}
+	const auto &sel = *FlatVector::IncrementalSelectionVector();
+	data_collection->Gather(addresses, sel, key_count, column_index, result, sel, nullptr);
+	return key_count;
+}
+
 idx_t JoinHashTable::GetTotalSize(const vector<idx_t> &partition_sizes, const vector<idx_t> &partition_counts,
                                   idx_t &max_partition_size, idx_t &max_partition_count) const {
 	const auto num_partitions = RadixPartitioning::NumberOfPartitions(radix_bits);
@@ -1527,8 +1569,8 @@ void JoinHashTable::SetRepartitionRadixBits(const idx_t max_ht_size, const idx_t
 		}
 	}
 	radix_bits += added_bits;
-	sink_collection =
-	    make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, radix_bits, layout_ptr->ColumnCount() - 1);
+	sink_collection = make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, MemoryTag::HASH_TABLE,
+	                                                       radix_bits, layout_ptr->ColumnCount() - 1);
 
 	// Need to initialize again after changing the number of bits
 	InitializePartitionMasks();
@@ -1558,8 +1600,8 @@ idx_t JoinHashTable::FinishedPartitionCount() const {
 }
 
 void JoinHashTable::Repartition(JoinHashTable &global_ht) {
-	auto new_sink_collection = make_uniq<RadixPartitionedTupleData>(buffer_manager, layout_ptr, global_ht.radix_bits,
-	                                                                layout_ptr->ColumnCount() - 1);
+	auto new_sink_collection = make_uniq<RadixPartitionedTupleData>(
+	    buffer_manager, layout_ptr, MemoryTag::HASH_TABLE, global_ht.radix_bits, layout_ptr->ColumnCount() - 1);
 	sink_collection->Repartition(context, *new_sink_collection);
 	sink_collection = std::move(new_sink_collection);
 	global_ht.Merge(*this);

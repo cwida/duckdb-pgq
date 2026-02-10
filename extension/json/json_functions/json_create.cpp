@@ -605,8 +605,9 @@ static void CreateValues(const StructNames &names, yyjson_mut_doc *doc, yyjson_m
 	case LogicalTypeId::INVALID:
 	case LogicalTypeId::UNKNOWN:
 	case LogicalTypeId::ANY:
-	case LogicalTypeId::USER:
 	case LogicalTypeId::TEMPLATE:
+	case LogicalTypeId::UNBOUND:
+	case LogicalTypeId::TYPE:
 	case LogicalTypeId::VARIANT:
 	case LogicalTypeId::CHAR:
 	case LogicalTypeId::STRING_LITERAL:
@@ -728,7 +729,7 @@ ScalarFunctionSet JSONFunctions::GetObjectFunction() {
 	ScalarFunction fun("json_object", {}, LogicalType::JSON(), ObjectFunction, JSONObjectBind, nullptr, nullptr,
 	                   JSONFunctionLocalState::Init);
 	fun.varargs = LogicalType::ANY;
-	fun.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	fun.SetNullHandling(FunctionNullHandling::SPECIAL_HANDLING);
 	return ScalarFunctionSet(fun);
 }
 
@@ -736,7 +737,7 @@ ScalarFunctionSet JSONFunctions::GetArrayFunction() {
 	ScalarFunction fun("json_array", {}, LogicalType::JSON(), ArrayFunction, JSONArrayBind, nullptr, nullptr,
 	                   JSONFunctionLocalState::Init);
 	fun.varargs = LogicalType::ANY;
-	fun.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	fun.SetNullHandling(FunctionNullHandling::SPECIAL_HANDLING);
 	return ScalarFunctionSet(fun);
 }
 

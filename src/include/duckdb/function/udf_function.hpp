@@ -125,7 +125,7 @@ public:
 	                        aggregate_destructor_t destructor = nullptr) {
 		AggregateFunction aggr_function(name, arguments, return_type, state_size, initialize, update, combine, finalize,
 		                                simple_update, bind, destructor);
-		aggr_function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+		aggr_function.SetNullHandling(FunctionNullHandling::SPECIAL_HANDLING);
 		return aggr_function;
 	}
 
@@ -321,6 +321,8 @@ private:
 			return std::is_same<T, date_t>();
 		case LogicalTypeId::TIME:
 			return std::is_same<T, dtime_t>();
+		case LogicalTypeId::TIME_NS:
+			return std::is_same<T, dtime_ns_t>();
 		case LogicalTypeId::TIME_TZ:
 			return std::is_same<T, dtime_tz_t>();
 		case LogicalTypeId::TIMESTAMP:
