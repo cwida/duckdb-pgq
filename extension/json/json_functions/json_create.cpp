@@ -566,7 +566,7 @@ static void CreateValues(const StructNames &names, yyjson_mut_doc *doc, yyjson_m
 		break;
 	case LogicalTypeId::BIT:
 	case LogicalTypeId::BLOB:
-	case LogicalTypeId::AGGREGATE_STATE:
+	case LogicalTypeId::LEGACY_AGGREGATE_STATE:
 	case LogicalTypeId::ENUM:
 	case LogicalTypeId::DATE:
 	case LogicalTypeId::INTERVAL:
@@ -605,8 +605,9 @@ static void CreateValues(const StructNames &names, yyjson_mut_doc *doc, yyjson_m
 	case LogicalTypeId::INVALID:
 	case LogicalTypeId::UNKNOWN:
 	case LogicalTypeId::ANY:
-	case LogicalTypeId::USER:
 	case LogicalTypeId::TEMPLATE:
+	case LogicalTypeId::UNBOUND:
+	case LogicalTypeId::TYPE:
 	case LogicalTypeId::VARIANT:
 	case LogicalTypeId::CHAR:
 	case LogicalTypeId::STRING_LITERAL:
@@ -616,6 +617,7 @@ static void CreateValues(const StructNames &names, yyjson_mut_doc *doc, yyjson_m
 	case LogicalTypeId::TABLE:
 	case LogicalTypeId::LAMBDA:
 	case LogicalTypeId::GEOMETRY: // TODO! Add support for GEOMETRY
+	case LogicalTypeId::AGGREGATE_STATE:
 		throw InternalException("Unsupported type arrived at JSON create function");
 	}
 }
@@ -728,7 +730,7 @@ ScalarFunctionSet JSONFunctions::GetObjectFunction() {
 	ScalarFunction fun("json_object", {}, LogicalType::JSON(), ObjectFunction, JSONObjectBind, nullptr, nullptr,
 	                   JSONFunctionLocalState::Init);
 	fun.varargs = LogicalType::ANY;
-	fun.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	fun.SetNullHandling(FunctionNullHandling::SPECIAL_HANDLING);
 	return ScalarFunctionSet(fun);
 }
 
@@ -736,7 +738,7 @@ ScalarFunctionSet JSONFunctions::GetArrayFunction() {
 	ScalarFunction fun("json_array", {}, LogicalType::JSON(), ArrayFunction, JSONArrayBind, nullptr, nullptr,
 	                   JSONFunctionLocalState::Init);
 	fun.varargs = LogicalType::ANY;
-	fun.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	fun.SetNullHandling(FunctionNullHandling::SPECIAL_HANDLING);
 	return ScalarFunctionSet(fun);
 }
 

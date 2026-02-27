@@ -8,6 +8,7 @@
 #include "duckdb/parallel/thread_context.hpp"
 #include "duckdb/planner/expression/bound_reference_expression.hpp"
 #include "duckdb/storage/data_table.hpp"
+#include "duckdb/storage/table/data_table_info.hpp"
 #include "duckdb/storage/table/delete_state.hpp"
 #include "duckdb/storage/table/scan_state.hpp"
 #include "duckdb/storage/table/update_state.hpp"
@@ -242,8 +243,8 @@ unique_ptr<GlobalSourceState> PhysicalUpdate::GetGlobalSourceState(ClientContext
 	return make_uniq<UpdateSourceState>(*this);
 }
 
-SourceResultType PhysicalUpdate::GetData(ExecutionContext &context, DataChunk &chunk,
-                                         OperatorSourceInput &input) const {
+SourceResultType PhysicalUpdate::GetDataInternal(ExecutionContext &context, DataChunk &chunk,
+                                                 OperatorSourceInput &input) const {
 	auto &state = input.global_state.Cast<UpdateSourceState>();
 	auto &g = sink_state->Cast<UpdateGlobalState>();
 	if (!return_chunk) {

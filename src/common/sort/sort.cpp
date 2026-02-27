@@ -14,10 +14,10 @@
 
 namespace duckdb {
 
-Sort::Sort(ClientContext &context, const vector<BoundOrderByNode> &orders, const vector<LogicalType> &input_types,
+Sort::Sort(ClientContext &context_p, const vector<BoundOrderByNode> &orders, const vector<LogicalType> &input_types,
            vector<idx_t> projection_map, bool is_index_sort_p)
-    : key_layout(make_shared_ptr<TupleDataLayout>()), payload_layout(make_shared_ptr<TupleDataLayout>()),
-      is_index_sort(is_index_sort_p) {
+    : context(context_p), key_layout(make_shared_ptr<TupleDataLayout>()),
+      payload_layout(make_shared_ptr<TupleDataLayout>()), is_index_sort(is_index_sort_p) {
 	// Convert orders to a single "create_sort_key" expression (and corresponding "decode_sort_key")
 	FunctionBinder binder(context);
 	vector<unique_ptr<Expression>> create_children;
@@ -161,7 +161,7 @@ class SortGlobalSinkState : public GlobalSinkState {
 public:
 	explicit SortGlobalSinkState(ClientContext &context)
 	    : num_threads(NumericCast<idx_t>(TaskScheduler::GetScheduler(context).NumberOfThreads())),
-	      temporary_memory_state(TemporaryMemoryManager::Get(context).Register(context)),
+	      temporary_memory_state(TemporaryMemoryManager::Get(context).Register(context)), sorted_tuples(0),
 	      external(ClientConfig::GetConfig(context).force_external), any_combined(false), total_count(0),
 	      partition_size(0) {
 	}
@@ -174,7 +174,6 @@ public:
 
 	void TryIncreaseReservation(ClientContext &context, SortLocalSinkState &lstate, bool is_index_sort,
 	                            const unique_lock<mutex> &guard) {
-		VerifyLock(guard);
 		D_ASSERT(!external);
 
 		// If we already got less than we requested last time, have to go external
@@ -207,7 +206,7 @@ public:
 	}
 
 	void AddSortedRun(SortLocalSinkState &lstate) {
-		auto guard = Lock();
+		const lock_guard<mutex> guard(lock);
 		sorted_runs.push_back(std::move(lstate.sorted_run));
 		sorted_tuples += sorted_runs.back()->Count();
 	}
@@ -288,7 +287,7 @@ SinkResultType Sort::Sink(ExecutionContext &context, DataChunk &chunk, OperatorS
 	}
 
 	// Grab the lock, update the local state, and see if we can finish now
-	guard = gstate.Lock();
+	guard = unique_lock<mutex>(gstate.lock);
 	gstate.UpdateLocalState(lstate);
 	if (TryFinishSink(gstate, lstate, guard)) {
 		return SinkResultType::NEED_MORE_INPUT;
@@ -315,7 +314,7 @@ SinkCombineResultType Sort::Combine(ExecutionContext &context, OperatorSinkCombi
 	}
 
 	// Set any_combined under lock
-	auto guard = gstate.Lock();
+	unique_lock<mutex> guard {gstate.lock};
 	gstate.any_combined = true;
 	guard.unlock();
 
@@ -339,7 +338,7 @@ SinkFinalizeType Sort::Finalize(ClientContext &context, OperatorSinkFinalizeInpu
 		gstate.total_count += sorted_run->Count();
 		maximum_run_count = MaxValue(maximum_run_count, sorted_run->Count());
 	}
-	if (gstate.num_threads == 1 || context.config.verify_parallelism) {
+	if (context.config.verify_parallelism) {
 		gstate.partition_size = STANDARD_VECTOR_SIZE;
 	} else {
 		gstate.partition_size = MinValue<idx_t>(gstate.total_count, DEFAULT_ROW_GROUP_SIZE);
@@ -381,7 +380,7 @@ public:
 		if (!merger_global_state) {
 			return;
 		}
-		auto guard = merger_global_state->Lock();
+		const lock_guard<mutex> guard {merger_global_state->lock};
 		merger.sorted_runs.clear();
 		sink.temporary_memory_state.reset();
 	}
@@ -464,13 +463,12 @@ SourceResultType Sort::MaterializeColumnData(ExecutionContext &context, Operator
 	chunk.Initialize(context.client, types);
 
 	// Initialize local output collection
-	auto local_column_data = make_uniq<BatchedDataCollection>(context.client, types, true);
+	auto local_column_data =
+	    make_uniq<BatchedDataCollection>(context.client, types, ColumnDataAllocatorType::BUFFER_MANAGER_ALLOCATOR);
 
 	while (true) {
 		// Check for interrupts since this could be a long-running task
-		if (context.client.interrupted.load(std::memory_order_relaxed)) {
-			throw InterruptException();
-		}
+		context.client.InterruptCheck();
 		// Scan a chunk
 		chunk.Reset();
 		GetData(context, chunk, input);
@@ -486,7 +484,7 @@ SourceResultType Sort::MaterializeColumnData(ExecutionContext &context, Operator
 
 	// Merge into global output collection
 	{
-		auto guard = gstate.Lock();
+		const lock_guard<mutex> guard {gstate.lock};
 		if (!gstate.column_data) {
 			gstate.column_data = std::move(local_column_data);
 		} else {
@@ -509,7 +507,7 @@ SourceResultType Sort::MaterializeColumnData(ExecutionContext &context, Operator
 
 unique_ptr<ColumnDataCollection> Sort::GetColumnData(OperatorSourceInput &input) const {
 	auto &gstate = input.global_state.Cast<SortGlobalSourceState>();
-	auto guard = gstate.Lock();
+	const lock_guard<mutex> guard {gstate.lock};
 	return gstate.column_data->FetchCollection();
 }
 

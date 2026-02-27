@@ -9,7 +9,7 @@
 #include "keyword_helper.hpp"
 #include "duckdb/common/case_insensitive_map.hpp"
 #include "duckdb/common/exception/parser_exception.hpp"
-#include "tokenizer.hpp"
+#include "include/parser/tokenizer/base_tokenizer.hpp"
 #include "parser/peg_parser.hpp"
 #include "transformer/parse_result.hpp"
 #ifdef PEG_PARSER_SOURCE_FILE
@@ -61,16 +61,20 @@ public:
 	}
 
 	optional_ptr<ParseResult> MatchParseResult(MatchState &state) const override {
+		if (state.token_index >= state.tokens.size()) {
+			return nullptr;
+		}
+		auto &token_text = state.tokens[state.token_index].text;
 		if (!MatchKeyword(state)) {
 			return nullptr;
 		}
-		auto result = state.allocator.Allocate(make_uniq<KeywordParseResult>(keyword));
+		auto result = state.allocator.Allocate(make_uniq<KeywordParseResult>(token_text));
 		result->name = name;
 		return result;
 	}
 
 	SuggestionType AddSuggestionInternal(MatchState &state) const override {
-		AutoCompleteCandidate candidate(keyword, score_bonus, CandidateType::KEYWORD);
+		AutoCompleteCandidate candidate(keyword, SuggestionState::SUGGEST_KEYWORD, score_bonus, CandidateType::KEYWORD);
 		candidate.extra_char = extra_char;
 		state.AddSuggestion(MatcherSuggestion(std::move(candidate)));
 		return SuggestionType::MANDATORY;
@@ -89,6 +93,7 @@ private:
 		if (StringUtil::CIEquals(keyword, token.text)) {
 			// move to the next token
 			state.token_index++;
+			state.UpdateMaxTokenIndex();
 			return true;
 		}
 		return false;
@@ -384,14 +389,28 @@ public:
 	explicit IdentifierMatcher(SuggestionState suggestion_type) : Matcher(TYPE), suggestion_type(suggestion_type) {
 	}
 
+	bool IsQuoted(const string &text) const {
+		if (text.front() == '"' && text.back() == '"') {
+			return true;
+		}
+		return false;
+	}
+
+	bool IsSingleQuoted(const string &text) const {
+		if (text.front() == '\'' && text.back() == '\'') {
+			return true;
+		}
+		return false;
+	}
+
 	bool IsIdentifier(const string &text) const {
 		if (text.empty()) {
 			return false;
 		}
-		if (text.front() == '\'' && text.back() == '\'' && SupportsStringLiteral()) {
+		if (IsSingleQuoted(text) && SupportsStringLiteral()) {
 			return true;
 		}
-		if (text.front() == '"' && text.back() == '"') {
+		if (IsQuoted(text)) {
 			return true;
 		}
 		return BaseTokenizer::CharacterIsKeyword(text[0]);
@@ -408,11 +427,21 @@ public:
 		if (state.token_index >= state.tokens.size()) {
 			return nullptr;
 		}
-		auto &token_text = state.tokens[state.token_index].text;
+		const auto &token_text = state.tokens[state.token_index].text;
 		if (!MatchIdentifier(state)) {
 			return nullptr;
 		}
-		return state.allocator.Allocate(make_uniq<IdentifierParseResult>(token_text));
+
+		string result_text = token_text;
+		if (IsQuoted(result_text)) {
+			result_text = result_text.substr(1, result_text.size() - 2);
+			result_text = StringUtil::Replace(result_text, "\"\"", "\"");
+		}
+		if (IsSingleQuoted(result_text) && SupportsStringLiteral()) {
+			result_text = result_text.substr(1, result_text.size() - 2);
+			result_text = StringUtil::Replace(result_text, "''", "'");
+		}
+		return state.allocator.Allocate(make_uniq<IdentifierParseResult>(result_text));
 	}
 
 	bool SupportsStringLiteral() const {
@@ -509,6 +538,7 @@ private:
 			return false;
 		}
 		state.token_index++;
+		state.UpdateMaxTokenIndex();
 		return true;
 	}
 
@@ -535,7 +565,12 @@ public:
 		if (!MatchReservedIdentifier(state)) {
 			return nullptr;
 		}
-		return state.allocator.Allocate(make_uniq<IdentifierParseResult>(token_text));
+		string result_text = token_text;
+		if (IsQuoted(result_text)) {
+			result_text = result_text.substr(1, result_text.size() - 2);
+			result_text = StringUtil::Replace(result_text, "\"\"", "\"");
+		}
+		return state.allocator.Allocate(make_uniq<IdentifierParseResult>(result_text));
 	}
 
 private:
@@ -545,6 +580,7 @@ private:
 			return false;
 		}
 		state.token_index++;
+		state.UpdateMaxTokenIndex();
 		return true;
 	}
 };
@@ -559,8 +595,14 @@ public:
 	}
 
 	MatchResultType Match(MatchState &state) const override {
-		// variable matchers match anything except for reserved keywords
-		if (!MatchStringLiteral(state)) {
+		if (state.token_index >= state.tokens.size()) {
+			return MatchResultType::FAIL;
+		}
+
+		auto &token_text = state.tokens[state.token_index].text;
+		auto string_info = GetSpecialStringInfo(token_text);
+
+		if (!MatchStringLiteral(state, string_info)) {
 			return MatchResultType::FAIL;
 		}
 		return MatchResultType::SUCCESS;
@@ -570,13 +612,24 @@ public:
 		if (state.token_index >= state.tokens.size()) {
 			return nullptr;
 		}
-		auto &token_text = state.tokens[state.token_index].text;
-		if (!MatchStringLiteral(state)) {
+
+		auto &token = state.tokens[state.token_index];
+		auto string_info = GetSpecialStringInfo(token.text);
+
+		if (!MatchStringLiteral(state, string_info)) {
 			return nullptr;
 		}
-		string stripped_string = token_text.substr(1, token_text.length() - 2);
 
-		auto result = state.allocator.Allocate(make_uniq<StringLiteralParseResult>(stripped_string));
+		idx_t suffix_len = 1;
+		if (token.text.length() < string_info.prefix_len + suffix_len) {
+			return nullptr;
+		}
+
+		string stripped_string =
+		    token.text.substr(string_info.prefix_len, token.text.length() - (string_info.prefix_len + suffix_len));
+		stripped_string = StringUtil::Replace(stripped_string, "''", "'");
+
+		auto result = state.allocator.Allocate(make_uniq<StringLiteralParseResult>(stripped_string, string_info.type));
 		result->name = name;
 		return result;
 	}
@@ -590,10 +643,18 @@ public:
 	}
 
 private:
-	static bool MatchStringLiteral(MatchState &state) {
+	static bool MatchStringLiteral(MatchState &state, const SpecialStringInfo &string_info) {
+		if (state.token_index >= state.tokens.size()) {
+			return false;
+		}
 		auto &token_text = state.tokens[state.token_index].text;
-		if (token_text.size() >= 2 && token_text.front() == '\'' && token_text.back() == '\'') {
+
+		idx_t open_quote_idx = string_info.prefix_len - 1;
+		idx_t min_len = string_info.prefix_len + 1;
+
+		if (token_text.size() >= min_len && token_text[open_quote_idx] == '\'' && token_text.back() == '\'') {
 			state.token_index++;
+			state.UpdateMaxTokenIndex();
 			return true;
 		}
 		return false;
@@ -644,12 +705,23 @@ private:
 		if (!BaseTokenizer::CharacterIsInitialNumber(token_text[0])) {
 			return false;
 		}
+		bool scientific_notation = false;
 		for (idx_t i = 1; i < token_text.size(); i++) {
+			if (BaseTokenizer::CharacterIsScientific(token_text[i])) {
+				if (scientific_notation) {
+					throw ParserException("Already found scientific notation");
+				}
+				scientific_notation = true;
+			}
+			if (scientific_notation && (token_text[i] == '+' || token_text[i] == '-')) {
+				continue;
+			}
 			if (!BaseTokenizer::CharacterIsNumber(token_text[i])) {
 				return false;
 			}
 		}
 		state.token_index++;
+		state.UpdateMaxTokenIndex();
 		return true;
 	}
 };
@@ -713,6 +785,63 @@ private:
 			}
 		}
 		state.token_index++;
+		state.UpdateMaxTokenIndex();
+		return true;
+	}
+};
+
+class ArithmeticOperatorMatcher : public Matcher {
+public:
+	static constexpr MatcherType TYPE = MatcherType::OPERATOR;
+
+public:
+	explicit ArithmeticOperatorMatcher() : Matcher(TYPE) {
+	}
+
+	MatchResultType Match(MatchState &state) const override {
+		if (!MatchArithmeticOperator(state)) {
+			return MatchResultType::FAIL;
+		}
+		return MatchResultType::SUCCESS;
+	}
+
+	optional_ptr<ParseResult> MatchParseResult(MatchState &state) const override {
+		if (state.token_index >= state.tokens.size()) {
+			return nullptr;
+		}
+		auto &token_text = state.tokens[state.token_index].text;
+		if (!MatchArithmeticOperator(state)) {
+			return nullptr;
+		}
+		Printer::Print("Found arithmetic operator!!!");
+		return state.allocator.Allocate(make_uniq<OperatorParseResult>(token_text));
+	}
+
+	SuggestionType AddSuggestionInternal(MatchState &state) const override {
+		return SuggestionType::MANDATORY;
+	}
+
+	string ToString() const override {
+		return "ARITHMETICOPERATOR";
+	}
+
+private:
+	static bool MatchArithmeticOperator(MatchState &state) {
+		auto &token_text = state.tokens[state.token_index].text;
+		for (auto &c : token_text) {
+			switch (c) {
+			case '*':
+			case '/':
+			case '+':
+			case '-':
+			case '%':
+				break;
+			default:
+				return false;
+			}
+		}
+		state.token_index++;
+		state.UpdateMaxTokenIndex();
 		return true;
 	}
 };
@@ -757,10 +886,12 @@ private:
 	Matcher &StringLiteral() const;
 	Matcher &NumberLiteral() const;
 	Matcher &Operator() const;
+	Matcher &ArithmeticOperator() const;
 	Matcher &ScalarFunctionName() const;
 	Matcher &TableFunctionName() const;
 	Matcher &PragmaName() const;
 	Matcher &SettingName() const;
+	Matcher &CopyOptionName() const;
 	Matcher &ReservedSchemaName() const;
 	Matcher &ReservedTableName() const;
 	Matcher &ReservedColumnName() const;
@@ -865,6 +996,10 @@ Matcher &MatcherFactory::SettingName() const {
 	return allocator.Allocate(make_uniq<IdentifierMatcher>(SuggestionState::SUGGEST_SETTING_NAME));
 }
 
+Matcher &MatcherFactory::CopyOptionName() const {
+	return allocator.Allocate(make_uniq<ReservedIdentifierMatcher>(SuggestionState::SUGGEST_VARIABLE));
+}
+
 Matcher &MatcherFactory::NumberLiteral() const {
 	return allocator.Allocate(make_uniq<NumberLiteralMatcher>());
 }
@@ -875,6 +1010,10 @@ Matcher &MatcherFactory::StringLiteral() const {
 
 Matcher &MatcherFactory::Operator() const {
 	return allocator.Allocate(make_uniq<OperatorMatcher>());
+}
+
+Matcher &MatcherFactory::ArithmeticOperator() const {
+	return allocator.Allocate(make_uniq<ArithmeticOperatorMatcher>());
 }
 
 Matcher &MatcherFactory::CreateMatcher(PEGParser &parser, string_t rule_name) {
@@ -1049,6 +1188,22 @@ Matcher &MatcherFactory::CreateMatcher(PEGParser &parser, string_t rule_name, ve
 				list_matcher.matchers.push_back(replaced_matcher);
 				break;
 			}
+			case '+': {
+				// Similar to '*' except it's not optional and just repeat (match at least once)
+				auto &last_matcher = list.GetLastRootMatcher().matcher;
+				if (last_matcher.Type() != MatcherType::LIST) {
+					throw InternalException("Repeat expected a list matcher");
+				}
+				auto &list_matcher = last_matcher.Cast<ListMatcher>();
+				if (list_matcher.matchers.empty()) {
+					throw InternalException("Repeat rule found as first token");
+				}
+				auto &final_matcher = list_matcher.matchers.back();
+				final_matcher = Repeat(final_matcher.get());
+				list_matcher.matchers.pop_back();
+				list_matcher.matchers.push_back(final_matcher);
+				break;
+			}
 			case '/': {
 				// OR operator - this signifies a choice between the last rule and the next rule
 				auto &last_root_matcher = list.GetLastRootMatcher().matcher;
@@ -1131,19 +1286,26 @@ Matcher &MatcherFactory::CreateMatcher(const char *grammar, const char *root_rul
 	// rule overrides
 	AddRuleOverride("Identifier", Variable());
 	AddRuleOverride("ReservedIdentifier", ReservedVariable());
-	AddRuleOverride("TypeName", TypeName());
-	AddRuleOverride("TableName", TableName());
-	AddRuleOverride("ReservedTableName", ReservedTableName());
+
 	AddRuleOverride("CatalogName", CatalogName());
 	AddRuleOverride("SchemaName", SchemaName());
 	AddRuleOverride("ReservedSchemaName", ReservedSchemaName());
+	AddRuleOverride("TableName", TableName());
+	AddRuleOverride("ReservedTableName", ReservedTableName());
 	AddRuleOverride("ColumnName", ColumnName());
 	AddRuleOverride("ReservedColumnName", ReservedColumnName());
-	AddRuleOverride("TableFunctionName", TableFunctionName());
+	AddRuleOverride("IndexName", Variable());
+	AddRuleOverride("SequenceName", Variable());
+
 	AddRuleOverride("FunctionName", ScalarFunctionName());
 	AddRuleOverride("ReservedFunctionName", ReservedScalarFunctionName());
+	AddRuleOverride("TableFunctionName", TableFunctionName());
+
+	AddRuleOverride("TypeName", TypeName());
 	AddRuleOverride("PragmaName", PragmaName());
 	AddRuleOverride("SettingName", SettingName());
+	AddRuleOverride("CopyOptionName", CopyOptionName());
+
 	AddRuleOverride("NumberLiteral", NumberLiteral());
 	AddRuleOverride("StringLiteral", StringLiteral());
 	AddRuleOverride("OperatorLiteral", Operator());

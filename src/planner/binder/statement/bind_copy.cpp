@@ -5,6 +5,7 @@
 #include "duckdb/common/bind_helpers.hpp"
 #include "duckdb/common/filename_pattern.hpp"
 #include "duckdb/common/local_file_system.hpp"
+#include "duckdb/common/exception/parser_exception.hpp"
 #include "duckdb/function/table/read_csv.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/database.hpp"
@@ -115,7 +116,7 @@ BoundStatement Binder::BindCopyTo(CopyStatement &stmt, const CopyFunction &funct
 	PreserveOrderType preserve_order = PreserveOrderType::AUTOMATIC;
 	CopyFunctionReturnType return_type = CopyFunctionReturnType::CHANGED_ROWS;
 
-	CopyFunctionBindInput bind_input(*stmt.info);
+	CopyFunctionBindInput bind_input(*stmt.info, function.function_info);
 
 	bind_input.file_extension = function.extension;
 
@@ -421,8 +422,22 @@ vector<Value> BindCopyOption(ClientContext &context, TableFunctionBinder &option
 			return result;
 		}
 	}
+	const bool is_partition_by = StringUtil::CIEquals(name, "partition_by");
+
+	if (is_partition_by) {
+		//! When binding the 'partition_by' option, we don't want to resolve a column reference to a SQLValueFunction
+		//! (like 'user')
+		option_binder.DisableSQLValueFunctions();
+	}
 	auto bound_expr = option_binder.Bind(expr);
-	auto val = ExpressionExecutor::EvaluateScalar(context, *bound_expr);
+	if (bound_expr->HasParameter()) {
+		throw ParameterNotResolvedException();
+	}
+	if (is_partition_by) {
+		option_binder.EnableSQLValueFunctions();
+	}
+
+	auto val = ExpressionExecutor::EvaluateScalar(context, *bound_expr, true);
 	if (val.IsNull()) {
 		throw BinderException("NULL is not supported as a valid option for COPY option \"" + name + "\"");
 	}
@@ -598,7 +613,7 @@ BoundStatement Binder::Bind(CopyStatement &stmt, CopyToType copy_to_type) {
 	}
 
 	auto &properties = GetStatementProperties();
-	properties.allow_stream_result = false;
+	properties.output_type = QueryResultOutputType::FORCE_MATERIALIZED;
 	properties.return_type = StatementReturnType::CHANGED_ROWS;
 	if (stmt.info->is_from) {
 		return BindCopyFrom(stmt, function);

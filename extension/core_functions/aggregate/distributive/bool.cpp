@@ -93,22 +93,29 @@ struct BoolOrFunFunction {
 	}
 };
 
+LogicalType GetBoolAndStateType(const AggregateFunction &function) {
+	child_list_t<LogicalType> child_types;
+	child_types.emplace_back("empty", LogicalType::BOOLEAN);
+	child_types.emplace_back("val", LogicalType::BOOLEAN);
+	return LogicalType::STRUCT(std::move(child_types));
+}
+
 } // namespace
 
 AggregateFunction BoolOrFun::GetFunction() {
 	auto fun = AggregateFunction::UnaryAggregate<BoolState, bool, bool, BoolOrFunFunction>(
 	    LogicalType(LogicalTypeId::BOOLEAN), LogicalType::BOOLEAN);
-	fun.order_dependent = AggregateOrderDependent::NOT_ORDER_DEPENDENT;
-	fun.distinct_dependent = AggregateDistinctDependent::NOT_DISTINCT_DEPENDENT;
-	return fun;
+	fun.SetOrderDependent(AggregateOrderDependent::NOT_ORDER_DEPENDENT);
+	fun.SetDistinctDependent(AggregateDistinctDependent::NOT_DISTINCT_DEPENDENT);
+	return fun.SetStructStateExport(GetBoolAndStateType);
 }
 
 AggregateFunction BoolAndFun::GetFunction() {
 	auto fun = AggregateFunction::UnaryAggregate<BoolState, bool, bool, BoolAndFunFunction>(
 	    LogicalType(LogicalTypeId::BOOLEAN), LogicalType::BOOLEAN);
-	fun.order_dependent = AggregateOrderDependent::NOT_ORDER_DEPENDENT;
-	fun.distinct_dependent = AggregateDistinctDependent::NOT_DISTINCT_DEPENDENT;
-	return fun;
+	fun.SetOrderDependent(AggregateOrderDependent::NOT_ORDER_DEPENDENT);
+	fun.SetDistinctDependent(AggregateDistinctDependent::NOT_DISTINCT_DEPENDENT);
+	return fun.SetStructStateExport(GetBoolAndStateType);
 }
 
 } // namespace duckdb

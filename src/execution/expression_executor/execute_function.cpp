@@ -105,7 +105,7 @@ bool ExecuteFunctionState::TryExecuteDictionaryExpression(const BoundFunctionExp
 
 			// Execute, storing the result in an intermediate vector, and copying it to the output dictionary
 			Vector output_intermediate(result.GetType());
-			expr.function.function(input_chunk, state, output_intermediate);
+			expr.function.GetFunctionCallback()(input_chunk, state, output_intermediate);
 			VectorOperations::Copy(output_intermediate, output_dictionary->data, count, 0, offset);
 		}
 	}
@@ -116,6 +116,16 @@ bool ExecuteFunctionState::TryExecuteDictionaryExpression(const BoundFunctionExp
 	return true;
 }
 
+void ExecuteFunctionState::ResetDictionaryStates() {
+	// Clear the cached dictionary information
+	current_input_dictionary_id.clear();
+	output_dictionary.reset();
+
+	for (const auto &child_state : child_states) {
+		child_state->ResetDictionaryStates();
+	}
+}
+
 unique_ptr<ExpressionState> ExpressionExecutor::InitializeState(const BoundFunctionExpression &expr,
                                                                 ExpressionExecutorState &root) {
 	auto result = make_uniq<ExecuteFunctionState>(expr, root);
@@ -124,15 +134,15 @@ unique_ptr<ExpressionState> ExpressionExecutor::InitializeState(const BoundFunct
 	}
 
 	result->Finalize();
-	if (expr.function.init_local_state) {
-		result->local_state = expr.function.init_local_state(*result, expr, expr.bind_info.get());
+	if (expr.function.HasInitStateCallback()) {
+		result->local_state = expr.function.GetInitStateCallback()(*result, expr, expr.bind_info.get());
 	}
 	return std::move(result);
 }
 
 static void VerifyNullHandling(const BoundFunctionExpression &expr, DataChunk &args, Vector &result) {
 #ifdef DEBUG
-	if (args.data.empty() || expr.function.null_handling != FunctionNullHandling::DEFAULT_NULL_HANDLING) {
+	if (args.data.empty() || expr.function.GetNullHandling() != FunctionNullHandling::DEFAULT_NULL_HANDLING) {
 		return;
 	}
 
@@ -179,12 +189,12 @@ void ExpressionExecutor::Execute(const BoundFunctionExpression &expr, Expression
 		}
 	}
 	arguments.SetCardinality(count);
-	arguments.Verify();
+	arguments.Verify(context ? context->db : nullptr);
 
-	D_ASSERT(expr.function.function);
+	D_ASSERT(expr.function.HasFunctionCallback());
 	auto &execute_function_state = state->Cast<ExecuteFunctionState>();
 	if (!execute_function_state.TryExecuteDictionaryExpression(expr, arguments, *state, result)) {
-		expr.function.function(arguments, *state, result);
+		expr.function.GetFunctionCallback()(arguments, *state, result);
 	}
 
 	VerifyNullHandling(expr, arguments, result);

@@ -4,6 +4,7 @@
 #include "duckdb/common/types.hpp"
 #include "duckdb/common/exception/list.hpp"
 #include "duckdb/parser/tableref.hpp"
+#include "duckdb/parser/parsed_expression.hpp"
 #include "duckdb/planner/expression.hpp"
 
 #ifdef DUCKDB_CRASH_ON_ASSERT
@@ -32,7 +33,7 @@ string Exception::ToJSON(ExceptionType type, const string &message) {
 string Exception::ToJSON(const unordered_map<string, string> &extra_info, ExceptionType type, const string &message) {
 #ifndef DUCKDB_DEBUG_STACKTRACE
 	// by default we only enable stack traces for internal exceptions
-	if (type == ExceptionType::INTERNAL || type == ExceptionType::FATAL)
+	if (type == ExceptionType::INTERNAL)
 #endif
 	{
 		auto extended_extra_info = extra_info;
@@ -318,9 +319,10 @@ MissingExtensionException::MissingExtensionException(const string &msg)
 }
 
 AutoloadException::AutoloadException(const string &extension_name, const string &message)
-    : Exception(ExceptionType::AUTOLOAD,
-                "An error occurred while trying to automatically install the required extension '" + extension_name +
-                    "':\n" + message) {
+    : Exception(
+          ExceptionType::AUTOLOAD,
+          StringUtil::Format("An error occurred while trying to automatically install the required extension '%s:\n%s",
+                             extension_name, message)) {
 }
 
 SerializationException::SerializationException(const string &msg) : Exception(ExceptionType::SERIALIZATION, msg) {
@@ -329,13 +331,15 @@ SerializationException::SerializationException(const string &msg) : Exception(Ex
 SequenceException::SequenceException(const string &msg) : Exception(ExceptionType::SEQUENCE, msg) {
 }
 
-InterruptException::InterruptException() : Exception(ExceptionType::INTERRUPT, "Interrupted!") {
+InterruptException::InterruptException() : Exception(ExceptionType::INTERRUPT, INTERRUPT_MESSAGE) {
 }
 
 FatalException::FatalException(ExceptionType type, const string &msg) : Exception(type, msg) {
+	// FIXME: Make any log context available to add error logging.
 }
 
 InternalException::InternalException(const string &msg) : Exception(ExceptionType::INTERNAL, msg) {
+	// FIXME: Make any log context available to add error logging.
 #ifdef DUCKDB_CRASH_ON_ASSERT
 	Printer::Print("ABORT THROWN BY INTERNAL EXCEPTION: " + msg + "\n" + StackTrace::GetStackTrace());
 	abort();

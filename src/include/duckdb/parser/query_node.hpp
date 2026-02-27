@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "duckdb/common/common.hpp"
 #include "duckdb/parser/parsed_expression.hpp"
 #include "duckdb/parser/result_modifier.hpp"
 #include "duckdb/parser/common_table_expression_info.hpp"
@@ -42,7 +41,6 @@ public:
 	CommonTableExpressionMap Copy() const;
 
 	void Serialize(Serializer &serializer) const;
-	// static void Deserialize(Deserializer &deserializer, CommonTableExpressionMap &ret);
 	static CommonTableExpressionMap Deserialize(Deserializer &deserializer);
 };
 
