@@ -1700,6 +1700,11 @@ Typename:	SimpleTypename opt_array_bounds
 					$$ = $1;
 					$$->arrayBounds = $2;
 				}
+			| qualified_typename opt_array_bounds
+				{
+					$$ = makeTypeNameFromNameList($1);
+					$$->arrayBounds = $2;
+				}
 			| SETOF SimpleTypename opt_array_bounds
 				{
 					$$ = $2;
@@ -1712,9 +1717,20 @@ Typename:	SimpleTypename opt_array_bounds
 					$$ = $1;
 					$$->arrayBounds = list_make1(makeInteger($4));
 				}
+			| qualified_typename ARRAY '[' Iconst ']'
+				{
+					$$ = makeTypeNameFromNameList($1);
+					$$->arrayBounds = list_make1(makeInteger($4));
+				}
 			| SETOF SimpleTypename ARRAY '[' Iconst ']'
 				{
 					$$ = $2;
+					$$->arrayBounds = list_make1(makeInteger($5));
+					$$->setof = true;
+				}
+			| SETOF qualified_typename ARRAY '[' Iconst ']'
+				{
+					$$ = makeTypeNameFromNameList($2);
 					$$->arrayBounds = list_make1(makeInteger($5));
 					$$->setof = true;
 				}
@@ -1723,16 +1739,22 @@ Typename:	SimpleTypename opt_array_bounds
 					$$ = $1;
 					$$->arrayBounds = list_make1(makeInteger(-1));
 				}
+			| qualified_typename ARRAY
+				{
+					$$ = makeTypeNameFromNameList($1);
+					$$->arrayBounds = list_make1(makeInteger(-1));
+				}
 			| SETOF SimpleTypename ARRAY
 				{
 					$$ = $2;
 					$$->arrayBounds = list_make1(makeInteger(-1));
 					$$->setof = true;
 				}
-			| qualified_typename opt_array_bounds
+			| SETOF qualified_typename ARRAY
 				{
-					$$ = makeTypeNameFromNameList($1);
-					$$->arrayBounds = $2;
+					$$ = makeTypeNameFromNameList($2);
+					$$->arrayBounds = list_make1(makeInteger(-1));
+					$$->setof = true;
 				}
 			| RowOrStruct '(' colid_type_list ')' opt_array_bounds
 				{
