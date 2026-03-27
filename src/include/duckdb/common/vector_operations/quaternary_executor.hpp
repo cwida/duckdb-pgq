@@ -14,6 +14,9 @@
 
 #include <functional>
 
+#include "duckdb/common/vector/constant_vector.hpp"
+#include "duckdb/common/vector/flat_vector.hpp"
+
 namespace duckdb {
 
 struct QuaternaryLambdaWrapper {
