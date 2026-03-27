@@ -1,3 +1,7 @@
+#include "duckdb/common/vector/list_vector.hpp"
+#include "duckdb/common/vector/map_vector.hpp"
+#include "duckdb/common/vector/variant_vector.hpp"
+#include "duckdb/common/vector/struct_vector.hpp"
 #include "duckdb/storage/table/variant_column_data.hpp"
 #include "duckdb/common/types/variant.hpp"
 #include "duckdb/function/cast/variant/to_variant_fwd.hpp"
@@ -88,7 +92,7 @@ static vector<VariantValue> UnshredTypedObject(UnifiedVariantVectorData &variant
 	vector<vector<VariantValue>> child_values(child_entries.size());
 	for (idx_t child_idx = 0; child_idx < child_entries.size(); child_idx++) {
 		auto &child_entry = child_entries[child_idx];
-		child_values[child_idx] = Unshred(variant, *child_entry, count, row_sel);
+		child_values[child_idx] = Unshred(variant, child_entry, count, row_sel);
 	}
 
 	//! Then compose the OBJECT value by combining all the children
@@ -122,46 +126,57 @@ static vector<VariantValue> UnshredTypedObject(UnifiedVariantVectorData &variant
 
 static vector<VariantValue> UnshredTypedArray(UnifiedVariantVectorData &variant, Vector &typed_value, idx_t count,
                                               optional_ptr<SelectionVector> row_sel) {
-	auto child_size = ListVector::GetListSize(typed_value);
 	auto &child_vector = ListVector::GetEntry(typed_value);
 
 	D_ASSERT(typed_value.GetType().id() == LogicalTypeId::LIST);
-	auto list_data = FlatVector::GetData<list_entry_t>(typed_value);
 
 	UnifiedVectorFormat vector_format;
 	typed_value.ToUnifiedFormat(count, vector_format);
+	auto list_data = UnifiedVectorFormat::GetData<list_entry_t>(vector_format);
 	auto &typed_value_validity = vector_format.validity;
 
+	idx_t child_size = 0;
+	for (uint32_t i = 0; i < count; i++) {
+		auto list_idx = vector_format.sel->get_index(i);
+		if (!typed_value_validity.RowIsValid(list_idx)) {
+			continue;
+		}
+		auto &list_entry = list_data[list_idx];
+		child_size += list_entry.length;
+	}
+	idx_t current_offset = 0;
 	SelectionVector child_sel(child_size);
 	vector<VariantValue> res(count);
 	for (uint32_t i = 0; i < count; i++) {
-		if (!typed_value_validity.RowIsValid(vector_format.sel->get_index(i))) {
-			// array itself is NULL
+		auto list_idx = vector_format.sel->get_index(i);
+		if (!typed_value_validity.RowIsValid(list_idx)) {
 			res[i] = VariantValue(Value(LogicalType::SQLNULL));
 			continue;
 		}
 		auto row = row_sel ? static_cast<uint32_t>(row_sel->get_index(i)) : i;
-		auto &list_entry = list_data[i];
+		auto &list_entry = list_data[list_idx];
 		for (idx_t j = 0; j < list_entry.length; j++) {
-			child_sel[list_entry.offset + j] = row;
+			child_sel[current_offset++] = row;
 		}
 	}
 	auto child_values = Unshred(variant, child_vector, child_size, child_sel);
 
+	current_offset = 0;
 	for (idx_t i = 0; i < count; i++) {
-		if (res[i].IsNull()) {
+		auto list_idx = vector_format.sel->get_index(i);
+		if (!typed_value_validity.RowIsValid(list_idx)) {
 			continue;
 		}
-		auto &list_entry = list_data[i];
+		auto &list_entry = list_data[list_idx];
 
 		auto &list_val = res[i];
 		list_val = VariantValue(VariantValueType::ARRAY);
 		list_val.array_items.reserve(list_entry.length);
 		list_val.array_items.insert(
 		    list_val.array_items.end(),
-		    std::make_move_iterator(child_values.begin() + static_cast<int64_t>(list_entry.offset)),
-		    std::make_move_iterator(child_values.begin() +
-		                            static_cast<int64_t>(list_entry.offset + list_entry.length)));
+		    std::make_move_iterator(child_values.begin() + static_cast<int64_t>(current_offset)),
+		    std::make_move_iterator(child_values.begin() + static_cast<int64_t>(current_offset + list_entry.length)));
+		current_offset += list_entry.length;
 	}
 	return res;
 }
@@ -189,10 +204,10 @@ static vector<VariantValue> Unshred(UnifiedVariantVectorData &variant, Vector &s
 		D_ASSERT(shredded.GetType().id() == LogicalTypeId::STRUCT);
 		auto &child_entries = StructVector::GetEntries(shredded);
 		D_ASSERT(child_entries.size() <= 2);
-		typed_value_ref = *child_vectors[VariantColumnData::TYPED_VALUE_INDEX];
+		typed_value_ref = child_vectors[VariantColumnData::TYPED_VALUE_INDEX];
 		if (child_vectors.size() > 1) {
 			D_ASSERT(child_vectors.size() == 2);
-			untyped_value_index = *child_vectors[VariantColumnData::UNTYPED_VALUE_INDEX];
+			untyped_value_index = child_vectors[VariantColumnData::UNTYPED_VALUE_INDEX];
 		}
 	}
 	auto &typed_value = typed_value_ref.get();
@@ -238,13 +253,13 @@ static vector<VariantValue> Unshred(UnifiedVariantVectorData &variant, Vector &s
 	return res;
 }
 
-void VariantColumnData::UnshredVariantData(Vector &input, Vector &output, idx_t count) {
+void VariantUtils::UnshredVariantData(Vector &input, Vector &output, idx_t count) {
 	D_ASSERT(input.GetType().id() == LogicalTypeId::STRUCT);
 	auto &child_vectors = StructVector::GetEntries(input);
 	D_ASSERT(child_vectors.size() == 2);
 
-	auto &unshredded = *child_vectors[0];
-	auto &shredded = *child_vectors[1];
+	auto &unshredded = child_vectors[0];
+	auto &shredded = child_vectors[1];
 
 	RecursiveUnifiedVectorFormat recursive_format;
 	Vector::RecursiveToUnifiedFormat(unshredded, count, recursive_format);

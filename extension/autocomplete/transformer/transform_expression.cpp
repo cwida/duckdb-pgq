@@ -15,8 +15,75 @@
 #include "duckdb/parser/tableref/subqueryref.hpp"
 #include "duckdb/parser/tableref/emptytableref.hpp"
 #include "duckdb/parser/parsed_expression_iterator.hpp"
+#include "duckdb/common/string_util.hpp"
 
 namespace duckdb {
+
+unique_ptr<SQLStatement> PEGTransformerFactory::TransformExpressionStatement(PEGTransformer &transformer,
+                                                                             optional_ptr<ParseResult> parse_result) {
+	auto &list_pr = parse_result->Cast<ListParseResult>();
+	auto expr_list = ExtractParseResultsFromList(list_pr.GetChild(0));
+
+	vector<unique_ptr<ParsedExpression>> expressions;
+	for (auto &expr : expr_list) {
+		expressions.push_back(transformer.Transform<unique_ptr<ParsedExpression>>(expr));
+	}
+
+	auto select_statement = make_uniq<SelectStatement>();
+	auto select_node = make_uniq<SelectNode>();
+
+	bool any_column_ref = false;
+	for (auto &expr : expressions) {
+		if (expr->GetExpressionClass() == ExpressionClass::COLUMN_REF) {
+			any_column_ref = true;
+			break;
+		}
+	}
+
+	if (any_column_ref && expressions.size() > 1) {
+		throw ParserException("Mix of table names and expressions is not supported. "
+		                      "Use SELECT to explicitly specify what you want to query.");
+	}
+
+	if (any_column_ref) {
+		// Single COLUMN_REF: treat as table scan
+		auto &col_expr = expressions[0]->Cast<ColumnRefExpression>();
+		if (col_expr.IsQualified()) {
+			if (col_expr.column_names.size() >= 4) {
+				throw ParserException(
+				    "Too many qualifiers encountered. Expected \"catalog.schema.table\" or \"schema.table\"");
+			}
+			if (col_expr.column_names.size() == 3) {
+				auto table_description =
+				    TableDescription(col_expr.column_names[0], col_expr.column_names[1], col_expr.column_names[2]);
+				select_node->from_table = make_uniq<BaseTableRef>(table_description);
+			} else if (col_expr.column_names.size() == 2) {
+				auto table_description =
+				    TableDescription(INVALID_CATALOG, col_expr.column_names[0], col_expr.column_names[1]);
+				select_node->from_table = make_uniq<BaseTableRef>(table_description);
+			}
+		} else {
+			auto base_table = make_uniq<BaseTableRef>();
+			base_table->table_name = col_expr.GetColumnName();
+			select_node->from_table = std::move(base_table);
+		}
+		select_node->select_list.push_back(make_uniq<StarExpression>());
+	} else {
+		for (auto &expr : expressions) {
+			select_node->select_list.push_back(std::move(expr));
+		}
+		select_node->from_table = make_uniq<EmptyTableRef>();
+	}
+
+	select_statement->node = std::move(select_node);
+	return std::move(select_statement);
+}
+
+unique_ptr<ParsedExpression> PEGTransformerFactory::TransformExpressionAlias(PEGTransformer &transformer,
+                                                                             optional_ptr<ParseResult> parse_result) {
+	auto &list_pr = parse_result->Cast<ListParseResult>();
+	return transformer.Transform<unique_ptr<ParsedExpression>>(list_pr.Child<ChoiceParseResult>(0).result);
+}
 
 // BaseExpression <- SingleExpression Indirection*
 unique_ptr<ParsedExpression> PEGTransformerFactory::TransformBaseExpression(PEGTransformer &transformer,
@@ -192,6 +259,11 @@ PEGTransformerFactory::TransformFunctionExpression(PEGTransformer &transformer,
 	if (over_opt.HasResult()) {
 		if (transformer.in_window_definition) {
 			throw ParserException("window functions are not allowed in window definitions");
+		}
+		//	We map first/last OVER() to first_value/last_value.
+		//	Not sure the semantics match, but we are stuck with it.
+		if (lowercase_name == "first" || lowercase_name == "last") {
+			lowercase_name += "_value";
 		}
 		const auto win_fun_type = WindowExpression::WindowToExpressionType(lowercase_name);
 		if (win_fun_type == ExpressionType::INVALID) {
@@ -377,10 +449,6 @@ PEGTransformerFactory::TransformFunctionExpression(PEGTransformer &transformer,
 			throw ParserException("Unknown ordered aggregate \"%s\".", qualified_function.name);
 		}
 	}
-	if (has_ignore_nulls_result) {
-		throw ParserException("RESPECT/IGNORE NULLS is not supported for non-window functions");
-	}
-
 	auto result = make_uniq<FunctionExpression>(qualified_function.catalog, qualified_function.schema, lowercase_name,
 	                                            std::move(function_children), std::move(filter_expr),
 	                                            std::move(order_modifier), distinct, false, export_opt.HasResult());
@@ -597,6 +665,9 @@ unique_ptr<ParsedExpression> PEGTransformerFactory::TransformStructField(PEGTran
                                                                          optional_ptr<ParseResult> parse_result) {
 	auto &list_pr = parse_result->Cast<ListParseResult>();
 	auto alias = transformer.Transform<string>(list_pr.Child<ListParseResult>(0));
+	if (alias[0] >= '0' && alias[0] <= '9') {
+		throw ParserException("syntax error at or near \"%s\"", alias);
+	}
 	auto expr = transformer.Transform<unique_ptr<ParsedExpression>>(list_pr.Child<ListParseResult>(2));
 	expr->SetAlias(alias);
 	return expr;
@@ -1190,6 +1261,9 @@ PEGTransformerFactory::TransformAdditiveExpression(PEGTransformer &transformer,
 		    transformer.Transform<unique_ptr<ParsedExpression>>(inner_list_pr.Child<ListParseResult>(1)));
 		auto func_expr = make_uniq<FunctionExpression>(std::move(term), std::move(term_children));
 		func_expr->is_operator = true;
+		if (inner_list_pr.offset.IsValid()) {
+			transformer.SetQueryLocation(*func_expr, inner_list_pr.offset);
+		}
 		expr = std::move(func_expr);
 	}
 	return expr;

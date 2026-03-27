@@ -28,7 +28,11 @@ Statement <-
 	LoadStatement /
 	InstallStatement /
 	AnalyzeStatement /
-	MergeIntoStatement
+	MergeIntoStatement /
+	ExpressionStatement
+
+ExpressionStatement <- List(ExpressionAlias)
+ExpressionAlias <- ColIdExpression / ExpressionAsCollabel / Expression
 
 CatalogName <- Identifier
 SchemaName <- Identifier
@@ -133,7 +137,7 @@ MapType <- 'MAP' Parens(List(Type))
 ColIdType <- ColId Type
 ArrayBounds <- SquareBracketsArray / 'ARRAY'
 ArrayKeyword <- 'ARRAY'
-SquareBracketsArray <- '[' NumberLiteral? ']'
+SquareBracketsArray <- '[' Expression? ']'
 TimeType <- TimeOrTimestamp TypeModifiers? TimeZone?
 TimeOrTimestamp <- TimeTypeId / TimestampTypeId
 TimeTypeId <- 'TIME'

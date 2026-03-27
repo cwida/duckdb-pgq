@@ -165,9 +165,7 @@ shared_ptr<AttachedDatabase> DatabaseManager::AttachDatabase(ClientContext &cont
 				// The database ACTUALLY exists, so we return it.
 				return entry->second;
 			}
-			if (context.interrupted) {
-				throw InterruptException();
-			}
+			context.InterruptCheck();
 		}
 	}
 	auto &config = DBConfig::GetConfig(context);
@@ -191,6 +189,10 @@ shared_ptr<AttachedDatabase> DatabaseManager::AttachDatabase(ClientContext &cont
 	auto &db = DatabaseInstance::GetDatabase(context);
 	auto attached_db = db.CreateAttachedDatabase(context, info, options);
 
+	if (default_database.empty()) {
+		default_database = attached_db->GetName();
+	}
+
 	//! Initialize the database.
 	if (options.is_main_database) {
 		attached_db->SetInitialDatabase();
@@ -211,9 +213,6 @@ optional_ptr<AttachedDatabase> DatabaseManager::FinalizeAttach(ClientContext &co
                                                                shared_ptr<AttachedDatabase> attached_db) {
 	const auto name = attached_db->GetName();
 	attached_db->oid = NextOid();
-	if (default_database.empty()) {
-		default_database = name;
-	}
 	shared_ptr<AttachedDatabase> detached_db;
 	{
 		lock_guard<mutex> guard(databases_lock);
@@ -259,7 +258,7 @@ void DatabaseManager::DetachDatabase(ClientContext &context, const string &name,
 	attached_db->OnDetach(context);
 
 	// DetachInternal removes the AttachedDatabase from the list of databases that can be referenced.
-	AttachedDatabase::InvokeCloseIfLastReference(attached_db);
+	AttachedDatabase::InvokeCloseIfLastReference(attached_db, context);
 }
 
 void DatabaseManager::Alter(ClientContext &context, AlterInfo &info) {

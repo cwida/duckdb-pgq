@@ -26,6 +26,7 @@
 #include "duckdb/planner/table_filter_state.hpp"
 #include "duckdb/common/multi_file/multi_file_reader.hpp"
 #include "duckdb/common/types/geometry_crs.hpp"
+#include "duckdb/planner/filter/constant_filter.hpp"
 
 namespace duckdb {
 
@@ -408,7 +409,7 @@ ParquetColumnSchema ParquetReader::ParseColumnSchema(const SchemaElement &s_ele,
 
 unique_ptr<ColumnReader> ParquetReader::CreateReaderRecursive(ClientContext &context,
                                                               const vector<ColumnIndex> &indexes,
-                                                              const ParquetColumnSchema &schema) {
+                                                              const ParquetColumnSchema &schema) const {
 	switch (schema.schema_type) {
 	case ParquetColumnSchemaType::FILE_ROW_NUMBER:
 		return make_uniq<RowNumberColumnReader>(*this, schema);
@@ -460,7 +461,7 @@ unique_ptr<ColumnReader> ParquetReader::CreateReaderRecursive(ClientContext &con
 	}
 }
 
-unique_ptr<ColumnReader> ParquetReader::CreateReader(ClientContext &context) {
+unique_ptr<ColumnReader> ParquetReader::CreateReader(ClientContext &context) const {
 	auto ret = CreateReaderRecursive(context, column_indexes, *root_schema);
 	if (ret->Type().id() != LogicalTypeId::STRUCT) {
 		throw InternalException("Root element of Parquet file must be a struct");
@@ -853,6 +854,9 @@ ParquetReader::ParquetReader(ClientContext &context_p, OpenFileInfo file_p, Parq
 		}
 	} else {
 		metadata = std::move(metadata_p);
+		if (parquet_options.encryption_config) {
+			encryption_util = context_p.db->GetEncryptionUtil(true);
+		}
 	}
 	InitializeSchema(context_p);
 }
@@ -869,6 +873,16 @@ shared_ptr<ParquetFileMetadataCache> ParquetReader::GetMetadataCacheEntry(Client
 }
 
 ParquetUnionData::~ParquetUnionData() {
+}
+
+optional_idx ParquetUnionData::TryGetCardinalityEstimate() const {
+	if (reader) {
+		return reader->Cast<ParquetReader>().NumRows();
+	}
+	if (metadata) {
+		return metadata->metadata->num_rows;
+	}
+	return optional_idx();
 }
 
 unique_ptr<BaseStatistics> ParquetUnionData::GetStatistics(ClientContext &context, const string &name) {
@@ -958,13 +972,13 @@ string ParquetReader::GetUniqueFileIdentifier(const duckdb_parquet::EncryptionAl
 	if (encryption_algorithm.__isset.AES_GCM_V1) {
 		return encryption_algorithm.AES_GCM_V1.aad_file_unique;
 	} else if (encryption_algorithm.__isset.AES_GCM_CTR_V1) {
-		throw InternalException("File is encrypted with AES_GCM_CTR_V1, but this is not supported by DuckDB");
+		throw InvalidInputException("File is encrypted with AES_GCM_CTR_V1, but this is not supported by DuckDB");
 	} else {
-		throw InternalException("File is encrypted but no encryption algorithm is set");
+		throw InvalidInputException("File is encrypted but no encryption algorithm is set");
 	}
 }
 
-uint32_t ParquetReader::Read(duckdb_apache::thrift::TBase &object, TProtocol &iprot) {
+uint32_t ParquetReader::Read(duckdb_apache::thrift::TBase &object, TProtocol &iprot) const {
 	return object.read(&iprot);
 }
 
@@ -976,7 +990,7 @@ uint32_t ParquetReader::ReadEncrypted(duckdb_apache::thrift::TBase &object, TPro
 }
 
 uint32_t ParquetReader::ReadData(duckdb_apache::thrift::protocol::TProtocol &iprot, const data_ptr_t buffer,
-                                 const uint32_t buffer_size) {
+                                 const uint32_t buffer_size) const {
 	return iprot.getTransport()->read(buffer, buffer_size);
 }
 
@@ -987,7 +1001,7 @@ uint32_t ParquetReader::ReadDataEncrypted(duckdb_apache::thrift::protocol::TProt
 	                               *encryption_util, aad_crypto_metadata);
 }
 
-static idx_t GetRowGroupOffset(ParquetReader &reader, idx_t group_idx) {
+static idx_t GetRowGroupOffset(const ParquetReader &reader, idx_t group_idx) {
 	idx_t row_group_offset = 0;
 	auto &row_groups = reader.GetFileMetadata()->row_groups;
 	for (idx_t i = 0; i < group_idx; i++) {
@@ -1066,7 +1080,7 @@ idx_t ParquetReader::GetGroupOffset(ParquetReaderScanState &state) {
 }
 
 static FilterPropagateResult CheckParquetStringFilter(BaseStatistics &stats, const Statistics &pq_col_stats,
-                                                      TableFilter &filter) {
+                                                      const TableFilter &filter) {
 	switch (filter.filter_type) {
 	case TableFilterType::CONJUNCTION_AND: {
 		auto &conjunction_filter = filter.Cast<ConjunctionAndFilter>();
@@ -1096,7 +1110,7 @@ static FilterPropagateResult CheckParquetStringFilter(BaseStatistics &stats, con
 }
 
 static FilterPropagateResult CheckParquetFloatFilter(ColumnReader &reader, const Statistics &pq_col_stats,
-                                                     TableFilter &filter) {
+                                                     const TableFilter &filter) {
 	// floating point values can have values in the [min, max] domain AND nan values
 	// check both stats against the filter
 	auto &type = reader.Type();
@@ -1138,9 +1152,9 @@ void ParquetReader::PrepareRowGroupBuffer(ParquetReaderScanState &state, idx_t i
 	if (filters) {
 		auto stats = column_reader.Stats(state.group_idx_list[state.current_group], group.columns);
 		// filters contain output chunk index, not file col idx!
-		auto filter_entry = filters->filters.find(col_idx);
-		if (stats && filter_entry != filters->filters.end()) {
-			auto &filter = *filter_entry->second;
+		auto filter_entry = filters->TryGetFilterByColumnIndex(col_idx);
+		if (stats && filter_entry) {
+			auto &filter = *filter_entry;
 
 			FilterPropagateResult prune_result;
 			bool is_generated_column = column_reader.ColumnIndex() >= group.columns.size();
@@ -1201,7 +1215,19 @@ idx_t ParquetReader::NumRowGroups() const {
 	return GetFileMetadata()->row_groups.size();
 }
 
-ParquetScanFilter::ParquetScanFilter(ClientContext &context, idx_t filter_idx, TableFilter &filter)
+idx_t ParquetReader::GetFileSize() const {
+	return file_handle->GetFileSize();
+}
+
+idx_t ParquetReader::GetDataSize() const {
+	idx_t data_size = 0;
+	for (auto &row_group : GetFileMetadata()->row_groups) {
+		data_size += row_group.total_compressed_size;
+	}
+	return data_size;
+}
+
+ParquetScanFilter::ParquetScanFilter(ClientContext &context, ProjectionIndex filter_idx, TableFilter &filter)
     : filter_idx(filter_idx), filter(filter) {
 	filter_state = TableFilterState::Initialize(context, filter);
 }
@@ -1210,7 +1236,7 @@ ParquetScanFilter::~ParquetScanFilter() {
 }
 
 void ParquetReader::InitializeScan(ClientContext &context, ParquetReaderScanState &state,
-                                   vector<idx_t> groups_to_read) {
+                                   vector<idx_t> groups_to_read) const {
 	state.current_group = -1;
 	state.finished = false;
 	state.offset_in_group = 0;
@@ -1233,8 +1259,8 @@ void ParquetReader::InitializeScan(ClientContext &context, ParquetReaderScanStat
 	state.scan_filters.clear();
 	if (filters) {
 		state.adaptive_filter = make_uniq<AdaptiveFilter>(*filters);
-		for (auto &entry : filters->filters) {
-			state.scan_filters.emplace_back(context, entry.first, *entry.second);
+		for (auto &entry : *filters) {
+			state.scan_filters.emplace_back(context, entry.GetIndex(), entry.Filter());
 		}
 	}
 
@@ -1374,20 +1400,33 @@ AsyncResult ParquetReader::Scan(ClientContext &context, ParquetReaderScanState &
 			} else {
 				// lazy fetching is when all tuples in a column can be skipped. With lazy fetching the buffer is only
 				// fetched on the first read to that buffer.
-				bool lazy_fetch = filters != nullptr;
+				bool lazy_fetch = false;
+				if (filters) {
+					// check if any filter is non-optional
+					bool has_non_optional_filter = false;
+					for (auto &entry : *filters) {
+						if (entry.Filter().filter_type != TableFilterType::OPTIONAL_FILTER) {
+							has_non_optional_filter = true;
+						}
+					}
+					if (has_non_optional_filter) {
+						lazy_fetch = true;
+					}
+				}
 
 				// Prefetch column-wise
+				auto &root_reader = state.root_reader->Cast<StructColumnReader>();
 				for (idx_t i = 0; i < column_ids.size(); i++) {
 					auto col_idx = MultiFileLocalIndex(i);
 					auto file_col_idx = column_ids[col_idx];
-					auto &root_reader = state.root_reader->Cast<StructColumnReader>();
-
 					bool has_filter = false;
 					if (filters) {
-						auto entry = filters->filters.find(col_idx);
-						has_filter = entry != filters->filters.end();
+						auto filter = filters->TryGetFilterByColumnIndex(col_idx);
+						if (filter && filter->filter_type != TableFilterType::OPTIONAL_FILTER) {
+							has_filter = true;
+						}
 					}
-					root_reader.GetChildReader(file_col_idx).RegisterPrefetch(trans, !(lazy_fetch && !has_filter));
+					root_reader.GetChildReader(file_col_idx).RegisterPrefetch(trans, !has_filter);
 				}
 
 				trans.FinalizeRegistration();
@@ -1426,7 +1465,7 @@ AsyncResult ParquetReader::Scan(ClientContext &context, ParquetReaderScanState &
 		vector<bool> need_to_read(column_ids.size(), true);
 
 		state.sel.Initialize(nullptr);
-		D_ASSERT(!filters || state.scan_filters.size() == filters->filters.size());
+		D_ASSERT(!filters || state.scan_filters.size() == filters->FilterCount());
 
 		bool is_first_filter = true;
 		if (deletion_filter) {
@@ -1446,7 +1485,7 @@ AsyncResult ParquetReader::Scan(ClientContext &context, ParquetReaderScanState &
 					break;
 				}
 				auto &scan_filter = state.scan_filters[state.adaptive_filter->permutation[i]];
-				auto local_idx = MultiFileLocalIndex(scan_filter.filter_idx);
+				MultiFileLocalIndex local_idx(scan_filter.filter_idx);
 				auto column_id = column_ids[local_idx];
 
 				auto &result_vector = result.data[local_idx.GetIndex()];
@@ -1461,7 +1500,7 @@ AsyncResult ParquetReader::Scan(ClientContext &context, ParquetReaderScanState &
 
 		// we still may have to read some cols
 		for (idx_t i = 0; i < column_ids.size(); i++) {
-			auto col_idx = MultiFileLocalIndex(i);
+			MultiFileLocalIndex col_idx(i);
 			if (!need_to_read[col_idx]) {
 				continue;
 			}

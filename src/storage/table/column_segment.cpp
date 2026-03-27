@@ -1,3 +1,5 @@
+#include "duckdb/common/vector/map_vector.hpp"
+#include "duckdb/common/vector/struct_vector.hpp"
 #include "duckdb/storage/table/column_segment.hpp"
 
 #include "duckdb/common/limits.hpp"
@@ -6,12 +8,15 @@
 #include "duckdb/main/config.hpp"
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/planner/filter/constant_filter.hpp"
+#include "duckdb/planner/filter/prefix_range_filter.hpp"
 #include "duckdb/planner/filter/struct_filter.hpp"
+#include "duckdb/planner/table_filter.hpp"
 #include "duckdb/storage/data_pointer.hpp"
 #include "duckdb/storage/table/append_state.hpp"
 #include "duckdb/storage/table/scan_state.hpp"
 #include "duckdb/planner/table_filter_state.hpp"
 #include "duckdb/planner/filter/bloom_filter.hpp"
+#include "duckdb/planner/filter/perfect_hash_join_filter.hpp"
 #include "duckdb/planner/filter/selectivity_optional_filter.hpp"
 
 #include <cstring>
@@ -286,16 +291,16 @@ void ColumnSegment::VisitBlockIds(BlockIdVisitor &visitor) const {
 // Filter Selection
 //===--------------------------------------------------------------------===//
 template <class T, class OP, bool HAS_NULL>
-static idx_t TemplatedFilterSelection(UnifiedVectorFormat &vdata, T predicate, SelectionVector &sel,
-                                      idx_t approved_tuple_count, SelectionVector &result_sel) {
+static idx_t TemplatedFilterSelection(const UnifiedVectorFormat &vdata, T predicate, const SelectionVector &sel,
+                                      const idx_t approved_tuple_count, SelectionVector &result_sel) {
 	auto &mask = vdata.validity;
-	auto vec = UnifiedVectorFormat::GetData<T>(vdata);
+	const auto vec = UnifiedVectorFormat::GetData<const T>(vdata);
 	idx_t result_count = 0;
 	for (idx_t i = 0; i < approved_tuple_count; i++) {
-		auto idx = sel.get_index(i);
+		const auto idx = sel.get_index(i);
 		auto vector_idx = vdata.sel->get_index(idx);
 		bool comparison_result =
-		    (!HAS_NULL || mask.RowIsValid(vector_idx)) && OP::Operation(vec[vector_idx], predicate);
+		    (!HAS_NULL || mask.RowIsValidUnsafe(vector_idx)) && OP::Operation(vec[vector_idx], predicate);
 		result_sel.set_index(result_count, idx);
 		result_count += comparison_result;
 	}
@@ -551,14 +556,22 @@ idx_t ColumnSegment::FilterSelection(SelectionVector &sel, Vector &vector, Unifi
 		// Apply the filter on the child vector
 		auto &child_vec = StructVector::GetEntries(vector)[struct_filter.child_idx];
 		UnifiedVectorFormat child_data;
-		child_vec->ToUnifiedFormat(scan_count, child_data);
-		return FilterSelection(sel, *child_vec, child_data, *struct_filter.child_filter, filter_state, scan_count,
+		child_vec.ToUnifiedFormat(scan_count, child_data);
+		return FilterSelection(sel, child_vec, child_data, *struct_filter.child_filter, filter_state, scan_count,
 		                       approved_tuple_count);
 	}
 	case TableFilterType::BLOOM_FILTER: {
 		auto &bloom_filter = filter.Cast<BFTableFilter>();
 		auto &state = filter_state.Cast<BFTableFilterState>();
 		return bloom_filter.Filter(vector, sel, approved_tuple_count, state);
+	}
+	case TableFilterType::PERFECT_HASH_JOIN_FILTER: {
+		auto &perfect_hash_join_filter = filter.Cast<PerfectHashJoinFilter>();
+		return perfect_hash_join_filter.Filter(vector, sel, approved_tuple_count);
+	}
+	case duckdb::TableFilterType::PREFIX_RANGE_FILTER: {
+		auto &prefix_range_filter = filter.Cast<PrefixRangeTableFilter>();
+		return prefix_range_filter.Filter(vector, sel, approved_tuple_count);
 	}
 	case TableFilterType::EXPRESSION_FILTER: {
 		auto &state = filter_state.Cast<ExpressionFilterState>();
@@ -609,7 +622,7 @@ idx_t ColumnSegment::FilterSelection(SelectionVector &sel, Vector &vector, Unifi
 		} else {
 			// standard case: we can handle everything at once - run the expression once
 			DataChunk chunk;
-			chunk.data.emplace_back(vector);
+			chunk.data.emplace_back(Vector::Ref(vector));
 			chunk.SetCardinality(scan_count);
 			approved_tuple_count = state.executor.SelectExpression(chunk, result_sel, sel, approved_tuple_count);
 		}

@@ -418,13 +418,20 @@ static void FetchRowValidity(transaction_t start_time, transaction_t transaction
 	UpdateInfo::UpdatesForTransaction(info, start_time, transaction_id, [&](UpdateInfo &current) {
 		auto info_data = current.GetData<bool>();
 		auto tuples = current.GetTuples();
-		// FIXME: we could do a binary search in here
-		for (idx_t i = 0; i < current.N; i++) {
-			if (tuples[i] == row_idx) {
-				result_mask.Set(result_idx, info_data[i]);
-				break;
-			} else if (tuples[i] > row_idx) {
-				break;
+		if (current.N == 0) {
+			return;
+		}
+		idx_t left = 0;
+		idx_t right = current.N - 1;
+		while (left <= right) {
+			idx_t mid = left + (right - left) / 2;
+			if (tuples[mid] == row_idx) {
+				result_mask.Set(result_idx, info_data[mid]);
+				return;
+			} else if (tuples[mid] < row_idx) {
+				left = mid + 1;
+			} else {
+				right = mid - 1;
 			}
 		}
 	});
@@ -1041,7 +1048,7 @@ idx_t TemplatedUpdateNumericStatistics(UpdateSegment *segment, SegmentStatistics
 
 idx_t UpdateStringStatistics(UpdateSegment *segment, SegmentStatistics &stats, UnifiedVectorFormat &update, idx_t count,
                              SelectionVector &sel) {
-	auto update_data = update.GetDataNoConst<string_t>(update);
+	auto update_data = update.GetData<string_t>(update);
 	auto &mask = update.validity;
 	if (mask.AllValid()) {
 		stats.statistics.SetHasNoNullFast();
@@ -1049,9 +1056,6 @@ idx_t UpdateStringStatistics(UpdateSegment *segment, SegmentStatistics &stats, U
 			auto idx = update.sel->get_index(i);
 			auto &str = update_data[idx];
 			StringStats::Update(stats.statistics, str);
-			if (!str.IsInlined()) {
-				update_data[idx] = segment->GetStringHeap().AddBlob(str);
-			}
 		}
 		sel.Initialize(nullptr);
 		return count;
@@ -1065,9 +1069,6 @@ idx_t UpdateStringStatistics(UpdateSegment *segment, SegmentStatistics &stats, U
 				sel.set_index(not_null_count++, i);
 				auto &str = update_data[idx];
 				StringStats::Update(stats.statistics, str);
-				if (!str.IsInlined()) {
-					update_data[idx] = segment->GetStringHeap().AddBlob(str);
-				}
 			} else {
 				stats.statistics.SetHasNullFast();
 			}
@@ -1293,6 +1294,18 @@ void UpdateSegment::Update(TransactionData transaction, DataTable &data_table, i
 	}
 	if (count == 0) {
 		return;
+	}
+	if (statistics_update_function == UpdateStringStatistics) {
+		// for strings - we need to push all strings we are going to place here into the string heap of the segment
+		update_p.Flatten(count);
+		auto update_data = FlatVector::GetData<string_t>(update_p);
+		auto &validity = FlatVector::Validity(update_p);
+		for (idx_t i = 0; i < count; i++) {
+			if (validity.RowIsValid(i) && !update_data[i].IsInlined()) {
+				update_data[i] = GetStringHeap().AddBlob(update_data[i]);
+			}
+		}
+		update_p.ToUnifiedFormat(count, update_format);
 	}
 
 	// subsequent algorithms used by the update require row ids to be (1) sorted, and (2) unique

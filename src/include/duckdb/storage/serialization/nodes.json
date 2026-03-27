@@ -25,6 +25,11 @@
         "id": 103,
         "name": "key_targets",
         "type": "vector<ParsedExpression*>"
+      },
+      {
+        "id": 104,
+        "name": "payload_aggregates",
+        "type": "vector<ParsedExpression*>"
       }
     ]
   },
@@ -183,6 +188,11 @@
         "name": "seed",
         "type": "int64_t",
         "serialize_property": "GetSeed()"
+      },
+      {
+        "id": 104,
+        "name": "repeatable",
+        "type": "bool"
       }
     ],
     "constructor": ["seed"]
@@ -414,12 +424,12 @@
       {
         "id": 100,
         "name": "table_index",
-        "type": "idx_t"
+        "type": "TableIndex"
       },
       {
         "id": 101,
         "name": "column_index",
-        "type": "idx_t"
+        "type": "ProjectionIndex"
       }
     ],
     "pointer_type": "none"
@@ -466,6 +476,7 @@
         "type": "ExpressionType"
       }
     ],
+    "constructor": ["left", "right", "comparison"],
     "pointer_type": "none"
   },
   {
@@ -496,7 +507,7 @@
       {
         "id": 100,
         "name": "filters",
-        "type": "map<idx_t, TableFilter*>"
+        "type": "map<ProjectionIndex, TableFilter*>"
       }
     ],
     "pointer_type": "none"
@@ -1156,9 +1167,14 @@
         "id": 106,
         "name": "row_group_offset",
         "type": "idx_t"
+      },
+      {
+        "id": 107,
+        "name": "leading_null_group_offset",
+        "type": "idx_t"
       }
     ],
-    "constructor": ["column_idx", "order_by", "order_type", "null_order", "column_type",  "row_limit", "row_group_offset"]
+    "constructor": ["column_idx", "order_by", "order_type", "null_order", "column_type",  "row_limit", "row_group_offset", "leading_null_group_offset"]
   },
   {
     "class": "StorageIndex",

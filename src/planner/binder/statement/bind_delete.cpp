@@ -1,4 +1,5 @@
 #include "duckdb/parser/statement/delete_statement.hpp"
+#include "duckdb/parser/query_node/delete_query_node.hpp"
 #include "duckdb/planner/binder.hpp"
 #include "duckdb/planner/expression_binder/where_binder.hpp"
 #include "duckdb/planner/expression_binder/returning_binder.hpp"
@@ -7,12 +8,17 @@
 #include "duckdb/planner/operator/logical_get.hpp"
 #include "duckdb/planner/operator/logical_cross_product.hpp"
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
+#include "duckdb/storage/data_table.hpp"
 
 namespace duckdb {
 
 BoundStatement Binder::Bind(DeleteStatement &stmt) {
+	return Bind(*stmt.node);
+}
+
+BoundStatement Binder::BindNode(DeleteQueryNode &node) {
 	// visit the table reference
-	auto bound_table = Bind(*stmt.table);
+	auto bound_table = Bind(*node.table);
 	auto root = std::move(bound_table.plan);
 	if (root->type != LogicalOperatorType::LOGICAL_GET) {
 		throw BinderException("Can only delete from base table");
@@ -30,9 +36,9 @@ BoundStatement Binder::Bind(DeleteStatement &stmt) {
 	}
 
 	// plan any tables from the various using clauses
-	if (!stmt.using_clauses.empty()) {
+	if (!node.using_clauses.empty()) {
 		unique_ptr<LogicalOperator> child_operator;
-		for (auto &using_clause : stmt.using_clauses) {
+		for (auto &using_clause : node.using_clauses) {
 			// bind the using clause
 			auto using_binder = Binder::CreateBinder(context, this);
 			auto op = using_binder->Bind(*using_clause);
@@ -51,9 +57,9 @@ BoundStatement Binder::Bind(DeleteStatement &stmt) {
 
 	// project any additional columns required for the condition
 	unique_ptr<Expression> condition;
-	if (stmt.condition) {
+	if (node.condition) {
 		WhereBinder binder(*this, context);
-		condition = binder.Bind(stmt.condition);
+		condition = binder.Bind(node.condition);
 
 		PlanSubqueries(condition, root);
 		auto filter = make_uniq<LogicalFilter>(std::move(condition));
@@ -63,20 +69,37 @@ BoundStatement Binder::Bind(DeleteStatement &stmt) {
 	// create the delete node
 	auto del = make_uniq<LogicalDelete>(table, GenerateTableIndex());
 	del->bound_constraints = BindConstraints(table);
+
+	// Add columns to the scan to avoid fetching by row ID in PhysicalDelete:
+	// - If RETURNING: add all physical columns (for RETURNING projection)
+	// - Else if unique indexes exist: add only indexed columns (for delete index tracking)
+	if (!node.returning_list.empty()) {
+		// Add all physical columns for RETURNING
+		BindDeleteReturningColumns(table, get, del->return_columns);
+	} else if (table.IsDuckTable()) {
+		// Only optimize for DuckDB tables (not attached external tables like SQLite)
+		auto &storage = table.GetStorage();
+		if (storage.HasUniqueIndexes()) {
+			BindDeleteIndexColumns(table, get, del->return_columns);
+		}
+	}
+
 	del->AddChild(std::move(root));
 
 	// bind the row id columns and add them to the projection list
 	BindRowIdColumns(table, get, del->expressions);
 
-	if (!stmt.returning_list.empty()) {
+	if (!node.returning_list.empty()) {
 		del->return_chunk = true;
 
 		auto update_table_index = GenerateTableIndex();
 		del->table_index = update_table_index;
 
 		unique_ptr<LogicalOperator> del_as_logicaloperator = std::move(del);
-		return BindReturning(std::move(stmt.returning_list), table, stmt.table->alias, update_table_index,
-		                     std::move(del_as_logicaloperator));
+		// Include virtual columns (like rowid) so they can be referenced in RETURNING
+		auto virtual_columns = table.GetVirtualColumns();
+		return BindReturning(std::move(node.returning_list), table, node.table->alias, update_table_index,
+		                     std::move(del_as_logicaloperator), std::move(virtual_columns));
 	}
 	BoundStatement result;
 	result.plan = std::move(del);

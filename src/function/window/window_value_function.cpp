@@ -8,6 +8,8 @@
 #include "duckdb/function/window/window_shared_expressions.hpp"
 #include "duckdb/function/window/window_token_tree.hpp"
 #include "duckdb/function/window/window_value_function.hpp"
+#include "duckdb/function/window/window_functions.hpp"
+#include "duckdb/function/function_set.hpp"
 #include "duckdb/planner/expression/bound_window_expression.hpp"
 
 namespace duckdb {
@@ -65,6 +67,14 @@ public:
 				sort_nulls.Initialize();
 			}
 		}
+
+		auto &required = state.required;
+		required.clear();
+
+		required.insert(FRAME_BEGIN);
+		required.insert(FRAME_END);
+
+		WindowBoundariesState::AddImpliedBounds(required, gvstate.executor.wexpr);
 	}
 
 	//! Accumulate the secondary sort values
@@ -235,6 +245,22 @@ public:
 		if (gstate.row_tree) {
 			local_row = gstate.row_tree->GetLocalState(context);
 		}
+
+		const auto &wexpr = gstate.executor.wexpr;
+
+		auto &required = state.required;
+		required.clear();
+
+		if (wexpr.arg_orders.empty()) {
+			required.insert(PARTITION_BEGIN);
+			required.insert(PARTITION_END);
+		} else {
+			// Secondary orders need to know where the frame is
+			required.insert(FRAME_BEGIN);
+			required.insert(FRAME_END);
+		}
+
+		WindowBoundariesState::AddImpliedBounds(required, wexpr);
 	}
 
 	//! Accumulate the secondary sort values
@@ -273,6 +299,32 @@ void WindowLeadLagLocalState::Finalize(ExecutionContext &context, CollectionPtr 
 //===--------------------------------------------------------------------===//
 // WindowLeadLagExecutor
 //===--------------------------------------------------------------------===//
+WindowFunctionSet LeadFun::GetFunctions() {
+	WindowFunctionSet funcs("lead");
+
+	funcs.AddFunction(WindowFunction({LogicalType::TEMPLATE("T"), LogicalType::BIGINT, LogicalType::TEMPLATE("T")},
+	                                 LogicalType::TEMPLATE("T"), ExpressionType::WINDOW_LEAD));
+	funcs.AddFunction(WindowFunction({LogicalType::TEMPLATE("T"), LogicalType::BIGINT}, LogicalType::TEMPLATE("T"),
+	                                 ExpressionType::WINDOW_LEAD));
+	funcs.AddFunction(
+	    WindowFunction({LogicalType::TEMPLATE("T")}, LogicalType::TEMPLATE("T"), ExpressionType::WINDOW_LEAD));
+
+	return funcs;
+}
+
+WindowFunctionSet LagFun::GetFunctions() {
+	WindowFunctionSet funcs("lag");
+
+	funcs.AddFunction(WindowFunction({LogicalType::TEMPLATE("T"), LogicalType::BIGINT, LogicalType::TEMPLATE("T")},
+	                                 LogicalType::TEMPLATE("T"), ExpressionType::WINDOW_LEAD));
+	funcs.AddFunction(WindowFunction({LogicalType::TEMPLATE("T"), LogicalType::BIGINT}, LogicalType::TEMPLATE("T"),
+	                                 ExpressionType::WINDOW_LEAD));
+	funcs.AddFunction(
+	    WindowFunction({LogicalType::TEMPLATE("T")}, LogicalType::TEMPLATE("T"), ExpressionType::WINDOW_LEAD));
+
+	return funcs;
+}
+
 WindowLeadLagExecutor::WindowLeadLagExecutor(BoundWindowExpression &wexpr, WindowSharedExpressions &shared)
     : WindowValueExecutor(wexpr, shared) {
 }
@@ -441,6 +493,12 @@ void WindowLeadLagExecutor::EvaluateInternal(ExecutionContext &context, DataChun
 	}
 }
 
+WindowFunction FirstValueFun::GetFunction() {
+	WindowFunction fun("first_value", {LogicalType::TEMPLATE("T")}, LogicalType::TEMPLATE("T"),
+	                   ExpressionType::WINDOW_FIRST_VALUE);
+	return fun;
+}
+
 WindowFirstValueExecutor::WindowFirstValueExecutor(BoundWindowExpression &wexpr, WindowSharedExpressions &shared)
     : WindowValueExecutor(wexpr, shared) {
 }
@@ -492,6 +550,12 @@ void WindowFirstValueExecutor::EvaluateInternal(ExecutionContext &context, DataC
 		// Didn't find one
 		FlatVector::SetNull(result, i, true);
 	});
+}
+
+WindowFunction LastValueFun::GetFunction() {
+	WindowFunction fun("last_value", {LogicalType::TEMPLATE("T")}, LogicalType::TEMPLATE("T"),
+	                   ExpressionType::WINDOW_LAST_VALUE);
+	return fun;
 }
 
 WindowLastValueExecutor::WindowLastValueExecutor(BoundWindowExpression &wexpr, WindowSharedExpressions &shared)
@@ -551,6 +615,12 @@ void WindowLastValueExecutor::EvaluateInternal(ExecutionContext &context, DataCh
 		// Didn't find one
 		FlatVector::SetNull(result, i, true);
 	});
+}
+
+WindowFunction NthValueFun::GetFunction() {
+	WindowFunction fun("nth_value", {LogicalType::TEMPLATE("T"), LogicalType::BIGINT}, LogicalType::TEMPLATE("T"),
+	                   ExpressionType::WINDOW_NTH_VALUE);
+	return fun;
 }
 
 WindowNthValueExecutor::WindowNthValueExecutor(BoundWindowExpression &wexpr, WindowSharedExpressions &shared)
@@ -840,6 +910,11 @@ static fill_value_t GetFillValueFunction(const LogicalType &type) {
 	}
 }
 
+WindowFunction FillFun::GetFunction() {
+	WindowFunction fun("fill", {LogicalType::TEMPLATE("T")}, LogicalType::TEMPLATE("T"), ExpressionType::WINDOW_FILL);
+	return fun;
+}
+
 WindowFillExecutor::WindowFillExecutor(BoundWindowExpression &wexpr, ClientContext &client,
                                        WindowSharedExpressions &shared)
     : WindowValueExecutor(wexpr, shared) {
@@ -893,11 +968,22 @@ class WindowFillLocalState : public WindowLeadLagLocalState {
 public:
 	WindowFillLocalState(ExecutionContext &context, const WindowLeadLagGlobalState &gvstate)
 	    : WindowLeadLagLocalState(context, gvstate) {
-		//	If we optimised the ordering, force computation of the validity range.
-		if (!gvstate.value_tree) {
-			state.required.insert(VALID_BEGIN);
-			state.required.insert(VALID_END);
+		const auto &wexpr = gvstate.executor.wexpr;
+
+		auto &required = state.required;
+		required.clear();
+
+		required.insert(FRAME_BEGIN);
+		required.insert(FRAME_END);
+
+		if (wexpr.arg_orders.empty() || !gvstate.value_tree) {
+			//	FILL uses the validity ranges to quickly eliminate indexes that can't be interpolated.
+			//	This only works for non-secondary orderings
+			required.insert(VALID_BEGIN);
+			required.insert(VALID_END);
 		}
+
+		WindowBoundariesState::AddImpliedBounds(required, gvstate.executor.wexpr);
 	}
 
 	//! Finish the sinking and prepare to scan

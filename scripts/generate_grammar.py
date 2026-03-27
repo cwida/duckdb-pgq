@@ -75,13 +75,13 @@ def strip_p(x):
     else:
         return x
 
-unreserved_keywords.sort(key=lambda x: strip_p(x))
-colname_keywords.sort(key=lambda x: strip_p(x))
-func_name_keywords.sort(key=lambda x: strip_p(x))
-type_name_keywords.sort(key=lambda x: strip_p(x))
-reserved_keywords.sort(key=lambda x: strip_p(x))
-pgq_unreserved_keywords.sort(key=lambda x: strip_p(x))
-pgq_colname_keywords.sort(key=lambda x: strip_p(x))
+unreserved_keywords.sort(key=lambda x: strip_p(x).lower())
+colname_keywords.sort(key=lambda x: strip_p(x).lower())
+func_name_keywords.sort(key=lambda x: strip_p(x).lower())
+type_name_keywords.sort(key=lambda x: strip_p(x).lower())
+reserved_keywords.sort(key=lambda x: strip_p(x).lower())
+pgq_unreserved_keywords.sort(key=lambda x: strip_p(x).lower())
+pgq_colname_keywords.sort(key=lambda x: strip_p(x).lower())
 
 statements = read_list_from_file(os.path.join(base_dir, 'statements.list'))
 statements.sort()
@@ -111,7 +111,7 @@ for kw in reserved_keywords:
 
 kwlist = [(x, kwdict[x]) for x in kwdict.keys()]
 # sorting uppercase is different from lowercase: A-Z < _ < a-z
-kwlist.sort(key=lambda x: strip_p(x[0].lower()))
+kwlist.sort(key=lambda x: strip_p(x[0]).lower())
 
 # now generate kwlist.h
 # PG_KEYWORD("abort", ABORT_P, UNRESERVED_KEYWORD)
