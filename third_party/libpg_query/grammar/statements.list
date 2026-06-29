@@ -11,6 +11,7 @@ CreateAsStmt
 CreateSecretStmt
 CreateTypeStmt
 CreateFunctionStmt
+CreatePropertyGraphStmt
 CreateSchemaStmt
 CreateSeqStmt
 CreateStmt
@@ -20,12 +21,14 @@ DeleteStmt
 DetachStmt
 DropSecretStmt
 DropStmt
+DropPropertyGraphStmt
 ExecuteStmt
 ExplainStmt
 ExportStmt
 ImportStmt
 IndexStmt
 InsertStmt
+GraphTableStmt
 LoadStmt
 MergeIntoStmt
 PragmaStmt

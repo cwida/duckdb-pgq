@@ -1157,11 +1157,15 @@ table_ref:	relation_expr opt_alias_clause opt_at_clause opt_tablesample_clause
 					$2->alias = $4;
 					$$ = (PGNode *) $2;
 				}
+            | GRAPH_TABLE GraphTableStmt
+                {
+                        $$ = (PGNode *) $2;
+				}
             | alias_prefix_colon_clause '(' joined_table ')'
                 {
                     $3->alias = $1;
                     $$ = (PGNode *) $3;
-                }
+                } 
 			| table_ref PIVOT '(' target_list_opt_comma FOR pivot_value_list opt_pivot_group_by ')' opt_alias_clause
 				{
 					PGPivotExpr *n = makeNode(PGPivotExpr);
@@ -3509,6 +3513,7 @@ row:		qualified_row							{ $$ = $1;}
 			| '(' expr_list ',' a_expr ')'			{ $$ = lappend($2, $4); }
 		;
 
+
 dict_arg:
 	ColIdOrString SINGLE_COLON a_expr						{
 		PGNamedArgExpr *na = makeNode(PGNamedArgExpr);
@@ -3522,7 +3527,7 @@ dict_arg:
 dict_arguments:
 	dict_arg						{ $$ = list_make1($1); }
 	| dict_arguments ',' dict_arg	{ $$ = lappend($1, $3); }
-
+    ;
 
 dict_arguments_opt_comma:
 			dict_arguments								{ $$ = $1; }
@@ -4342,16 +4347,22 @@ Iconst:		ICONST									{ $$ = $1; };
 type_function_name:	IDENT							{ $$ = $1; }
 			| unreserved_keyword					{ $$ = pstrdup($1); }
 			| type_func_name_keyword				{ $$ = pstrdup($1); }
+            | pgq_unreserved_keyword                { $$ = pstrdup($1); }
+
 		;
 
 function_name_token:	IDENT						{ $$ = $1; }
 			| unreserved_keyword					{ $$ = pstrdup($1); }
 			| func_name_keyword						{ $$ = pstrdup($1); }
+            | pgq_unreserved_keyword                { $$ = pstrdup($1); }
+
 		;
 
 type_name_token:	IDENT						{ $$ = $1; }
 			| unreserved_keyword					{ $$ = pstrdup($1); }
 			| type_name_keyword						{ $$ = pstrdup($1); }
+            | pgq_unreserved_keyword                { $$ = pstrdup($1); }
+
 		;
 
 any_name:	ColId						{ $$ = list_make1(makeString($1)); }
