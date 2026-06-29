@@ -326,6 +326,12 @@ enum class OrdinalityType : uint8_t;
 
 enum class OutputStream : uint8_t;
 
+enum class PGQMatchType : uint8_t;
+
+enum class PGQPathMode : uint8_t;
+
+enum class PGQPathReferenceType : uint8_t;
+
 enum class ParseInfoType : uint8_t;
 
 enum class ParserExtensionResultType : uint8_t;
@@ -943,6 +949,15 @@ const char* EnumUtil::ToChars<OrdinalityType>(OrdinalityType value);
 
 template<>
 const char* EnumUtil::ToChars<OutputStream>(OutputStream value);
+
+template<>
+const char* EnumUtil::ToChars<PGQMatchType>(PGQMatchType value);
+
+template<>
+const char* EnumUtil::ToChars<PGQPathMode>(PGQPathMode value);
+
+template<>
+const char* EnumUtil::ToChars<PGQPathReferenceType>(PGQPathReferenceType value);
 
 template<>
 const char* EnumUtil::ToChars<ParseInfoType>(ParseInfoType value);
@@ -1649,6 +1664,15 @@ OrdinalityType EnumUtil::FromString<OrdinalityType>(const char *value);
 
 template<>
 OutputStream EnumUtil::FromString<OutputStream>(const char *value);
+
+template<>
+PGQMatchType EnumUtil::FromString<PGQMatchType>(const char *value);
+
+template<>
+PGQPathMode EnumUtil::FromString<PGQPathMode>(const char *value);
+
+template<>
+PGQPathReferenceType EnumUtil::FromString<PGQPathReferenceType>(const char *value);
 
 template<>
 ParseInfoType EnumUtil::FromString<ParseInfoType>(const char *value);

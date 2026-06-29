@@ -15,7 +15,9 @@ unique_ptr<QueryNode> Transformer::TransformShow(duckdb_libpgquery::PGVariableSh
 	select_node->select_list.push_back(make_uniq<StarExpression>());
 	auto showref = make_uniq<ShowRef>();
 	if (stmt.set) {
-		if (std::string(stmt.set) == "__show_tables_from_database") {
+		if (stmt.set == std::string("property_graph")) {
+			showref->table_name = stmt.relation->relname;
+		} else if (std::string(stmt.set) == "__show_tables_from_database") {
 			showref->show_type = ShowType::SHOW_FROM;
 			auto qualified_name = TransformQualifiedName(*stmt.relation);
 			if (!IsInvalidCatalog(qualified_name.catalog)) {

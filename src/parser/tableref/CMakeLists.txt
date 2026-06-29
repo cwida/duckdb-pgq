@@ -9,6 +9,7 @@ add_library_unity(
   expressionlistref.cpp
   column_data_ref.cpp
   joinref.cpp
+  matchref.cpp
   pivotref.cpp
   showref.cpp
   subqueryref.cpp

@@ -99,7 +99,6 @@ enum class PhysicalOperatorType : uint8_t {
 	CREATE_TYPE,
 	ATTACH,
 	DETACH,
-
 	// -----------------------------
 	// Helpers
 	// -----------------------------

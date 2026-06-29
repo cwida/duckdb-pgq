@@ -436,6 +436,8 @@ typedef enum PGNodeTag {
 	T_PGAttachStmt,
 	T_PGDetachStmt,
 	T_PGUseStmt,
+	T_PGDropPropertyGraphStmt,   /* SQL/PGQ extension */
+	T_PGCreatePropertyGraphStmt, /* SQL/PGQ extension */
 
 	/*
 	 * TAGS FOR PARSE TREE NODES (parsenodes.h)
@@ -498,6 +500,15 @@ typedef enum PGNodeTag {
 	T_PGPositionalReference,
 	T_PGMatchEntry,
 	T_PGMatchAction,
+	T_PGPropertyGraphTable, /* SQL/PGQ extension */
+	T_PGMatchClause,       /* SQL/PGQ extension */
+	T_PGPathPattern,       /* SQL/PGQ extension */
+	T_PGSubPath,           /* SQL/PGQ extension */
+	T_PGPathUnion,         /* SQL/PGQ extension */
+	T_PGPathInfo,          /* SQL/PGQ extension */
+	T_PGLabelTest,         /* SQL/PGQ extension */
+	T_PGPathElement,       /* SQL/PGQ extension */
+	T_PGKeyReference, /* SQL/PGQ extension */
 
 	/*
 	 * TAGS FOR REPLICATION GRAMMAR PARSE NODES (replnodes.h)

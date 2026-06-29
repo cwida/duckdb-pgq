@@ -92,6 +92,7 @@ ExplainableStmt:
 NonReservedWord:	IDENT							{ $$ = $1; }
 			| unreserved_keyword					{ $$ = pstrdup($1); }
 			| other_keyword						{ $$ = pstrdup($1); }
+			| pgq_unreserved_keyword            { $$ = pstrdup($1); }
 		;
 
 
