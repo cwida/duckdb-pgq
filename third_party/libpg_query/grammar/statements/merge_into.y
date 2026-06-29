@@ -123,7 +123,7 @@ matched_clause:
 	;
 
 opt_source_or_target:
-	BY SOURCE_P				{ $$ = MERGE_ACTION_WHEN_NOT_MATCHED_BY_SOURCE; }
+	BY SOURCE				{ $$ = MERGE_ACTION_WHEN_NOT_MATCHED_BY_SOURCE; }
 	| BY TARGET_P			{ $$ = MERGE_ACTION_WHEN_NOT_MATCHED_BY_TARGET; }
 	| /* empty */			{ $$ = MERGE_ACTION_WHEN_NOT_MATCHED_BY_TARGET; }
 	;
