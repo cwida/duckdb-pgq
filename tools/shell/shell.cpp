@@ -2822,12 +2822,12 @@ int ShellState::ProcessInput(InputMode mode) {
 			}
 			continue;
 		}
-		if (zLine && (zLine[0] == '.' || zLine[0] == '#') && nSql == 0) {
+		if ((zLine[0] == '.' || zLine[0] == '#') && nSql == 0) {
 			if (ShellHasFlag(ShellFlags::SHFLG_Echo)) {
 				printf("%s\n", zLine);
 			}
 			if (zLine[0] == '.') {
-				if (mode == InputMode::STANDARD && zLine && *zLine && *zLine != '\3') {
+				if (mode == InputMode::STANDARD && *zLine && *zLine != '\3') {
 					ShellAddHistory(zLine);
 				}
 				rc = DoMetaCommand(zLine);
@@ -3266,6 +3266,11 @@ int RunShell(int argc, const char **argv) {
 			rc = data.ProcessInput(InputMode::STANDARD);
 		}
 	}
+#if !defined(_WIN32) && !defined(WIN32)
+	signal(SIGINT, SIG_IGN);
+#else
+	SetConsoleCtrlHandler(ConsoleCtrlHandler, FALSE);
+#endif
 	data.SetTableName(0);
 	data.last_result.reset();
 	data.db.reset();
