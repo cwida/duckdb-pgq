@@ -121,12 +121,11 @@ public:
 	//! Verifies the constraint for a chunk of data.
 	virtual void VerifyConstraint(DataChunk &chunk, IndexAppendInfo &info, ConflictManager &manager);
 
-	//! Deletes all data from the index. The lock obtained from InitializeLock must be held
-	virtual void CommitDrop(IndexLock &index_lock) = 0;
+	//! Resets all index storage, clearing the index entirely. The lock obtained from InitializeLock must be held.
+	virtual void ResetStorage(IndexLock &index_lock) = 0;
+	//! Obtains a lock and calls ResetStorage while holding that lock.
+	void ResetStorage() override;
 
-	//! Deletes all data from the index
-	// FIXME: we can rename this to ResetStorage().
-	void CommitDrop() override;
 	//! Delete a chunk of entries from the index. The lock obtained from InitializeLock must be held.
 	//! Returns the amount of rows successfully deleted from the index.
 	//! If either deleted_sel or non_deleted_sel are provided the exact rows that were (not) deleted are written there
@@ -208,7 +207,7 @@ public:
 
 	//! Replay index insert and delete operations buffered during WAL replay.
 	//! table_types has the physical types of the table in the order they appear, not logical (no generated columns).
-	//! mapped_column_ids contains the sorted order of Indexed physical column ID's (see unbound_index.hpp comments).
+	//! mapped_column_ids maps each buffered data column to its physical table column.
 	void ApplyBufferedReplays(const vector<LogicalType> &table_types, BufferedIndexReplays &buffered_replays,
 	                          const vector<StorageIndex> &mapped_column_ids);
 

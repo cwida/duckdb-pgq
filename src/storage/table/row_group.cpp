@@ -1,4 +1,5 @@
 #include "duckdb/storage/table/row_group.hpp"
+#include "duckdb/transaction/commit_state.hpp"
 
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/serializer/binary_serializer.hpp"
@@ -315,7 +316,7 @@ void ColumnScanState::Initialize(const QueryContext &context_p, const LogicalTyp
 void CollectionScanState::Initialize(const QueryContext &context, const vector<LogicalType> &types) {
 	auto &column_ids = GetColumnIds();
 	D_ASSERT(column_scans.empty());
-	column_scans.reserve(column_scans.size());
+	column_scans.reserve(column_ids.size());
 	for (idx_t i = 0; i < column_ids.size(); i++) {
 		column_scans.emplace_back(*this);
 	}
@@ -463,7 +464,7 @@ unique_ptr<RowGroup> RowGroup::AlterType(RowGroupCollection &new_collection, con
 	}
 	if (has_per_column_metadata_blocks) {
 		row_group->per_column_metadata_blocks = per_column_metadata_blocks;
-		row_group->per_column_metadata_blocks.RemoveColumn(changed_idx);
+		row_group->per_column_metadata_blocks.ClearColumn(changed_idx);
 	}
 	lock.unlock();
 	row_group->Verify();
@@ -552,6 +553,8 @@ unique_ptr<RowGroup> RowGroup::RemoveColumn(RowGroupCollection &new_collection, 
 	}
 	if (has_per_column_metadata_blocks) {
 		row_group->per_column_metadata_blocks = per_column_metadata_blocks;
+		// the columns after the removed one shift down by one position, so their
+		// metadata block entries (keyed by column index) must shift down as well
 		row_group->per_column_metadata_blocks.RemoveColumn(removed_column);
 	}
 	lock.unlock();
@@ -559,27 +562,33 @@ unique_ptr<RowGroup> RowGroup::RemoveColumn(RowGroupCollection &new_collection, 
 	return row_group;
 }
 
-void RowGroup::CommitDrop() {
+void RowGroup::CommitDrop(CommitDropState &drop_state) {
 	for (idx_t column_idx = 0; column_idx < GetColumnCount(); column_idx++) {
-		CommitDropColumn(column_idx);
+		CommitDropColumn(column_idx, drop_state);
 	}
 }
 
 struct BlockIdDropper : public BlockIdVisitor {
-	explicit BlockIdDropper(BlockManager &manager) : manager(manager) {
+	explicit BlockIdDropper(CommitDropState &drop_state) : drop_state(drop_state) {
 	}
 
 	void Visit(block_id_t block_id) override {
-		manager.MarkBlockAsModified(block_id);
+		drop_state.DropBlock(block_id);
 	}
 
-	BlockManager &manager;
+	CommitDropState &drop_state;
 };
 
-void RowGroup::CommitDropColumn(const idx_t column_index) {
+void RowGroup::CommitDropColumn(const idx_t column_index, CommitDropState &drop_state) {
 	auto &column = GetColumn(column_index);
-	BlockIdDropper dropper(GetBlockManager());
+	BlockIdDropper dropper(drop_state);
 	column.VisitBlockIds(dropper);
+}
+
+void RowGroup::CommitDrop() {
+	CommitDropState drop_state(&GetBlockManager());
+	CommitDrop(drop_state);
+	drop_state.FinalizeCommit();
 }
 
 void RowGroup::NextVector(CollectionScanState &state) {
@@ -1235,6 +1244,17 @@ bool RowGroup::HasUnloadedDeletes() const {
 	return !deletes_is_loaded;
 }
 
+vector<MetaBlockPointer> RowGroup::GetPersistedDeletePointers() const {
+	if (HasUnloadedDeletes()) {
+		return deletes_pointers;
+	}
+	auto vinfo = version_info.load();
+	if (!vinfo) {
+		return vector<MetaBlockPointer>();
+	}
+	return vinfo->GetStoragePointers();
+}
+
 PerColumnMetadataBlocks RowGroup::ComputePerColumnMetadataBlocks() const {
 	PerColumnMetadataBlocks result;
 	if (column_pointers.empty()) {
@@ -1640,6 +1660,18 @@ PersistentRowGroupData RowGroup::SerializeRowGroupInfo(idx_t row_group_start) co
 	result.start = row_group_start;
 	result.count = count;
 	return result;
+}
+
+void RowGroup::CompressVersionInfo(transaction_t lowest_active_start) {
+	if (HasUnloadedDeletes()) {
+		// deletes were not loaded - they are still stored in their compact serialized form
+		return;
+	}
+	auto vinfo = GetVersionInfo();
+	if (!vinfo) {
+		return;
+	}
+	vinfo->CompressVersionIds(lowest_active_start);
 }
 
 vector<MetaBlockPointer> RowGroup::CheckpointDeletes(RowGroupWriter &writer) {

@@ -158,6 +158,8 @@ enum class DecimalBitWidth : uint8_t;
 
 enum class DefaultOrderByNullType : uint8_t;
 
+enum class DeleteIdState : uint8_t;
+
 enum class DependencyEntryType : uint8_t;
 
 enum class DeprecatedIndexType : uint8_t;
@@ -500,6 +502,8 @@ enum class VerificationType : uint8_t;
 
 enum class VerifyExistenceType : uint8_t;
 
+enum class VersionCompressionResult : uint8_t;
+
 enum class VertexType : uint8_t;
 
 enum class WALType : uint8_t;
@@ -701,6 +705,9 @@ const char* EnumUtil::ToChars<DecimalBitWidth>(DecimalBitWidth value);
 
 template<>
 const char* EnumUtil::ToChars<DefaultOrderByNullType>(DefaultOrderByNullType value);
+
+template<>
+const char* EnumUtil::ToChars<DeleteIdState>(DeleteIdState value);
 
 template<>
 const char* EnumUtil::ToChars<DependencyEntryType>(DependencyEntryType value);
@@ -1216,6 +1223,9 @@ template<>
 const char* EnumUtil::ToChars<VerifyExistenceType>(VerifyExistenceType value);
 
 template<>
+const char* EnumUtil::ToChars<VersionCompressionResult>(VersionCompressionResult value);
+
+template<>
 const char* EnumUtil::ToChars<VertexType>(VertexType value);
 
 template<>
@@ -1422,6 +1432,9 @@ DecimalBitWidth EnumUtil::FromString<DecimalBitWidth>(const char *value);
 
 template<>
 DefaultOrderByNullType EnumUtil::FromString<DefaultOrderByNullType>(const char *value);
+
+template<>
+DeleteIdState EnumUtil::FromString<DeleteIdState>(const char *value);
 
 template<>
 DependencyEntryType EnumUtil::FromString<DependencyEntryType>(const char *value);
@@ -1935,6 +1948,9 @@ VerificationType EnumUtil::FromString<VerificationType>(const char *value);
 
 template<>
 VerifyExistenceType EnumUtil::FromString<VerifyExistenceType>(const char *value);
+
+template<>
+VersionCompressionResult EnumUtil::FromString<VersionCompressionResult>(const char *value);
 
 template<>
 VertexType EnumUtil::FromString<VertexType>(const char *value);

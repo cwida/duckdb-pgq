@@ -20,6 +20,7 @@
 #include "duckdb/common/optional_ptr.hpp"
 #include "duckdb/common/reference_map.hpp"
 #include "duckdb/parser/query_error_context.hpp"
+#include "duckdb/parser/qualified_name.hpp"
 #include "duckdb/catalog/entry_lookup_info.hpp"
 #include "duckdb/common/types/string.hpp"
 
@@ -384,6 +385,20 @@ public:
 		return *entry;
 	}
 
+	//! Look up an entry by its (optionally qualified) name - the 2.0 spelling of the catalog/schema/name overloads
+	//! above.
+	template <class T>
+	static optional_ptr<T> GetEntry(ClientContext &context, const QualifiedName &name, OnEntryNotFound if_not_found,
+	                                QueryErrorContext error_context = QueryErrorContext()) {
+		return GetEntry<T>(context, name.catalog, name.schema, name.name, if_not_found, error_context);
+	}
+	template <class T>
+	static T &GetEntry(ClientContext &context, const QualifiedName &name,
+	                   QueryErrorContext error_context = QueryErrorContext()) {
+		auto entry = GetEntry<T>(context, name, OnEntryNotFound::THROW_EXCEPTION, error_context);
+		return *entry;
+	}
+
 	DUCKDB_API vector<reference<SchemaCatalogEntry>> GetSchemas(ClientContext &context);
 	DUCKDB_API static vector<reference<SchemaCatalogEntry>> GetSchemas(ClientContext &context,
 	                                                                   const string &catalog_name);
@@ -429,7 +444,7 @@ private:
 	                                  const EntryLookupInfo &lookup_info, OnEntryNotFound if_not_found);
 	static CatalogEntryLookup TryLookupEntry(CatalogEntryRetriever &retriever, const vector<CatalogLookup> &lookups,
 	                                         const EntryLookupInfo &lookup_info, OnEntryNotFound if_not_found,
-	                                         bool allow_default_table_lookup);
+	                                         bool allow_default_lookup);
 	static CatalogEntryLookup TryLookupEntry(CatalogEntryRetriever &retriever, const string &catalog,
 	                                         const string &schema, const EntryLookupInfo &lookup_info,
 	                                         OnEntryNotFound if_not_found);
@@ -438,6 +453,10 @@ private:
 	static CatalogEntryLookup TryLookupDefaultTable(CatalogEntryRetriever &retriever,
 	                                                const EntryLookupInfo &lookup_info,
 	                                                bool allow_ignore_at_clause = false);
+
+	//! Looks for a non-table entry in the default schema of any implicit search catalog
+	static CatalogEntryLookup TryLookupDefaultSchema(CatalogEntryRetriever &retriever,
+	                                                 const EntryLookupInfo &lookup_info);
 
 	//! Return an exception with did-you-mean suggestion.
 	static CatalogException CreateMissingEntryException(CatalogEntryRetriever &retriever,

@@ -1,6 +1,8 @@
 #include "duckdb/storage/table/row_group_collection.hpp"
+#include "duckdb/transaction/commit_state.hpp"
 
 #include "duckdb/common/serializer/binary_deserializer.hpp"
+#include "duckdb/common/thread.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/execution/index/bound_index.hpp"
 #include "duckdb/main/client_context.hpp"
@@ -20,6 +22,7 @@
 #include "duckdb/storage/table_storage_info.hpp"
 #include "duckdb/main/settings.hpp"
 #include "duckdb/execution/index/art/art.hpp"
+#include "duckdb/transaction/duck_transaction_manager.hpp"
 #include "duckdb/common/type_visitor.hpp"
 
 namespace duckdb {
@@ -89,6 +92,7 @@ RowGroupCollection::RowGroupCollection(shared_ptr<DataTableInfo> info_p, BlockMa
 		if (TypeVisitor::Contains(type, LogicalTypeId::VARIANT) ||
 		    TypeVisitor::Contains(type, LogicalTypeId::GEOMETRY)) {
 			row_group_append_mode = RowGroupAppendMode::REQUIRE_NEW;
+			can_append_to_checkpointed_row_group = false;
 			break;
 		}
 	}
@@ -160,10 +164,11 @@ void RowGroupCollection::Initialize(PersistentCollectionData &data) {
 }
 
 void RowGroupCollection::SetRowGroupAppendMode(RowGroupAppendMode mode) {
-	if (mode > row_group_append_mode) {
-		// We never downgrade the mode, i.e. if REQUIRE_NEW was already set then we do not set it back to SUGGEST_NEW
-		row_group_append_mode = mode;
+	if (mode == RowGroupAppendMode::SUGGEST_NEW && !can_append_to_checkpointed_row_group) {
+		// if we cannot append to existing (checkpointed) row groups we need to promote SUGGEST_NEW to REQUIRE_NEW
+		mode = RowGroupAppendMode::REQUIRE_NEW;
 	}
+	row_group_append_mode = mode;
 }
 
 void RowGroupCollection::InitializeEmpty() {
@@ -232,7 +237,6 @@ void RowGroupCollection::InitializeScan(const QueryContext &context, CollectionS
                                         optional_ptr<TableFilterSet> table_filters) {
 	state.row_groups = GetRowGroups();
 	auto row_group = state.GetRootSegment();
-	D_ASSERT(row_group);
 	state.max_row = state.row_groups->GetBaseRowId() + total_rows;
 	state.Initialize(context, GetTypes());
 	while (row_group && !row_group->GetNode().InitializeScan(state, *row_group)) {
@@ -973,8 +977,8 @@ void RowGroupCollection::RemoveFromIndexes(const QueryContext &context, TableInd
 		indexed_column_id_set.insert(set.begin(), set.end());
 	}
 
-	// If we are in WAL replay, delete data will be buffered, and so we sort the column_ids
-	// since the sorted form will be the mapping used to get back physical IDs from the buffered index chunk.
+	// Sorted so that the fetched columns align with the ascending physical order used when
+	// referencing them into result_chunk below.
 	vector<StorageIndex> column_ids;
 	for (auto &col : indexed_column_id_set) {
 		column_ids.emplace_back(col);
@@ -1071,16 +1075,9 @@ void RowGroupCollection::RemoveFromIndexes(const QueryContext &context, TableInd
 			}
 			continue;
 		}
-		// Buffering takes only the indexed columns in ordering of the column_ids mapping.
-		DataChunk index_column_chunk;
-		index_column_chunk.InitializeEmpty(column_types);
-		for (idx_t i = 0; i < column_types.size(); i++) {
-			auto col_id = column_ids[i].GetPrimaryIndex();
-			index_column_chunk.data[i].Reference(result_chunk.data[col_id]);
-		}
-		index_column_chunk.SetCardinality(result_chunk.size());
+		// Buffer the delete: result_chunk is in table layout with all indexed columns populated.
 		auto &unbound_index = index.Cast<UnboundIndex>();
-		unbound_index.BufferChunk(index_column_chunk, row_identifiers, column_ids, BufferedIndexReplay::DEL_ENTRY);
+		unbound_index.BufferChunk(result_chunk, row_identifiers, BufferedIndexReplay::DEL_ENTRY);
 	}
 }
 
@@ -1542,6 +1539,8 @@ void RowGroupCollection::Checkpoint(TableDataWriter &writer, TableStatistics &gl
 		writer.SetRowIdsChanged();
 	}
 
+	auto &transaction_manager = DuckTransactionManager::Get(GetAttached());
+	auto lowest_active_start = transaction_manager.LowestActiveStart();
 	try {
 		// schedule tasks
 		idx_t total_vacuum_tasks = 0;
@@ -1566,6 +1565,8 @@ void RowGroupCollection::Checkpoint(TableDataWriter &writer, TableStatistics &gl
 			if (!RefersToSameObject(row_group.GetCollection(), *this)) {
 				throw InternalException("RowGroup Vacuum - row group collection of row group changed");
 			}
+			// the row group is kept as-is: try to compress its version information
+			row_group.CompressVersionInfo(lowest_active_start);
 			if (writer.GetCheckpointOptions().type != CheckpointType::VACUUM_ONLY) {
 				DUCKDB_LOG(checkpoint_state.writer.GetDatabase(), CheckpointLogType, GetAttached(), *info, segment_idx,
 				           row_group, vacuum_state.row_start);
@@ -1584,6 +1585,11 @@ void RowGroupCollection::Checkpoint(TableDataWriter &writer, TableStatistics &gl
 	}
 	// all tasks have been successfully scheduled - execute tasks until we are done
 	checkpoint_state.executor->WorkOnTasks();
+
+	auto scan_sleep_ms = Settings::Get<DebugCheckpointScanSleepMsSetting>(writer.GetDatabase());
+	if (scan_sleep_ms > 0) {
+		ThreadUtil::SleepMs(scan_sleep_ms);
+	}
 
 	// no errors - finalize the row groups
 	// if the table already exists on disk - check if all row groups have stayed the same
@@ -1613,8 +1619,7 @@ void RowGroupCollection::Checkpoint(TableDataWriter &writer, TableStatistics &gl
 				         RowGroupWriteAction::REUSE_EXISTING_ROW_GROUP_METADATA);
 				vector<MetaBlockPointer> extra_metadata_block_pointers = row_group.GetExtraMetadataBlockPointers();
 				metadata_manager.ClearModifiedBlocks(extra_metadata_block_pointers);
-				auto row_group_writer = checkpoint_state.writer.GetRowGroupWriter(row_group);
-				row_group.CheckpointDeletes(*row_group_writer);
+				metadata_manager.ClearModifiedBlocks(row_group.GetPersistedDeletePointers());
 			}
 			writer.WriteUnchangedTable(metadata_pointer, metadata_pointers, total_rows.load());
 			// copy over existing stats into the global stats
@@ -1910,18 +1915,30 @@ void RowGroupCollection::Destroy() {
 //===--------------------------------------------------------------------===//
 // CommitDrop
 //===--------------------------------------------------------------------===//
-void RowGroupCollection::CommitDropColumn(const idx_t column_index) {
+void RowGroupCollection::CommitDropColumn(const idx_t column_index, CommitDropState &drop_state) {
 	auto row_groups = GetRowGroups();
 	for (auto &row_group : row_groups->Segments()) {
-		row_group.CommitDropColumn(column_index);
+		row_group.CommitDropColumn(column_index, drop_state);
 	}
 }
 
-void RowGroupCollection::CommitDropTable() {
+void RowGroupCollection::CommitDropTable(CommitDropState &drop_state) {
 	auto row_groups = GetRowGroups();
 	for (auto &row_group : row_groups->Segments()) {
-		row_group.CommitDrop();
+		row_group.CommitDrop(drop_state);
 	}
+}
+
+void RowGroupCollection::CommitDropColumn(const idx_t column_index) {
+	CommitDropState drop_state(&GetBlockManager());
+	CommitDropColumn(column_index, drop_state);
+	drop_state.FinalizeCommit();
+}
+
+void RowGroupCollection::CommitDropTable() {
+	CommitDropState drop_state(&GetBlockManager());
+	CommitDropTable(drop_state);
+	drop_state.FinalizeCommit();
 }
 
 //===--------------------------------------------------------------------===//
